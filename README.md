@@ -29,7 +29,6 @@ coala := Coala.NewCoala()
 ## Simple server & Simple client
 
 ```go
-
 package main
 
 import (
@@ -37,6 +36,8 @@ import (
 	"net"
 
 	"github.com/coalalib/coalago"
+	"github.com/coalalib/coalago/resource"
+
 	m "github.com/coalalib/coalago/message"
 )
 
@@ -46,18 +47,18 @@ func main() {
 }
 
 func server() {
-	coalaServer := Coala.NewCoala()
-	coalaServer.Listen(5683)
+	coalaServer := coalago.NewListen(5683)
 
-	coalaServer.AddGETResource("/parrot", func(message *m.CoAPMessage) *Coala.CoAPResourceHandlerResult {
+	coalaServer.AddGETResource("/parrot", func(message *m.CoAPMessage) *resource.CoAPResourceHandlerResult {
 		word := message.GetURIQuery("word")
-		handlerResult := Coala.NewResponse(m.NewStringPayload(word), m.CoapCodeContent)
+		handlerResult := resource.NewResponse(m.NewStringPayload(word), m.CoapCodeContent)
 		return handlerResult
 	})
+
 }
 
 func client() {
-	coalaClient := Coala.NewCoala()
+	coalaClient := coalago.NewCoala()
 	requestMessage := m.NewCoAPMessage(m.CON, m.GET)
 	requestMessage.SetURIPath("/parrot")
 	requestMessage.SetURIQuery("word", "hello world!")
@@ -85,8 +86,8 @@ Coala is designed to be strongly secured, simple and lightweight and the same ti
 Switching between standard and secured connections is easy as is, just specify "coaps" scheme in your request:
 
 ```go
-request := Coala.NewCoAPMessage(Coala.CON, Coala.GET)
-request.SetURI("coaps://coap.me:5683/large?param=Me")
+request := coalago.NewCoAPMessage(coalago.CON, coalago.GET)
+requestMessage.SetSchemeCOAPS()
 request.SetStringPayload("Put your innermost secrets here... And nobody will be able to read it...")
 ```
 
