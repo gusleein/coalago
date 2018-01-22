@@ -3,21 +3,20 @@ package window
 type SlidingWindow struct {
 	offset int
 	values []interface{}
-	size   int
 }
 
-func NewSlidingWindow(size int, offset int) {
-	s := &SlidingWindow{
+func NewSlidingWindow(size int, offset int) *SlidingWindow {
+	return &SlidingWindow{
 		offset: offset,
 		values: make([]interface{}, size),
 	}
 }
 
-func (s *SlidingWindow) getOffset() int {
+func (s *SlidingWindow) GetOffset() int {
 	return s.offset
 }
 
-func (s *SlidingWindow) getSize() int {
+func (s *SlidingWindow) GetSize() int {
 	return len(s.values)
 }
 
@@ -34,16 +33,19 @@ func (s *SlidingWindow) Set(number int, value interface{}) {
 }
 
 func (s *SlidingWindow) Advance() interface{} {
-	firstBlock := s.values[0]
+	if len(s.values) == 0 {
+		return nil
+	}
 
+	firstBlock := s.values[0]
 	if firstBlock == nil {
 		return nil
 	}
 
 	copy(s.values, s.values[1:])
 	s.values[len(s.values)-1] = nil
-
 	s.offset++
+
 	return firstBlock
 }
 

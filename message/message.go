@@ -8,8 +8,9 @@ import (
 	"sort"
 	"strconv"
 	"strings"
+	"time"
 
-	"github.com/coalalib/coalago/stack/ARQLayer/blockwise"
+	"github.com/coalalib/coalago/blockwise"
 	"github.com/op/go-logging"
 )
 
@@ -25,9 +26,13 @@ type CoAPMessage struct {
 	Payload   CoAPMessagePayload
 	Token     []byte
 	Options   []*CoAPMessageOption
+
 	Sender    *net.UDPAddr
-	Attempts  int
-	IsACKed   bool
+	Recipient *net.UDPAddr
+
+	Attempts int
+	LastSent time.Time
+
 	IsProxies bool
 
 	KeysOpts struct {
@@ -36,6 +41,8 @@ type CoAPMessage struct {
 	}
 
 	PublicKey []byte
+
+	Callback func(*CoAPMessage, error)
 }
 
 func NewCoAPMessage(messageType CoapType, messageCode CoapCode) *CoAPMessage {
@@ -78,9 +85,9 @@ func Deserialize(data []byte) (*CoAPMessage, error) {
 
 	// Token
 	if tokenLength > 0 {
-		msg.Token = make([]byte, tokenLength)
-		token := data[DataTokenStart : DataTokenStart+tokenLength]
-		copy(msg.Token, token)
+		// msg.Token = make([]byte, tokenLength)
+		msg.Token = data[DataTokenStart : DataTokenStart+tokenLength]
+		// copy(msg.Token, token)
 	}
 
 	/*
@@ -447,13 +454,12 @@ func (m *CoAPMessage) ToReadableString() string {
 	}
 
 	return fmt.Sprintf(
-		"ID:'%v', METHOD:'%v', SCHEME:'%s', TOKEN:'%s', TYPE:'%v', CODE:'%v', OPTIONS[ %s ]",
-		m.MessageID,
-		methodString(m.GetMethod()),
-		m.GetSchemeString(),
-		m.GetTokenString(),
+		"%v\t%v\t%v\t%v\t%v\t[%v]",
 		typeString(m.Type),
 		coapCodeToString(m.Code),
+		m.GetSchemeString(),
+		m.GetTokenString(),
+		m.MessageID,
 		options)
 }
 
@@ -473,10 +479,7 @@ func (m *CoAPMessage) GetACKKeyForReceive() string {
 }
 
 func (m *CoAPMessage) IsProxied() bool {
-	if m.GetOption(OptionProxyURI) == nil {
-		return false
-	}
-	return true
+	return m.GetOption(OptionProxyURI) != nil
 }
 
 func (m *CoAPMessage) GetBlock1() *blockwise.Block {

@@ -1,20 +1,15 @@
-package SecurityLayer
+package coalago
 
 import (
 	"net"
 	"time"
 
-	"github.com/coalalib/coalago/common"
-
 	m "github.com/coalalib/coalago/message"
-	logging "github.com/op/go-logging"
 )
-
-var log = logging.MustGetLogger("SecurityLayer")
 
 type HandshakeLayer struct{}
 
-func (layer *HandshakeLayer) OnReceive(coala common.SenderIface, message *m.CoAPMessage) bool {
+func (layer *HandshakeLayer) OnReceive(coala *Coala, message *m.CoAPMessage) bool {
 	if message.IsProxies {
 		return true
 	}
@@ -33,8 +28,6 @@ func (layer *HandshakeLayer) OnReceive(coala common.SenderIface, message *m.CoAP
 	if value == m.CoapHandshakeTypeClientHello && message.Payload != nil {
 		peerSession.PeerPublicKey = message.Payload.Bytes()
 
-		log.Debug("Received HANDSHAKE Client Public Key", string(peerSession.PeerPublicKey[:]))
-
 		err := incomingHandshake(coala, peerSession.Curve.GetPublicKey(), message)
 		if err != nil {
 			log.Error(err)
@@ -49,12 +42,11 @@ func (layer *HandshakeLayer) OnReceive(coala common.SenderIface, message *m.CoAP
 	}
 
 	peerSession.UpdatedAt = int(time.Now().Unix())
-	log.Debug("Update current session for ID:", message.Sender.String())
 	coala.SetSessionForAddress(peerSession, message.Sender)
 
 	return false
 }
 
-func (layer *HandshakeLayer) OnSend(coala common.SenderIface, message *m.CoAPMessage, address *net.UDPAddr) (bool, error) {
+func (layer *HandshakeLayer) OnSend(coala *Coala, message *m.CoAPMessage, address *net.UDPAddr) (bool, error) {
 	return true, nil
 }

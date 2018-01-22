@@ -1,21 +1,16 @@
-package ProxyLayer
+package coalago
 
 import (
 	"net"
 	"net/url"
 	"strings"
 
-	"github.com/coalalib/coalago/common"
-	logging "github.com/op/go-logging"
-
 	m "github.com/coalalib/coalago/message"
 )
 
-var log = logging.MustGetLogger("ProxyLayer")
-
 type ProxyLayer struct{}
 
-func (layer *ProxyLayer) OnReceive(coala common.SenderIface, message *m.CoAPMessage) bool {
+func (layer *ProxyLayer) OnReceive(coala *Coala, message *m.CoAPMessage) bool {
 	if !coala.IsProxyMode() {
 		return true
 	}
@@ -26,40 +21,32 @@ func (layer *ProxyLayer) OnReceive(coala common.SenderIface, message *m.CoAPMess
 		}
 
 		proxyMessage, address, err := makeMessageFromProxyToRecepient(message)
+
 		if err != nil {
-			sendResponseProxyAckMessage(coala, message, m.CoapCodeBadOption, "")
+			sendResponseFromProxyToSenderAckMessage(coala, message, m.CoapCodeBadOption, "")
 			return false
 		}
 
 		coala.GetAllPools().ProxySessions.Store(string(proxyMessage.Token)+address.String(), message.Sender)
+		coala.GetAllPools().ProxySessions.Store(string(proxyMessage.Token)+message.Sender.String(), address)
 
-		coala.Send(proxyMessage, address)
+		sendToSocket(coala, proxyMessage, address)
 
 		return false
 	}
 
-	addrSender, ok := coala.GetAllPools().ProxySessions.Load(message.GetProxyKeyReceiver())
+	addrSender, ok := coala.GetAllPools().ProxySessions.Load(string(message.Token) + message.Sender.String())
 	if !ok {
 		return true
 	}
 
 	message.IsProxies = true
-	response, err := coala.Send(message, addrSender.(*net.UDPAddr))
-	if err != nil && message.Type != m.ACK {
-		log.Error(err, message.ToReadableString())
-		sendResponseProxyAckMessage(coala, message, m.CoapCodeBadGateway, "Unable to send message to proxy sender")
-	} else if response != nil {
-		response.IsProxies = true
-		_, err := coala.Send(response, message.Sender)
-		if err != nil {
-			log.Warning("An attempt to send a response from proxy. Error:", err, response.ToReadableString())
-		}
-	}
+	sendToSocket(coala, message, addrSender.(*net.UDPAddr))
 
 	return false
 }
 
-func (layer *ProxyLayer) OnSend(coala common.SenderIface, message *m.CoAPMessage, address *net.UDPAddr) (bool, error) {
+func (layer *ProxyLayer) OnSend(coala *Coala, message *m.CoAPMessage, address *net.UDPAddr) (bool, error) {
 	if proxyURI := message.GetOptionProxyURIasString(); proxyURI != "" {
 		message.RemoveOptions(m.OptionURIPath)
 		message.RemoveOptions(m.OptionURIQuery)
@@ -72,7 +59,7 @@ func (layer *ProxyLayer) OnSend(coala common.SenderIface, message *m.CoAPMessage
 	}
 
 	if message.IsProxies {
-		return false, nil
+		return true, nil
 	}
 
 	_, ok := coala.GetAllPools().ProxySessions.Load(message.GetProxyKeySender(address))
@@ -84,18 +71,18 @@ func (layer *ProxyLayer) OnSend(coala common.SenderIface, message *m.CoAPMessage
 }
 
 // Sends ACK message to sender from proxy
-func sendResponseProxyAckMessage(coala common.SenderIface, message *m.CoAPMessage, code m.CoapCode, payload string) error {
+func sendResponseFromProxyToSenderAckMessage(coala *Coala, message *m.CoAPMessage, code m.CoapCode, payload string) error {
 	responseMessage := makeMessageFromProxyToSender(message, code)
 	responseMessage.SetStringPayload(payload)
-	_, err := coala.Send(responseMessage, message.Sender)
-	return err
+	sendToSocket(coala, responseMessage, message.Sender)
+	return nil
 }
 
-func isValideProxyMode(coala common.SenderIface, message *m.CoAPMessage) bool {
+func isValideProxyMode(coala *Coala, message *m.CoAPMessage) bool {
 	proxyURI := message.GetOptionProxyURIasString()
 	proxyScheme := message.GetOptionProxyScheme()
 	if !coala.IsProxyMode() {
-		sendResponseProxyAckMessage(coala, message, m.CoapCodeProxyingNotSupported, "")
+		sendResponseFromProxyToSenderAckMessage(coala, message, m.CoapCodeProxyingNotSupported, "")
 		return false
 	}
 
@@ -103,7 +90,7 @@ func isValideProxyMode(coala common.SenderIface, message *m.CoAPMessage) bool {
 		!strings.HasPrefix(proxyURI, "coap") && !strings.HasPrefix(proxyURI, "coaps") {
 
 		log.Error("Proxy Scheme is invalid", proxyScheme, proxyURI)
-		sendResponseProxyAckMessage(coala, message, m.CoapCodeBadRequest, "Proxy Scheme is invalid")
+		sendResponseFromProxyToSenderAckMessage(coala, message, m.CoapCodeBadRequest, "Proxy Scheme is invalid")
 		return false
 	}
 	return true
@@ -113,8 +100,10 @@ func isValideProxyMode(coala common.SenderIface, message *m.CoAPMessage) bool {
 func makeMessageFromProxyToRecepient(message *m.CoAPMessage) (proxyMessage *m.CoAPMessage, address *net.UDPAddr, err error) {
 	message.RemoveOptions(m.OptionURIPath)
 	proxyURI := message.GetOptionProxyURIasString()
+
 	parsedURL, err := url.Parse(proxyURI)
 	if err != nil {
+		log.Error("Error of parsing the ProxyURI:", err)
 		return
 	}
 

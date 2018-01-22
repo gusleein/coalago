@@ -3,8 +3,6 @@ package coalago
 import (
 	"net"
 
-	"github.com/coalalib/coalago/common"
-
 	m "github.com/coalalib/coalago/message"
 )
 
@@ -15,10 +13,10 @@ type ResourceDiscoveryResult struct {
 
 type ResourceDiscoveryLayer struct{}
 
-func (layer *ResourceDiscoveryLayer) OnReceive(coala common.SenderIface, message *m.CoAPMessage) bool {
+func (layer *ResourceDiscoveryLayer) OnReceive(coala *Coala, message *m.CoAPMessage) bool {
 	return true
 }
 
-func (layer *ResourceDiscoveryLayer) OnSend(coala common.SenderIface, message *m.CoAPMessage, address *net.UDPAddr) (bool, error) {
+func (layer *ResourceDiscoveryLayer) OnSend(coala *Coala, message *m.CoAPMessage, address *net.UDPAddr) (bool, error) {
 	return true, nil
 }

@@ -41,7 +41,7 @@ func (m *mockUDPConnector) SetReadDeadline(t time.Time) error {
 }
 
 func newCoalaMocked() (coala *Coala) {
-	coala = NewCoala()
-	coala.connection = new(mockUDPConnector)
+	coala = NewListen(0)
+	//	coala.connection = new(mockUDPConnector)
 	return coala
 }
