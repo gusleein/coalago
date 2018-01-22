@@ -1,4 +1,4 @@
-package Coala
+package coalago
 
 import (
 	"net"
