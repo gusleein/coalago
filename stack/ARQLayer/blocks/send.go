@@ -93,11 +93,14 @@ func sendWindow(coala common.SenderIface, pools *pools.AllPools, window []*m.CoA
 			err = errors.New("Max attempts")
 			return
 		}
-
-		send(&wg, coala, msg, pools, state, i, address)
+		go func(msg *m.CoAPMessage) {
+			wg.Add(1)
+			send(coala, msg, pools, state, i, address)
+			wg.Done()
+		}(msg)
 
 	}
-
+	wg.Wait()
 	return
 }
 
@@ -111,8 +114,7 @@ type windowState struct {
 	LastMessage *m.CoAPMessage
 }
 
-func send(wg *sync.WaitGroup, coala common.SenderIface, msg *m.CoAPMessage, pools *pools.AllPools, state *windowState, index int, address *net.UDPAddr) {
-
+func send(coala common.SenderIface, msg *m.CoAPMessage, pools *pools.AllPools, state *windowState, index int, address *net.UDPAddr) {
 	respMessage, err := coala.Send(msg, address)
 	if err != nil {
 		state.Timeout = true
@@ -148,6 +150,7 @@ func send(wg *sync.WaitGroup, coala common.SenderIface, msg *m.CoAPMessage, pool
 }
 
 func processSending(coala common.SenderIface, pools *pools.AllPools, buffer *byteBuffer.Buffer, windowMessages []*m.CoAPMessage, address *net.UDPAddr) (next bool, isFull bool, lastMessage *m.CoAPMessage, err error) {
+
 	for {
 		state, err := sendWindow(coala, pools, windowMessages, address)
 		if err != nil {
