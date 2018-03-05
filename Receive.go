@@ -28,7 +28,7 @@ func rawBufferHandler(coala *Coala, readBuf []byte, length int, senderAddr *net.
 	}
 	message.Sender = senderAddr
 
-	log.Debugf("Receiving message: %s, from: %s", message.ToReadableString(), senderAddr.String())
+	// log.Debugf("Receiving message: %s, from: %s", message.ToReadableString(), senderAddr.String())
 
 	isNext := receive(coala, message, senderAddr)
 	if !isNext {

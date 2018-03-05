@@ -45,7 +45,7 @@ func (coala *Coala) send(message *m.CoAPMessage, address *net.UDPAddr, nonACK bo
 	defer close(respChannel)
 
 	coala.incomingMessages.Store(message.MessageID, respChannel)
-	log.Debug("Send message: ", message.ToReadableString(), "To:", address.String())
+	// log.Debug("Send message: ", message.ToReadableString(), "To:", address.String())
 	_, err = coala.connection.WriteTo(data, address)
 	coala.Metrics.SentMessages.Inc()
 	if err != nil {
