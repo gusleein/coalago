@@ -86,8 +86,6 @@ func (layer *SecurityLayer) OnSend(coala common.SenderIface, message *m.CoAPMess
 		return false, err
 	}
 
-	log.Debugf("Handshake SUCCESSFULL: message: %v,  to: %v", message.ToReadableString(), address)
-
 	// Encrypt message payload
 	err = Encrypt(message, address, currentSession.AEAD)
 	if err != nil {

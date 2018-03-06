@@ -33,8 +33,6 @@ func (layer *HandshakeLayer) OnReceive(coala common.SenderIface, message *m.CoAP
 	if value == m.CoapHandshakeTypeClientHello && message.Payload != nil {
 		peerSession.PeerPublicKey = message.Payload.Bytes()
 
-		log.Debug("Received HANDSHAKE Client Public Key", string(peerSession.PeerPublicKey[:]))
-
 		err := incomingHandshake(coala, peerSession.Curve.GetPublicKey(), message)
 		if err != nil {
 			log.Error(err)
@@ -49,7 +47,6 @@ func (layer *HandshakeLayer) OnReceive(coala common.SenderIface, message *m.CoAP
 	}
 
 	peerSession.UpdatedAt = int(time.Now().Unix())
-	log.Debug("Update current session for ID:", message.Sender.String())
 	coala.SetSessionForAddress(peerSession, message.Sender)
 
 	return false

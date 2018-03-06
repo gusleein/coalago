@@ -23,14 +23,11 @@ func handshake(coala common.SenderIface, message *m.CoAPMessage, session *sessio
 
 	// Sending my Public Key.
 	// Receiving Peer's Public Key as a Response!
-	// log.Debug("Handshake start! Sending PK", len(session.Curve.GetPublicKey()))
 	peerPublicKey, err := outgoingHandshake(coala, message, session.Curve.GetPublicKey(), address)
 	if err != nil {
 		log.Error(err.Error())
 		return err
 	}
-	log.Debugf("Received Peer PK  len: %v", len(peerPublicKey))
-
 	if len(peerPublicKey) == 0 {
 		log.Error("Empty public key for message: ", message.GetMessageIDString())
 	}
@@ -54,9 +51,6 @@ func outgoingHandshake(coala common.SenderIface, origMessage *m.CoAPMessage, myP
 	message.Payload = m.NewBytesPayload(myPublicKey)
 	message.Token = m.GenerateToken(6)
 	message.CloneOptions(origMessage, m.OptionProxyURI)
-
-	log.Debugf("\n\nHello: %s, to: %s\n\n", message.ToReadableString(), address.String())
-
 	// serialize the message
 
 	var peerPublicKey []byte
@@ -98,8 +92,6 @@ func incomingHandshake(coala common.SenderIface, publicKey []byte, origMessage *
 	message.AddOption(m.OptionHandshakeType, m.CoapHandshakeTypePeerHello)
 	message.Payload = m.NewBytesPayload(publicKey)
 	message.Token = origMessage.Token
-
-	log.Debugf("\n\nHello: %s, from: %s\n\n", message.ToReadableString(), origMessage.Sender.String())
 
 	_, err := coala.Send(message, origMessage.Sender)
 	if err != nil {
