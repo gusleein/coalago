@@ -11,8 +11,8 @@ import (
 	"github.com/coalalib/coalago/metrics"
 	"github.com/coalalib/coalago/network"
 	"github.com/coalalib/coalago/network/session"
-	"github.com/coalalib/coalago/observer"
 	"github.com/coalalib/coalago/pools"
+	"github.com/coalalib/coalago/queue"
 	"github.com/coalalib/coalago/resource"
 	"github.com/op/go-logging"
 )
@@ -27,9 +27,8 @@ var (
 )
 
 type Coala struct {
-	connection         network.UDPConnection
-	resources          []*resource.CoAPResource                   // We don't need it to be concurrent safe
-	observerConditions map[string]*observer.CoAPObserverCondition // key = address of resource. Without concurency
+	connection network.UDPConnection
+	resources  []*resource.CoAPResource // We don't need it to be concurrent safe
 
 	dataChannel *DataChannel
 
@@ -39,44 +38,12 @@ type Coala struct {
 	sendLayerStack    *LayersStack
 	Metrics           *metrics.MetricsList
 
-	incomingMessages sync.Map
-
-	observeMessages map[string]chan *m.CoAPMessage
-
 	Pools *pools.AllPools
 
+	senderPool  *queue.Queue
+	reciverPool *sync.Map
+
 	privatekey []byte
-}
-
-func NewCoala() *Coala {
-	var err error
-
-	coala := new(Coala)
-	coala.Pools = pools.NewPools()
-
-	coala.connection, err = network.NewUDPConnection(0)
-	if err != nil {
-		log.Fatal(err)
-		return nil
-	}
-	go coala.listenConnection()
-
-	coala.observerConditions = make(map[string]*observer.CoAPObserverCondition)
-
-	coala.dataChannel = &DataChannel{
-		Handshake:   make(chan *m.CoAPMessage),
-		StopSend:    make(chan bool, 1),
-		StopReceive: make(chan bool, 1),
-	}
-	// Default values
-	coala.proxyEnabled = false
-
-	coala.receiveLayerStack = NewReceiveLayersStack(coala)
-	coala.sendLayerStack = NewSendLayersStack(coala)
-	coala.Metrics = new(metrics.MetricsList)
-	coala.observeMessages = make(map[string]chan *m.CoAPMessage)
-
-	return coala
 }
 
 func NewListen(port int) *Coala {
@@ -87,7 +54,13 @@ func NewListen(port int) *Coala {
 	coala := new(Coala)
 	coala.Pools = pools.NewPools()
 
-	coala.observerConditions = make(map[string]*observer.CoAPObserverCondition)
+	coala.senderPool = queue.New()
+	coala.reciverPool = &sync.Map{}
+
+	for i := 0; i < 1; i++ {
+		go messagePoolSender(coala, coala.senderPool, coala.reciverPool)
+
+	}
 
 	coala.dataChannel = &DataChannel{
 		Handshake:   make(chan *m.CoAPMessage),
@@ -97,10 +70,8 @@ func NewListen(port int) *Coala {
 	// Default values
 	coala.proxyEnabled = false
 
-	coala.receiveLayerStack = NewReceiveLayersStack(coala)
-	coala.sendLayerStack = NewSendLayersStack(coala)
+	coala.receiveLayerStack, coala.sendLayerStack = NewLayersStacks(coala)
 	coala.Metrics = new(metrics.MetricsList)
-	coala.observeMessages = make(map[string]chan *m.CoAPMessage)
 
 	// Init Resource Discovery
 	coala.initResourceDiscovery()
@@ -110,8 +81,6 @@ func NewListen(port int) *Coala {
 	coala.initResourceTestsBlock2()
 
 	// Init Message Dispatching
-
-	observer.StartObserver(coala, coala.Pools)
 
 	coala.connection, err = network.NewUDPConnection(port)
 	if err != nil {
@@ -153,6 +122,8 @@ LabelTimeout: // <- for break by timeout
 
 	return list
 }
+
+type CoalaCallback func(*m.CoAPMessage, error)
 
 func (coala *Coala) AddGETResource(path string, handler resource.CoAPResourceHandler) {
 	coala.AddResource(resource.NewCoAPResource(m.CoapMethodGet, path, handler))
@@ -204,14 +175,6 @@ func (coala *Coala) RemoveResourceByHash(hash string) *Coala {
 		}
 	}
 	return coala
-}
-
-func (coala *Coala) AddConditionOfObserving(resource string, condition *observer.CoAPObserverCondition) {
-	coala.observerConditions[resource] = condition
-}
-
-func (coala *Coala) GetObserverCondition(key string) *observer.CoAPObserverCondition {
-	return coala.observerConditions[key]
 }
 
 func (coala *Coala) EnableProxy() {

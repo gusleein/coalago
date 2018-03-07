@@ -2,58 +2,52 @@ package coalago
 
 import (
 	"net"
+	"sync"
 
 	m "github.com/coalalib/coalago/message"
-	"github.com/coalalib/coalago/stack/ProxyLayer"
 )
+
+// buffer pool to reduce GC
+var buffers = sync.Pool{
+	New: func() interface{} {
+		return make([]byte, 1500)
+	},
+}
 
 func (coala *Coala) listenConnection() {
 	for {
-		readBuf, lenght, senderAddr, err := coala.connection.Read()
+		readBuf := [1500]byte{}
+
+		n, senderAddr, err := coala.connection.Read(readBuf[:])
 		if err != nil {
 			log.Error(err)
 			go coala.listenConnection()
 			return
 		}
 		coala.Metrics.ReceivedMessages.Inc()
-		go rawBufferHandler(coala, readBuf, lenght, senderAddr)
+
+		message, err := m.Deserialize(readBuf[:n])
+		if err != nil {
+			log.Error("Error while making CoAPMessage Object", err)
+			continue
+		}
+
+		go rawBufferHandler(coala, message, senderAddr)
 	}
 }
 
-func rawBufferHandler(coala *Coala, readBuf []byte, length int, senderAddr *net.UDPAddr) {
-	message, err := m.Deserialize(readBuf[:length])
-	if err != nil {
-		log.Error("Error while making CoAPMessage Object", err)
-		return
-	}
+func rawBufferHandler(coala *Coala, message *m.CoAPMessage, senderAddr *net.UDPAddr) {
 	message.Sender = senderAddr
+	// fmt.Printf("\n|<----- %s\t%s\n\n", senderAddr.String(), message.ToReadableString())
 
-	isNext := receive(coala, message, senderAddr)
-	if !isNext {
-		return
+	if coala.receiveLayerStack.OnReceive(message) {
+		coala.senderPool.Delete(message.GetMessageIDString() + senderAddr.String())
+
+		ic, _ := coala.reciverPool.Load(message.GetMessageIDString() + message.Sender.String())
+		if ic != nil {
+			coala.reciverPool.Delete(message.GetMessageIDString() + message.Sender.String())
+			callback := ic.(CoalaCallback)
+			callback(message, nil)
+		}
 	}
-
-	if message.IsRequest() {
-		return
-	}
-	respChannel, ok := coala.incomingMessages.Load(message.MessageID)
-	if !ok {
-		return
-	}
-
-	defer func() {
-		recover()
-	}()
-
-	respChannel.(chan *m.CoAPMessage) <- message
-}
-
-func receive(coala *Coala, message *m.CoAPMessage, senderAddr *net.UDPAddr) (isNext bool) {
-	proxyLayer := ProxyLayer.ProxyLayer{}
-	if !proxyLayer.OnReceive(coala, message) {
-		return false
-	}
-
-	coala.receiveLayerStack.OnReceive(message)
-	return true
 }

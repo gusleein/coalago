@@ -8,10 +8,11 @@ import (
 )
 
 // GenerateMessageId generate a uint16 Message ID
-var currentMessageID uint16 = RandomMessageID()
+var currentMessageID uint16
 
 func init() {
 	rand.Seed(time.Now().UnixNano())
+	currentMessageID = uint16(rand.Intn(65535))
 }
 
 //TODO  move to session context

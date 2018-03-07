@@ -3,19 +3,16 @@ package coalago
 import (
 	"net"
 
-	"github.com/coalalib/coalago/common"
-
 	m "github.com/coalalib/coalago/message"
 	"github.com/coalalib/coalago/resource"
 )
 
 type RequestLayer struct{}
 
-func (layer *RequestLayer) OnReceive(coala common.SenderIface, message *m.CoAPMessage) bool {
+func (layer *RequestLayer) OnReceive(coala *Coala, message *m.CoAPMessage) bool {
 	if message.Code <= 0 || message.Code > 4 {
 		return true
 	}
-
 	resources := coala.GetResourcesForPathAndMethod(message.GetURIPath(), message.GetMethod())
 
 	if len(resources) == 0 {
@@ -44,11 +41,11 @@ func (layer *RequestLayer) OnReceive(coala common.SenderIface, message *m.CoAPMe
 	return false
 }
 
-func (layer *RequestLayer) OnSend(coala common.SenderIface, message *m.CoAPMessage, address *net.UDPAddr) (bool, error) {
+func (layer *RequestLayer) OnSend(coala *Coala, message *m.CoAPMessage, address *net.UDPAddr) (bool, error) {
 	return true, nil
 }
 
-func methodNotAllowed(coala common.SenderIface, message *m.CoAPMessage) bool {
+func methodNotAllowed(coala *Coala, message *m.CoAPMessage) bool {
 	responseMessage := m.NewCoAPMessageId(m.ACK, m.CoapCodeMethodNotAllowed, message.MessageID)
 	responseMessage.Payload = m.NewStringPayload("Method is not allowed for requested resource")
 	if message.Token != nil && len(message.Token) > 0 {
@@ -56,15 +53,12 @@ func methodNotAllowed(coala common.SenderIface, message *m.CoAPMessage) bool {
 	}
 
 	responseMessage.CloneOptions(message, m.OptionBlock1, m.OptionBlock2)
-	_, err := coala.Send(responseMessage, message.Sender)
-	if err != nil {
-		log.Error(err)
-	}
+	coala.Send(responseMessage, message.Sender)
 
 	return false
 }
 
-func returnResultFromResource(coala common.SenderIface, message *m.CoAPMessage, handlerResult *resource.CoAPResourceHandlerResult) bool {
+func returnResultFromResource(coala *Coala, message *m.CoAPMessage, handlerResult *resource.CoAPResourceHandlerResult) bool {
 	// @TODO: Validate Response code! handlerResult.Code
 
 	// Create ACK response with the same ID and given reponse Code
@@ -93,14 +87,13 @@ func returnResultFromResource(coala common.SenderIface, message *m.CoAPMessage, 
 	responseMessage.CloneOptions(message, m.OptionBlock1, m.OptionBlock2, m.OptionSelectiveRepeatWindowSize)
 
 	_, err := coala.Send(responseMessage, message.Sender)
-
 	if err != nil {
 		return true
 	}
 	return false
 }
 
-func noResultResourceHandler(coala common.SenderIface, message *m.CoAPMessage) bool {
+func noResultResourceHandler(coala *Coala, message *m.CoAPMessage) bool {
 	responseMessage := m.NewCoAPMessageId(m.ACK, m.CoapCodeInternalServerError, message.MessageID)
 	responseMessage.Payload = m.NewStringPayload("No Result was returned by Resource Handler")
 	if message.Token != nil && len(message.Token) > 0 {
@@ -115,7 +108,7 @@ func noResultResourceHandler(coala common.SenderIface, message *m.CoAPMessage) b
 	return false
 }
 
-func noResource(coala common.SenderIface, message *m.CoAPMessage) bool {
+func noResource(coala *Coala, message *m.CoAPMessage) bool {
 	responseMessage := m.NewCoAPMessageId(m.ACK, m.CoapCodeNotFound, message.MessageID)
 	responseMessage.Payload = m.NewStringPayload("Requested resource " + message.GetURIPath() + " does not exist")
 	if message.Token != nil && len(message.Token) > 0 {
@@ -124,6 +117,7 @@ func noResource(coala common.SenderIface, message *m.CoAPMessage) bool {
 	responseMessage.CloneOptions(message, m.OptionBlock1, m.OptionBlock2)
 
 	_, err := coala.Send(responseMessage, message.Sender)
+
 	if err != nil {
 		return true
 	}

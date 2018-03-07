@@ -3,15 +3,12 @@ package coalago
 import (
 	"net"
 
-	"github.com/coalalib/coalago/common"
-
 	m "github.com/coalalib/coalago/message"
-	"github.com/coalalib/coalago/stack/SecurityLayer"
 )
 
 type Layer interface {
-	OnReceive(coala common.SenderIface, message *m.CoAPMessage) bool
-	OnSend(coala common.SenderIface, message *m.CoAPMessage, address *net.UDPAddr) (bool, error)
+	OnReceive(coala *Coala, message *m.CoAPMessage) bool
+	OnSend(coala *Coala, message *m.CoAPMessage, address *net.UDPAddr) (bool, error)
 }
 
 type LayersStack struct {
@@ -19,42 +16,42 @@ type LayersStack struct {
 	stack []Layer
 }
 
-func NewReceiveLayersStack(coala *Coala) *LayersStack {
-	stack := [...]Layer{
-		&ResponseLayer{},
-		&SecurityLayer.HandshakeLayer{},
-		&SecurityLayer.SecurityLayer{},
+func NewLayersStacks(coala *Coala) (receiveStack *LayersStack, sendStack *LayersStack) {
+	arqLayer := newLayerARQ(coala)
 
-		&layerARQ{},
-
+	stackReceive := [...]Layer{
+		// &ResponseLayer{},
+		&ProxyLayer{},
+		&HandshakeLayer{},
+		&SecurityLayer{},
+		arqLayer,
 		&ResourceDiscoveryLayer{},
 		&RequestLayer{},
 	}
 
-	return &LayersStack{stack: stack[:], coala: coala}
-}
+	stackSend := [...]Layer{
+		&ProxyLayer{},
+		arqLayer,
+		&SecurityLayer{},
 
-func NewSendLayersStack(coala *Coala) *LayersStack {
-	stack := [...]Layer{
-		&SecurityLayer.SecurityLayer{},
+		//&ResponseLayer{},
 	}
 
-	return &LayersStack{stack: stack[:], coala: coala}
+	return &LayersStack{stack: stackReceive[:], coala: coala}, &LayersStack{stack: stackSend[:], coala: coala}
 }
 
-func (stack *LayersStack) OnReceive(message *m.CoAPMessage) {
+func (stack *LayersStack) OnReceive(message *m.CoAPMessage) bool {
 	for _, layer := range stack.stack {
-		shouldContinue := layer.OnReceive(stack.coala, message)
-		if !shouldContinue {
-			break
+		if !layer.OnReceive(stack.coala, message) {
+			return false
 		}
 	}
+	return true
 }
 
 func (stack *LayersStack) OnSend(message *m.CoAPMessage, address *net.UDPAddr) (bool, error) {
 	for _, layer := range stack.stack {
-		shouldContinue, err := layer.OnSend(stack.coala, message, address)
-		if !shouldContinue || err != nil {
+		if shouldContinue, err := layer.OnSend(stack.coala, message, address); !shouldContinue {
 			return false, err
 		}
 	}

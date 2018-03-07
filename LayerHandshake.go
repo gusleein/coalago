@@ -1,20 +1,15 @@
-package SecurityLayer
+package coalago
 
 import (
 	"net"
 	"time"
 
-	"github.com/coalalib/coalago/common"
-
 	m "github.com/coalalib/coalago/message"
-	logging "github.com/op/go-logging"
 )
-
-var log = logging.MustGetLogger("SecurityLayer")
 
 type HandshakeLayer struct{}
 
-func (layer *HandshakeLayer) OnReceive(coala common.SenderIface, message *m.CoAPMessage) bool {
+func (layer *HandshakeLayer) OnReceive(coala *Coala, message *m.CoAPMessage) bool {
 	if message.IsProxies {
 		return true
 	}
@@ -52,6 +47,6 @@ func (layer *HandshakeLayer) OnReceive(coala common.SenderIface, message *m.CoAP
 	return false
 }
 
-func (layer *HandshakeLayer) OnSend(coala common.SenderIface, message *m.CoAPMessage, address *net.UDPAddr) (bool, error) {
+func (layer *HandshakeLayer) OnSend(coala *Coala, message *m.CoAPMessage, address *net.UDPAddr) (bool, error) {
 	return true, nil
 }

@@ -1,17 +1,15 @@
-package SecurityLayer
+package coalago
 
 import (
 	"errors"
 	"net"
-
-	"github.com/coalalib/coalago/common"
 
 	m "github.com/coalalib/coalago/message"
 )
 
 type SecurityLayer struct{}
 
-func (layer *SecurityLayer) OnReceive(coala common.SenderIface, message *m.CoAPMessage) bool {
+func (layer *SecurityLayer) OnReceive(coala *Coala, message *m.CoAPMessage) bool {
 	// Check if the message has coaps:// scheme and requires a new Session
 	if message.GetScheme() == m.COAPS_SCHEME {
 		currentSession := coala.GetSessionForAddress(message.Sender)
@@ -20,9 +18,10 @@ func (layer *SecurityLayer) OnReceive(coala common.SenderIface, message *m.CoAPM
 			log.Error("Cannot decrypt Message: NO session", message.Sender, message.ToReadableString())
 			responseMessage := m.NewCoAPMessageId(m.ACK, m.CoapCodeUnauthorized, message.MessageID)
 			responseMessage.AddOption(m.OptionSessionNotFound, 1)
-			if _, err := coala.Send(responseMessage, message.Sender); err != nil {
-				log.Error(err, message.ToReadableString())
-			}
+			// if _, err := coala.Send(responseMessage, message.Sender); err != nil {
+			// 	log.Error(err, message.ToReadableString())
+			// }
+			sendToSocket(coala, message, message.Sender)
 			return false
 		}
 
@@ -32,9 +31,11 @@ func (layer *SecurityLayer) OnReceive(coala common.SenderIface, message *m.CoAPM
 			log.Error("Cannot decrypt Message, error occured: ", err, message.ToReadableString())
 			responseMessage := m.NewCoAPMessageId(m.ACK, m.CoapCodeUnauthorized, message.MessageID)
 			responseMessage.AddOption(m.OptionSessionExpired, 1)
-			if _, err := coala.Send(responseMessage, message.Sender); err != nil {
-				log.Error("SecurityLayer", "OnReceive", err, message)
-			}
+			// if _, err := coala.Send(responseMessage, message.Sender); err != nil {
+			// 	log.Error("SecurityLayer", "OnReceive", err, message)
+			// }
+			sendToSocket(coala, responseMessage, message.Sender)
+
 			return false
 		}
 	}
@@ -50,11 +51,12 @@ func (layer *SecurityLayer) OnReceive(coala common.SenderIface, message *m.CoAPM
 	return true
 }
 
-func (layer *SecurityLayer) OnSend(coala common.SenderIface, message *m.CoAPMessage, address *net.UDPAddr) (bool, error) {
+func (layer *SecurityLayer) OnSend(coala *Coala, message *m.CoAPMessage, address *net.UDPAddr) (bool, error) {
 	if message.IsProxies {
-		return false, nil
+		return true, nil
 	}
 	// Check if the message has coaps:// scheme and requires Encryption
+
 	if message.GetScheme() != m.COAPS_SCHEME {
 		return true, nil
 	}
@@ -79,7 +81,7 @@ func (layer *SecurityLayer) OnSend(coala common.SenderIface, message *m.CoAPMess
 
 	// Perform the Handshake (if necessary)
 	err := handshake(coala, message, currentSession, address)
-	// message.SetSchemeCOAPS()
+
 	if err != nil {
 		log.Error(err, message.ToReadableString(), message.Sender.String(), currentSession)
 		coala.GetAllPools().ExpectedHandshakePool.Delete(key)

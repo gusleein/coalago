@@ -1,95 +1,66 @@
 package coalago
 
 import (
-	"errors"
 	"net"
-	"time"
+	"sync"
 
 	m "github.com/coalalib/coalago/message"
-	"github.com/coalalib/coalago/stack/ARQLayer"
-	"github.com/coalalib/coalago/stack/ProxyLayer"
+	"github.com/coalalib/coalago/queue"
 )
 
-const TIMEOUT_RTT = 3
-
 func (coala *Coala) Send(message *m.CoAPMessage, address *net.UDPAddr) (response *m.CoAPMessage, err error) {
-	nonACK := message.Type == m.ACK
-	response, err = coala.send(message, address, nonACK)
+	var (
+		callback CoalaCallback
+		wg       sync.WaitGroup
+	)
+	if message.Type == m.CON {
+		wg.Add(1)
+		callback = func(r *m.CoAPMessage, e error) {
+			response = r
+			err = e
+			wg.Done()
+		}
+	}
+
+	coala.sendMessage(message, address, callback, coala.senderPool, coala.reciverPool)
+	wg.Wait()
 
 	return
 }
 
-func (coala *Coala) send(message *m.CoAPMessage, address *net.UDPAddr, nonACK bool) (response *m.CoAPMessage, err error) {
-	proxyLayer := ProxyLayer.ProxyLayer{}
-	isContinue, err := proxyLayer.OnSend(coala, message, address)
+func (coala *Coala) sendMessage(message *m.CoAPMessage, address *net.UDPAddr, callback CoalaCallback, messagePool *queue.Queue, callbackPool *sync.Map) {
+	message.Recipient = address
+
+	if callback != nil {
+		// fmt.Println("CALLBACK SAVE -----------------> ", message.GetMessageIDString()+message.Recipient.String())
+		message.Callback = callback
+		callbackPool.Store(message.GetMessageIDString()+message.Recipient.String(), callback)
+	}
+
+	shouldContinue, err := coala.sendLayerStack.OnSend(message, address)
 	if err != nil {
-		return nil, err
+		callbackPool.Delete(message.GetMessageIDString() + message.Recipient.String())
+		callback(nil, err)
+		return
 	}
-	if isContinue {
-		response, isContinue := ARQLayer.ARQSendHandler(coala, message, address)
-		if !isContinue {
-			return response, nil
-		}
-		_, err := coala.sendLayerStack.OnSend(message, address)
-		if err != nil {
-			return nil, err
-		}
+	if !shouldContinue {
+		return
 	}
+
+	messagePool.Push(message.GetMessageIDString()+address.String(), message)
+	return
+}
+
+func sendToSocket(coala *Coala, message *m.CoAPMessage, address *net.UDPAddr) error {
+	// fmt.Printf("\n|-----> %v\t%v\n\n", message.Recipient.String(), message.ToReadableString())
 
 	data, err := m.Serialize(message)
 	if err != nil {
-		return nil, err
+		return err
 	}
 
-	respChannel := make(chan *m.CoAPMessage)
-	defer close(respChannel)
-
-	coala.incomingMessages.Store(message.MessageID, respChannel)
 	_, err = coala.connection.WriteTo(data, address)
-	coala.Metrics.SentMessages.Inc()
-	if err != nil {
-		coala.Metrics.SentMessageError.Inc()
-		return nil, err
-	}
-	if nonACK {
-		return nil, nil
-	}
-
-	var ok bool
-	select {
-	case <-time.After(time.Second * TIMEOUT_RTT):
-		coala.Metrics.ExpiredMessages.Inc()
-		return nil, errors.New("Timeout")
-	case response, ok = <-respChannel:
-		if !ok {
-			return nil, errors.New("Timeout")
-		}
-		break
-	}
-
-	if arqRespChan := coala.Pools.ARQRespMessages.Get(getBufferKeyForSend(message, address)); arqRespChan != nil {
-
-	LabelNext:
-		select {
-		case <-time.After(time.Second * TIMEOUT_RTT):
-			coala.Metrics.ExpiredMessages.Inc()
-			return nil, errors.New("Timeout ARQ")
-
-		case arqResp, ok := <-arqRespChan:
-			if !ok {
-				err = errors.New("Timeout. Channel is nil")
-			}
-			response = arqResp.Message
-			if arqResp.IsNext {
-				break LabelNext
-			}
-		}
-	}
-
-	coala.Pools.ARQRespMessages.Delete(getBufferKeyForSend(message, address))
-	coala.Pools.ARQBuffers.Delete(getBufferKeyForSend(message, address))
-
-	return
+	return err
 }
 
 func getBufferKeyForReceive(msg *m.CoAPMessage) string {

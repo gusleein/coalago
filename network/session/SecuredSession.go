@@ -121,7 +121,6 @@ func (session *SecuredSession) PeerVerify(peerSignature []byte) error {
 	}
 
 	peerKey, myKey, peerIV, myIV, err := crypto.DeriveKeysFromSharedSecret(sharedSecret, nil, nil)
-
 	if err != nil {
 		log.Error(err.Error())
 		return err

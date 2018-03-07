@@ -13,7 +13,6 @@ func (layer *ReliabilityLayer) OnReceive(coala *Coala, message *m.CoAPMessage) b
 		return true
 	}
 
-	coala.Pools.ActiveRequests.Set(message.GetMessageIDString() + message.Sender.String())
 	return true
 }
 

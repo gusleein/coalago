@@ -1,4 +1,4 @@
-package SecurityLayer
+package coalago
 
 import (
 	"net"
