@@ -9,10 +9,8 @@ import (
 	"crypto/rand"
 	"encoding/hex"
 	"strconv"
-	"time"
 
 	m "github.com/coalalib/coalago/message"
-	"github.com/coalalib/coalago/observer"
 	"github.com/coalalib/coalago/resource"
 )
 
@@ -37,7 +35,6 @@ func (coala *Coala) initResourceTestsBlock2() {
 		//body := []byte("aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaabbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb") //ccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccdddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd")
 		return resource.NewResponse(m.NewBytesPayload(body), m.CoapCodeContent)
 	})
-	coala.AddConditionOfObserving("/tests/large", periodicConditionOfObserving())
 
 	coala.AddPOSTResource("/tests/large", func(message *m.CoAPMessage) *resource.CoAPResourceHandlerResult {
 		hash := message.GetURIQuery("hash")
@@ -59,20 +56,4 @@ func (coala *Coala) initResourceTestsBlock2() {
 
 		return resource.NewResponse(m.NewStringPayload(resp), m.CoapCodeContent)
 	})
-}
-
-func periodicConditionOfObserving() *observer.CoAPObserverCondition {
-	var condition observer.CoAPObserverCondition
-	condition = func(callback *observer.CoAPObserverCallback) bool {
-		period, err := strconv.Atoi(callback.RegisteredMessage.GetURIQuery("period"))
-		if err != nil || period < 1 {
-			period = 10
-		}
-		if time.Now().Unix()-callback.LastUpdate >= int64(period) {
-			return true
-		}
-		return false
-	}
-
-	return &condition
 }
