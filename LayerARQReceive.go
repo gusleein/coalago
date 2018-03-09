@@ -9,42 +9,21 @@ func (l *layerARQ) ARQReceiveHandler(message *m.CoAPMessage) bool {
 	block1 := message.GetBlock1()
 	block2 := message.GetBlock2()
 
-	windowSize := DEFAULT_WINDOW_SIZE
-
 	windowSizeOption := message.GetOption(m.OptionSelectiveRepeatWindowSize)
-	if windowSizeOption != nil {
-		windowSize = windowSizeOption.IntValue()
+	if windowSizeOption == nil {
+		if block1 == nil && block2 == nil {
+			return true
+		}
+		return false
 	}
 
+	windowSize := windowSizeOption.IntValue()
+
 	if block1 == nil && block2 == nil {
-		if message.Code == m.CoapCodeEmpty && message.Type == m.ACK && windowSizeOption != nil {
-			l.coala.senderPool.Delete(message.GetMessageIDString() + message.Sender.String())
-			l.emptyAcks.Store(message.GetTokenString(), message.MessageID)
-
-			receiveState := l.rxStates.Get(message.GetTokenString())
-			if receiveState != nil {
-				if receiveState.IsTransferCompleted() {
-					l.rxStates.Delete(message.GetTokenString())
-
-					message.Payload = m.NewBytesPayload(receiveState.GetData())
-					message.Code = receiveState.GetInitiatingMessage().Code
-
-					if id, ok := l.emptyAcks.Load(message.GetTokenString()); ok {
-						message.MessageID = id.(uint16)
-						l.emptyAcks.Delete(message.GetTokenString())
-					}
-
-					ackMessage := ackTo(message, m.CoapCodeEmpty)
-
-					l.sendARQmessage(ackMessage, ackMessage.Recipient, nil)
-
-					message.Code = receiveState.initMessage.Code
-					return true
-				}
-			}
-
-			return false
+		if message.Code == m.CoapCodeEmpty && message.Type == m.ACK {
+			return l.emptyACKHandler(message)
 		}
+
 		return true
 	}
 
@@ -99,6 +78,11 @@ func (l layerARQ) process(incomingMessage *m.CoAPMessage, blockOptionCode m.Opti
 
 				l.txStates.Delete(incomingMessage.GetTokenString())
 				incomingMessage.MessageID = origMessage.MessageID
+
+				if incomingMessage.Code == m.CoapCodeEmpty {
+					return l.emptyACKHandler(incomingMessage)
+				}
+
 				return true
 			}
 
@@ -160,5 +144,34 @@ func (l layerARQ) process(incomingMessage *m.CoAPMessage, blockOptionCode m.Opti
 		l.sendARQmessage(ackMessage, ackMessage.Recipient, nil)
 	}
 
+	return false
+}
+
+func (l layerARQ) emptyACKHandler(incomingMessage *m.CoAPMessage) bool {
+	l.coala.senderPool.Delete(incomingMessage.GetMessageIDString() + incomingMessage.Sender.String())
+	l.messagePool.Delete(incomingMessage.GetMessageIDString() + incomingMessage.Sender.String())
+	l.emptyAcks.Store(incomingMessage.GetTokenString(), incomingMessage.MessageID)
+
+	receiveState := l.rxStates.Get(incomingMessage.GetTokenString())
+	if receiveState != nil {
+		if receiveState.IsTransferCompleted() {
+			l.rxStates.Delete(incomingMessage.GetTokenString())
+
+			incomingMessage.Payload = m.NewBytesPayload(receiveState.GetData())
+			incomingMessage.Code = receiveState.GetInitiatingMessage().Code
+
+			if id, ok := l.emptyAcks.Load(incomingMessage.GetTokenString()); ok {
+				incomingMessage.MessageID = id.(uint16)
+				l.emptyAcks.Delete(incomingMessage.GetTokenString())
+			}
+
+			ackMessage := ackTo(incomingMessage, m.CoapCodeEmpty)
+
+			l.sendARQmessage(ackMessage, ackMessage.Recipient, nil)
+
+			incomingMessage.Code = receiveState.initMessage.Code
+			return true
+		}
+	}
 	return false
 }
