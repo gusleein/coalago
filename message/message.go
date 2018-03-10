@@ -51,6 +51,7 @@ func NewCoAPMessage(messageType CoapType, messageCode CoapCode) *CoAPMessage {
 		Type:      messageType,
 		Code:      messageCode,
 		Payload:   NewEmptyPayload(),
+		Token:     GenerateToken(6),
 	}
 }
 
@@ -59,6 +60,7 @@ func NewCoAPMessageId(messageType CoapType, messageCode CoapCode, messageID uint
 		MessageID: messageID,
 		Type:      messageType,
 		Code:      messageCode,
+		Token:     GenerateToken(6),
 	}
 }
 
