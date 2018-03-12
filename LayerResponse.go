@@ -21,6 +21,6 @@ func (layer *ResponseLayer) OnReceive(coala common.SenderIface, message *m.CoAPM
 	return true
 }
 
-func (layer *ResponseLayer) OnSend(coala common.SenderIface, message *m.CoAPMessage, address *net.UDPAddr) (bool, error) {
+func (layer *ResponseLayer) OnSend(coala common.SenderIface, message *m.CoAPMessage, address net.Addr) (bool, error) {
 	return true, nil
 }

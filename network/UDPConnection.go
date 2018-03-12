@@ -17,7 +17,7 @@ type UDPConnection interface {
 	IsClosed() bool
 	Close() error
 	WriteTo(b []byte, addr net.Addr) (int, error)
-	Read(buffer []byte) (n int, fromAddr *net.UDPAddr, err error)
+	Read(buffer []byte) (n int, fromAddr net.Addr, err error)
 	SetReadDeadline(time.Time) error
 }
 
@@ -47,7 +47,7 @@ func (c *udpConnection) SetReadDeadline(t time.Time) error {
 	return c.conn.SetReadDeadline(t)
 }
 
-func (c *udpConnection) Read(buffer []byte) (int, *net.UDPAddr, error) {
+func (c *udpConnection) Read(buffer []byte) (int, net.Addr, error) {
 	n, peer, err := c.conn.ReadFromUDP(buffer)
 	if err != nil {
 		return 0, nil, err
@@ -56,6 +56,10 @@ func (c *udpConnection) Read(buffer []byte) (int, *net.UDPAddr, error) {
 }
 
 func (c *udpConnection) WriteTo(b []byte, addr net.Addr) (n int, err error) {
+	addr, err = net.ResolveUDPAddr(addr.Network(), addr.String())
+	if err != nil {
+		return
+	}
 	return c.conn.WriteTo(b, addr)
 }
 

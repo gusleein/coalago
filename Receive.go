@@ -36,9 +36,9 @@ func (coala *Coala) listenConnection() {
 	}
 }
 
-func rawBufferHandler(coala *Coala, message *m.CoAPMessage, senderAddr *net.UDPAddr) {
+func rawBufferHandler(coala *Coala, message *m.CoAPMessage, senderAddr net.Addr) {
 	message.Sender = senderAddr
-	// fmt.Printf("\n|<----- %s\t%s\n\n", senderAddr.String(), message.ToReadableString())
+	// fmt.Printf("\n|<----- %s\t%s\n\n", senderAddr, message.ToReadableString())
 
 	if coala.receiveLayerStack.OnReceive(message) {
 		coala.senderPool.Delete(message.GetMessageIDString() + senderAddr.String())

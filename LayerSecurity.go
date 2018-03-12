@@ -51,7 +51,7 @@ func (layer *SecurityLayer) OnReceive(coala *Coala, message *m.CoAPMessage) bool
 	return true
 }
 
-func (layer *SecurityLayer) OnSend(coala *Coala, message *m.CoAPMessage, address *net.UDPAddr) (bool, error) {
+func (layer *SecurityLayer) OnSend(coala *Coala, message *m.CoAPMessage, address net.Addr) (bool, error) {
 	if message.IsProxies {
 		return true, nil
 	}

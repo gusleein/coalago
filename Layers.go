@@ -8,7 +8,7 @@ import (
 
 type Layer interface {
 	OnReceive(coala *Coala, message *m.CoAPMessage) bool
-	OnSend(coala *Coala, message *m.CoAPMessage, address *net.UDPAddr) (bool, error)
+	OnSend(coala *Coala, message *m.CoAPMessage, address net.Addr) (bool, error)
 }
 
 type LayersStack struct {
@@ -49,7 +49,7 @@ func (stack *LayersStack) OnReceive(message *m.CoAPMessage) bool {
 	return true
 }
 
-func (stack *LayersStack) OnSend(message *m.CoAPMessage, address *net.UDPAddr) (bool, error) {
+func (stack *LayersStack) OnSend(message *m.CoAPMessage, address net.Addr) (bool, error) {
 	for _, layer := range stack.stack {
 		if shouldContinue, err := layer.OnSend(stack.coala, message, address); !shouldContinue {
 			return false, err

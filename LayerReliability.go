@@ -16,6 +16,6 @@ func (layer *ReliabilityLayer) OnReceive(coala *Coala, message *m.CoAPMessage) b
 	return true
 }
 
-func (layer *ReliabilityLayer) OnSend(coala *Coala, message *m.CoAPMessage, address *net.UDPAddr) bool {
+func (layer *ReliabilityLayer) OnSend(coala *Coala, message *m.CoAPMessage, address net.Addr) bool {
 	return true
 }

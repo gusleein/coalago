@@ -41,11 +41,11 @@ func (l layerARQ) OnReceive(coala *Coala, message *m.CoAPMessage) bool {
 	return l.ARQReceiveHandler(message)
 }
 
-func (l layerARQ) OnSend(coala *Coala, message *m.CoAPMessage, address *net.UDPAddr) (bool, error) {
+func (l layerARQ) OnSend(coala *Coala, message *m.CoAPMessage, address net.Addr) (bool, error) {
 	return l.ARQSendHandler(message, address), nil
 }
 
-func (l layerARQ) sendARQmessage(message *m.CoAPMessage, address *net.UDPAddr, callback CoalaCallback) {
+func (l layerARQ) sendARQmessage(message *m.CoAPMessage, address net.Addr, callback CoalaCallback) {
 	l.coala.sendMessage(message, address, callback, l.messagePool, l.callbackPool)
 }
 

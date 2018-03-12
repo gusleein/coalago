@@ -7,7 +7,7 @@ import (
 	m "github.com/coalalib/coalago/message"
 )
 
-func (l *layerARQ) ARQSendHandler(message *m.CoAPMessage, address *net.UDPAddr) (isContinue bool) {
+func (l *layerARQ) ARQSendHandler(message *m.CoAPMessage, address net.Addr) (isContinue bool) {
 	if !isBigPayload(message) {
 		return true
 	}
@@ -58,7 +58,7 @@ func isBigPayload(message *m.CoAPMessage) bool {
 	return message.Payload != nil && message.Payload.Length() > MAX_PAYLOAD_SIZE
 }
 
-func newBlockingMessage(origMessage *m.CoAPMessage, recipient *net.UDPAddr, frame []byte, optionBlock m.OptionCode, blockNum int, windowSize int, isMore bool) *m.CoAPMessage {
+func newBlockingMessage(origMessage *m.CoAPMessage, recipient net.Addr, frame []byte, optionBlock m.OptionCode, blockNum int, windowSize int, isMore bool) *m.CoAPMessage {
 	msg := m.NewCoAPMessage(m.CON, origMessage.Code)
 	if origMessage.GetScheme() == m.COAPS_SCHEME {
 		msg.SetSchemeCOAPS()

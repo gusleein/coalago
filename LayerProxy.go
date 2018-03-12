@@ -41,12 +41,12 @@ func (layer *ProxyLayer) OnReceive(coala *Coala, message *m.CoAPMessage) bool {
 	}
 
 	message.IsProxies = true
-	sendToSocket(coala, message, addrSender.(*net.UDPAddr))
+	sendToSocket(coala, message, addrSender.(net.Addr))
 
 	return false
 }
 
-func (layer *ProxyLayer) OnSend(coala *Coala, message *m.CoAPMessage, address *net.UDPAddr) (bool, error) {
+func (layer *ProxyLayer) OnSend(coala *Coala, message *m.CoAPMessage, address net.Addr) (bool, error) {
 	if proxyURI := message.GetOptionProxyURIasString(); proxyURI != "" {
 		message.RemoveOptions(m.OptionURIPath)
 		message.RemoveOptions(m.OptionURIQuery)
@@ -97,7 +97,7 @@ func isValideProxyMode(coala *Coala, message *m.CoAPMessage) bool {
 }
 
 // Prepares a message to send to the final recipient
-func makeMessageFromProxyToRecepient(message *m.CoAPMessage) (proxyMessage *m.CoAPMessage, address *net.UDPAddr, err error) {
+func makeMessageFromProxyToRecepient(message *m.CoAPMessage) (proxyMessage *m.CoAPMessage, address net.Addr, err error) {
 	message.RemoveOptions(m.OptionURIPath)
 	proxyURI := message.GetOptionProxyURIasString()
 

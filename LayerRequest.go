@@ -41,7 +41,7 @@ func (layer *RequestLayer) OnReceive(coala *Coala, message *m.CoAPMessage) bool 
 	return false
 }
 
-func (layer *RequestLayer) OnSend(coala *Coala, message *m.CoAPMessage, address *net.UDPAddr) (bool, error) {
+func (layer *RequestLayer) OnSend(coala *Coala, message *m.CoAPMessage, address net.Addr) (bool, error) {
 	return true, nil
 }
 

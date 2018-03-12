@@ -15,7 +15,7 @@ const (
 	ERR_KEYS_NOT_MATCH = "Expected and current encryption keys do not match"
 )
 
-func handshake(coala common.SenderIface, message *m.CoAPMessage, session *session.SecuredSession, address *net.UDPAddr) error {
+func handshake(coala *Coala, message *m.CoAPMessage, session *session.SecuredSession, address net.Addr) error {
 	// We skip handshake if session already exists
 	if session.AEAD != nil {
 		return nil
@@ -45,7 +45,7 @@ func handshake(coala common.SenderIface, message *m.CoAPMessage, session *sessio
 	return session.Verify(signature)
 }
 
-func outgoingHandshake(coala common.SenderIface, origMessage *m.CoAPMessage, myPublicKey []byte, address *net.UDPAddr) ([]byte, error) {
+func outgoingHandshake(coala common.SenderIface, origMessage *m.CoAPMessage, myPublicKey []byte, address net.Addr) ([]byte, error) {
 	message := m.NewCoAPMessage(m.CON, m.GET)
 	message.AddOption(m.OptionHandshakeType, m.CoapHandshakeTypeClientHello)
 	message.Payload = m.NewBytesPayload(myPublicKey)

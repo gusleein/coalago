@@ -47,6 +47,6 @@ func (layer *HandshakeLayer) OnReceive(coala *Coala, message *m.CoAPMessage) boo
 	return false
 }
 
-func (layer *HandshakeLayer) OnSend(coala *Coala, message *m.CoAPMessage, address *net.UDPAddr) (bool, error) {
+func (layer *HandshakeLayer) OnSend(coala *Coala, message *m.CoAPMessage, address net.Addr) (bool, error) {
 	return true, nil
 }

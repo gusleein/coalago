@@ -197,7 +197,7 @@ func (coala *Coala) Stop() {
 	}
 }
 
-func (coala *Coala) GetSessionForAddress(udpAddr *net.UDPAddr) *session.SecuredSession {
+func (coala *Coala) GetSessionForAddress(udpAddr net.Addr) *session.SecuredSession {
 	securedSession := coala.Pools.Sessions.Get(udpAddr.String())
 	var err error
 	if securedSession == nil || securedSession.Curve == nil {
@@ -213,7 +213,7 @@ func (coala *Coala) GetSessionForAddress(udpAddr *net.UDPAddr) *session.SecuredS
 	return securedSession
 }
 
-func (coala *Coala) SetSessionForAddress(securedSession *session.SecuredSession, udpAddr *net.UDPAddr) {
+func (coala *Coala) SetSessionForAddress(securedSession *session.SecuredSession, udpAddr net.Addr) {
 	coala.Pools.Sessions.Set(udpAddr.String(), coala.privatekey, securedSession)
 	coala.Metrics.Sessions.Set(int64(coala.Pools.Sessions.Count()))
 }

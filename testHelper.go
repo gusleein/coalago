@@ -14,7 +14,7 @@ type mockUDPConnector struct {
 	ResponseRead struct {
 		Result   []byte
 		N        int
-		FromAddr *net.UDPAddr
+		FromAddr net.Addr
 		Error    error
 	}
 	ResponseIsClosed bool
@@ -28,7 +28,7 @@ func (m *mockUDPConnector) Close() error {
 	return m.ResponseClose
 }
 
-func (m *mockUDPConnector) Read() (result []byte, n int, fromAddr *net.UDPAddr, err error) {
+func (m *mockUDPConnector) Read() (result []byte, n int, fromAddr net.Addr, err error) {
 	return m.ResponseRead.Result, m.ResponseRead.N, m.ResponseRead.FromAddr, m.ResponseRead.Error
 }
 

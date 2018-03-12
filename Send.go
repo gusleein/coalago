@@ -5,10 +5,11 @@ import (
 	"sync"
 
 	m "github.com/coalalib/coalago/message"
+	"github.com/coalalib/coalago/network"
 	"github.com/coalalib/coalago/queue"
 )
 
-func (coala *Coala) Send(message *m.CoAPMessage, address *net.UDPAddr) (response *m.CoAPMessage, err error) {
+func (coala *Coala) Send(message *m.CoAPMessage, address net.Addr) (response *m.CoAPMessage, err error) {
 	var (
 		callback CoalaCallback
 		wg       sync.WaitGroup
@@ -28,11 +29,11 @@ func (coala *Coala) Send(message *m.CoAPMessage, address *net.UDPAddr) (response
 	return
 }
 
-func (coala *Coala) sendMessage(message *m.CoAPMessage, address *net.UDPAddr, callback CoalaCallback, messagePool *queue.Queue, callbackPool *sync.Map) {
+func (coala *Coala) sendMessage(message *m.CoAPMessage, address net.Addr, callback CoalaCallback, messagePool *queue.Queue, callbackPool *sync.Map) {
+	address = network.NewAddress(address.String())
 	message.Recipient = address
 
 	if callback != nil {
-		// fmt.Println("CALLBACK SAVE -----------------> ", message.GetMessageIDString()+message.Recipient.String())
 		message.Callback = callback
 		callbackPool.Store(message.GetMessageIDString()+message.Recipient.String(), callback)
 	}
@@ -51,14 +52,13 @@ func (coala *Coala) sendMessage(message *m.CoAPMessage, address *net.UDPAddr, ca
 	return
 }
 
-func sendToSocket(coala *Coala, message *m.CoAPMessage, address *net.UDPAddr) error {
-	// fmt.Printf("\n|-----> %v\t%v\n\n", message.Recipient.String(), message.ToReadableString())
-
+func sendToSocket(coala *Coala, message *m.CoAPMessage, address net.Addr) error {
 	data, err := m.Serialize(message)
 	if err != nil {
 		return err
 	}
 
+	// fmt.Printf("\n|-----> %v\t%v\n\n", address, message.ToReadableString())
 	_, err = coala.connection.WriteTo(data, address)
 	return err
 }
@@ -67,6 +67,6 @@ func getBufferKeyForReceive(msg *m.CoAPMessage) string {
 	return msg.Sender.String() + msg.GetTokenString()
 }
 
-func getBufferKeyForSend(msg *m.CoAPMessage, address *net.UDPAddr) string {
+func getBufferKeyForSend(msg *m.CoAPMessage, address net.Addr) string {
 	return address.String() + msg.GetTokenString()
 }

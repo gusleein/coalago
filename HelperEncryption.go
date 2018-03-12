@@ -8,7 +8,7 @@ import (
 	m "github.com/coalalib/coalago/message"
 )
 
-func Encrypt(message *m.CoAPMessage, address *net.UDPAddr, aead *crypto.AEAD) error {
+func Encrypt(message *m.CoAPMessage, address net.Addr, aead *crypto.AEAD) error {
 	if message.Payload != nil && message.Payload.Length() != 0 {
 		var associatedData []byte
 		message.Payload = m.NewBytesPayload(aead.Seal(message.Payload.Bytes(), message.MessageID, associatedData))
@@ -36,7 +36,7 @@ func Decrypt(message *m.CoAPMessage, aead *crypto.AEAD) error {
 	return DecryptionOptions(message, aead)
 }
 
-func EncryptionOptions(message *m.CoAPMessage, address *net.UDPAddr, aead *crypto.AEAD) error {
+func EncryptionOptions(message *m.CoAPMessage, address net.Addr, aead *crypto.AEAD) error {
 	var associatedData []byte
 
 	coapsURI := aead.Seal([]byte(message.GetURI(address.String())), message.MessageID, associatedData)

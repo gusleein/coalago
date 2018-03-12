@@ -12,12 +12,12 @@ import (
 )
 
 type SenderIface interface {
-	Send(*m.CoAPMessage, *net.UDPAddr) (*m.CoAPMessage, error)
+	Send(*m.CoAPMessage, net.Addr) (*m.CoAPMessage, error)
 
 	GetResourcesForPathAndMethod(string, m.CoapMethod) []*resource.CoAPResource
 	GetAllPools() *pools.AllPools
-	GetSessionForAddress(udpAddr *net.UDPAddr) *session.SecuredSession
-	SetSessionForAddress(securedSession *session.SecuredSession, udpAddr *net.UDPAddr)
+	GetSessionForAddress(udpAddr net.Addr) *session.SecuredSession
+	SetSessionForAddress(securedSession *session.SecuredSession, udpAddr net.Addr)
 	GetResourcesForPath(path string) []*resource.CoAPResource
 	IsProxyMode() bool
 

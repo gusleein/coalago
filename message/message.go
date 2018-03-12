@@ -27,8 +27,8 @@ type CoAPMessage struct {
 	Token     []byte
 	Options   []*CoAPMessageOption
 
-	Sender    *net.UDPAddr
-	Recipient *net.UDPAddr
+	Sender    net.Addr
+	Recipient net.Addr
 
 	Attempts int
 	LastSent time.Time
@@ -469,11 +469,11 @@ func (m *CoAPMessage) GetProxyKeyReceiver() string {
 	return m.GetTokenString() + m.Sender.String()
 }
 
-func (m *CoAPMessage) GetProxyKeySender(address *net.UDPAddr) string {
+func (m *CoAPMessage) GetProxyKeySender(address net.Addr) string {
 	return m.GetTokenString() + address.String()
 }
 
-func (m *CoAPMessage) GetACKKeyForSend(address *net.UDPAddr) string {
+func (m *CoAPMessage) GetACKKeyForSend(address net.Addr) string {
 	return address.String() + m.GetTokenString() + m.GetMessageIDString()
 }
 func (m *CoAPMessage) GetACKKeyForReceive() string {
