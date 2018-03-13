@@ -14,15 +14,17 @@ func messagePoolSender(coala *Coala, senderPool *queue.Queue, receiverPool *sync
 		im := senderPool.Pop()
 
 		if im == nil {
-			time.Sleep(time.Millisecond * 10)
 			continue
 		}
 
-		message := im.(*m.CoAPMessage)
+		message := im.Value.(*m.CoAPMessage)
 
 		if message.Type == m.ACK {
-			senderPool.Delete(message.GetMessageIDString() + message.Recipient.String())
-			sendToSocket(coala, message, message.Recipient)
+			im := senderPool.Remove(im)
+			if im != nil {
+				message = im.Value.(*m.CoAPMessage)
+				sendToSocket(coala, message, message.Recipient)
+			}
 			continue
 		}
 
@@ -40,7 +42,7 @@ func messagePoolSender(coala *Coala, senderPool *queue.Queue, receiverPool *sync
 				callback := ci.(CoalaCallback)
 				go callback(nil, errors.New("timed out"))
 			}
-			senderPool.Delete(message.GetMessageIDString() + message.Recipient.String())
+			senderPool.Remove(im)
 			continue
 		}
 

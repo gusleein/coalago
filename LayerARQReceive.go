@@ -64,7 +64,7 @@ func (l layerARQ) process(incomingMessage *m.CoAPMessage, blockOptionCode m.Opti
 	switch incomingMessage.Type {
 	case m.ACK:
 		sendState := l.txStates.Get(incomingMessage.GetTokenString())
-		l.messagePool.Delete(incomingMessage.GetMessageIDString() + incomingMessage.Sender.String())
+		l.messagePool.RemoveByKey(incomingMessage.GetMessageIDString() + incomingMessage.Sender.String())
 
 		if sendState != nil {
 			if block.BlockNumber >= sendState.window.GetOffset()+windowSize && block.BlockNumber < sendState.window.GetOffset() {
@@ -148,8 +148,8 @@ func (l layerARQ) process(incomingMessage *m.CoAPMessage, blockOptionCode m.Opti
 }
 
 func (l layerARQ) emptyACKHandler(incomingMessage *m.CoAPMessage) bool {
-	l.coala.senderPool.Delete(incomingMessage.GetMessageIDString() + incomingMessage.Sender.String())
-	l.messagePool.Delete(incomingMessage.GetMessageIDString() + incomingMessage.Sender.String())
+	l.coala.senderPool.RemoveByKey(incomingMessage.GetMessageIDString() + incomingMessage.Sender.String())
+	l.messagePool.RemoveByKey(incomingMessage.GetMessageIDString() + incomingMessage.Sender.String())
 	l.emptyAcks.Store(incomingMessage.GetTokenString(), incomingMessage.MessageID)
 
 	receiveState := l.rxStates.Get(incomingMessage.GetTokenString())
