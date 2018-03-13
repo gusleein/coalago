@@ -22,7 +22,7 @@ func (coala *Coala) Send(message *m.CoAPMessage, address net.Addr) (response *m.
 			wg.Done()
 		}
 	}
-	coala.Metrics.SentMessages.Inc()
+
 	coala.sendMessage(message, address, callback, coala.senderPool, coala.reciverPool)
 	wg.Wait()
 
@@ -60,6 +60,10 @@ func sendToSocket(coala *Coala, message *m.CoAPMessage, address net.Addr) error 
 
 	// fmt.Printf("\n|-----> %v\t%v\n\n", address, message.ToReadableString())
 	_, err = coala.connection.WriteTo(data, address)
+	if err != nil {
+		coala.Metrics.SentMessageError.Inc()
+	}
+	coala.Metrics.SentMessages.Inc()
 	return err
 }
 

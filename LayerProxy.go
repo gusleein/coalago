@@ -30,6 +30,7 @@ func (layer *ProxyLayer) OnReceive(coala *Coala, message *m.CoAPMessage) bool {
 		coala.GetAllPools().ProxySessions.Store(string(proxyMessage.Token)+address.String(), message.Sender)
 		coala.GetAllPools().ProxySessions.Store(string(proxyMessage.Token)+message.Sender.String(), address)
 
+		coala.Metrics.ProxiedMessages.Inc()
 		sendToSocket(coala, proxyMessage, address)
 
 		return false

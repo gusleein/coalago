@@ -8,6 +8,7 @@ type MetricsList struct {
 	Retransmissions      metric
 	SuccessfulHandshakes metric
 	Sessions             metric
+	ProxiedMessages      metric
 	Observers            metric
 	ObservingTime        metric
 }

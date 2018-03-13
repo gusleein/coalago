@@ -33,6 +33,7 @@ func messagePoolSender(coala *Coala, senderPool *queue.Queue, receiverPool *sync
 		message.Attempts++
 
 		if message.Attempts > 3 {
+			coala.Metrics.ExpiredMessages.Inc()
 			ci, _ := receiverPool.Load(message.GetMessageIDString() + message.Recipient.String())
 			if ci != nil {
 				receiverPool.Delete(message.GetMessageIDString() + message.Recipient.String())
@@ -44,6 +45,9 @@ func messagePoolSender(coala *Coala, senderPool *queue.Queue, receiverPool *sync
 		}
 
 		message.LastSent = time.Now()
+		if message.Attempts > 1 {
+			coala.Metrics.Retransmissions.Inc()
+		}
 		sendToSocket(coala, message, message.Recipient)
 	}
 }
