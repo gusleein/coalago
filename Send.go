@@ -22,7 +22,7 @@ func (coala *Coala) Send(message *m.CoAPMessage, address net.Addr) (response *m.
 			wg.Done()
 		}
 	}
-
+	coala.Metrics.SentMessages.Inc()
 	coala.sendMessage(message, address, callback, coala.senderPool, coala.reciverPool)
 	wg.Wait()
 
