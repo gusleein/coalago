@@ -15,25 +15,17 @@ func (layer *SecurityLayer) OnReceive(coala *Coala, message *m.CoAPMessage) bool
 		currentSession := coala.GetSessionForAddress(message.Sender)
 
 		if currentSession == nil || currentSession.AEAD == nil {
-			log.Error("Cannot decrypt Message: NO session", message.Sender, message.ToReadableString())
 			responseMessage := m.NewCoAPMessageId(m.ACK, m.CoapCodeUnauthorized, message.MessageID)
 			responseMessage.AddOption(m.OptionSessionNotFound, 1)
-			// if _, err := coala.Send(responseMessage, message.Sender); err != nil {
-			// 	log.Error(err, message.ToReadableString())
-			// }
-			sendToSocket(coala, message, message.Sender)
+			sendToSocket(coala, responseMessage, message.Sender)
 			return false
 		}
 
 		// Decrypt message payload
 		err := Decrypt(message, currentSession.AEAD)
 		if err != nil {
-			log.Error("Cannot decrypt Message, error occured: ", err, message.ToReadableString())
 			responseMessage := m.NewCoAPMessageId(m.ACK, m.CoapCodeUnauthorized, message.MessageID)
 			responseMessage.AddOption(m.OptionSessionExpired, 1)
-			// if _, err := coala.Send(responseMessage, message.Sender); err != nil {
-			// 	log.Error("SecurityLayer", "OnReceive", err, message)
-			// }
 			sendToSocket(coala, responseMessage, message.Sender)
 
 			return false
