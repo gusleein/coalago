@@ -20,6 +20,7 @@ func (layer *HandshakeLayer) OnReceive(coala *Coala, message *m.CoAPMessage) boo
 
 	value := option.IntValue()
 	if value != m.CoapHandshakeTypeClientSignature && value != m.CoapHandshakeTypeClientHello {
+		coala.GetMetrics().SuccessfulHandshakes.Inc()
 		return true
 	}
 
@@ -40,6 +41,7 @@ func (layer *HandshakeLayer) OnReceive(coala *Coala, message *m.CoAPMessage) boo
 			}
 		}
 	}
+	coala.GetMetrics().SuccessfulHandshakes.Inc()
 
 	peerSession.UpdatedAt = int(time.Now().Unix())
 	coala.SetSessionForAddress(peerSession, message.Sender)
