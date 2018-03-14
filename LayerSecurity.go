@@ -79,8 +79,6 @@ func (layer *SecurityLayer) OnSend(coala *Coala, message *m.CoAPMessage, address
 		return false, err
 	}
 
-	coala.GetMetrics().SuccessfulHandshakes.Inc()
-
 	// Encrypt message payload
 	err = Encrypt(message, address, currentSession.AEAD)
 	if err != nil {

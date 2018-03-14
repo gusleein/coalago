@@ -41,7 +41,11 @@ func handshake(coala *Coala, message *m.CoAPMessage, session *session.SecuredSes
 		return err
 	}
 
-	return session.Verify(signature)
+	err = session.Verify(signature)
+	if err == nil {
+		coala.GetMetrics().SuccessfulHandshakes.Inc()
+	}
+	return err
 }
 
 func outgoingHandshake(coala common.SenderIface, origMessage *m.CoAPMessage, myPublicKey []byte, address net.Addr) ([]byte, error) {
