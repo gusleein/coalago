@@ -30,6 +30,9 @@ func (layer *RequestLayer) OnReceive(coala *Coala, message *m.CoAPMessage) bool 
 		}
 
 		if handlerResult := resource.Handler(message); handlerResult != nil {
+			if message.Type == m.NON {
+				return false
+			}
 			return returnResultFromResource(coala, message, handlerResult)
 		}
 
