@@ -35,11 +35,6 @@ type CoAPMessage struct {
 
 	IsProxies bool
 
-	KeysOpts struct {
-		IsStaticKey bool
-		ExpectedKey []byte
-	}
-
 	PublicKey []byte
 
 	Callback func(*CoAPMessage, error)

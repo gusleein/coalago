@@ -12,7 +12,7 @@ import (
 )
 
 const (
-	ERR_KEYS_NOT_MATCH = "Expected and current encryption keys do not match"
+	ERR_KEYS_NOT_MATCH = "Expected and current public keys do not match"
 )
 
 func handshake(coala *Coala, message *m.CoAPMessage, session *session.SecuredSession, address net.Addr) error {
@@ -77,7 +77,7 @@ func outgoingHandshake(coala common.SenderIface, origMessage *m.CoAPMessage, myP
 		}
 	}
 
-	if origMessage.KeysOpts.IsStaticKey && !bytes.Equal(peerPublicKey, origMessage.KeysOpts.ExpectedKey) {
+	if len(origMessage.PublicKey) > 1 && !bytes.Equal(peerPublicKey, origMessage.PublicKey) {
 		return nil, errors.New(ERR_KEYS_NOT_MATCH)
 	}
 	origMessage.PublicKey = peerPublicKey
