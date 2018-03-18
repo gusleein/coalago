@@ -30,6 +30,8 @@ func (layer *SecurityLayer) OnReceive(coala *Coala, message *m.CoAPMessage) bool
 
 			return false
 		}
+
+		message.PeerPublicKey = currentSession.PeerPublicKey
 	}
 
 	/* Receive Errors */

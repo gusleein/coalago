@@ -35,7 +35,8 @@ type CoAPMessage struct {
 
 	IsProxies bool
 
-	PublicKey []byte
+	PublicKey     []byte
+	PeerPublicKey []byte
 
 	Callback func(*CoAPMessage, error)
 }
