@@ -49,9 +49,6 @@ func (layer *ProxyLayer) OnReceive(coala *Coala, message *m.CoAPMessage) bool {
 
 func (layer *ProxyLayer) OnSend(coala *Coala, message *m.CoAPMessage, address net.Addr) (bool, error) {
 	if proxyURI := message.GetOptionProxyURIasString(); proxyURI != "" {
-		message.RemoveOptions(m.OptionURIPath)
-		message.RemoveOptions(m.OptionURIQuery)
-
 		coala.GetAllPools().SendMessages.Set(message.GetTokenString()+address.String(), message)
 	}
 
