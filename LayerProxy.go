@@ -2,6 +2,7 @@ package coalago
 
 import (
 	"net"
+	"net/url"
 	"strings"
 
 	m "github.com/coalalib/coalago/message"
@@ -98,7 +99,11 @@ func makeMessageFromProxyToRecepient(message *m.CoAPMessage) (proxyMessage *m.Co
 	message.RemoveOptions(m.OptionURIPath)
 	proxyURI := message.GetOptionProxyURIasString()
 
-	address, err = net.ResolveUDPAddr("udp4", proxyURI)
+	parsedURL, err := url.Parse(proxyURI)
+	if err != nil {
+		log.Error("Error of parsing the ProxyURI:", err)
+	}
+	address, err = net.ResolveUDPAddr("udp4", parsedURL.Host)
 	if err != nil {
 		log.Error("Error of parsing the ProxyURI:", err)
 		return
