@@ -2,7 +2,6 @@ package coalago
 
 import (
 	"net"
-	"net/url"
 	"strings"
 
 	m "github.com/coalalib/coalago/message"
@@ -99,19 +98,13 @@ func makeMessageFromProxyToRecepient(message *m.CoAPMessage) (proxyMessage *m.Co
 	message.RemoveOptions(m.OptionURIPath)
 	proxyURI := message.GetOptionProxyURIasString()
 
-	parsedURL, err := url.Parse(proxyURI)
+	address, err = net.ResolveUDPAddr("udp4", proxyURI)
 	if err != nil {
 		log.Error("Error of parsing the ProxyURI:", err)
 		return
 	}
 
 	proxyMessage = message.Clone(true)
-	proxyMessage.SetURIPath(parsedURL.Path)
-	queries := m.ParseQuery(parsedURL.RawQuery)
-
-	for k, v := range queries {
-		proxyMessage.SetURIQuery(k, v[0])
-	}
 
 	deleteProxyOptions(proxyMessage)
 	proxyMessage.IsProxies = true
@@ -120,7 +113,6 @@ func makeMessageFromProxyToRecepient(message *m.CoAPMessage) (proxyMessage *m.Co
 		message.AddOptions([]*m.CoAPMessageOption{observeOpt})
 	}
 
-	address, err = net.ResolveUDPAddr("udp", parsedURL.Host)
 	return
 }
 
