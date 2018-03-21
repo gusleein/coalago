@@ -65,6 +65,78 @@ const (
 	CoapCodeProxyingNotSupported     CoapCode = 165
 )
 
+func (code CoapCode) String() string {
+	switch code {
+	case GET:
+		return "GET"
+	case POST:
+		return "POST"
+	case PUT:
+		return "PUT"
+	case DELETE:
+		return "DELETE"
+	case CoapCodeEmpty:
+		return "0 Empty"
+	case CoapCodeCreated:
+		return "201 Created"
+	case CoapCodeDeleted:
+		return "202 Deleted"
+	case CoapCodeValid:
+		return "203 Valid"
+	case CoapCodeChanged:
+		return "204 Changed"
+	case CoapCodeContent:
+		return "205 Content"
+	case CoapCodeContinue:
+		return "231 Continue"
+	case CoapCodeBadRequest:
+		return "400 Bad Request"
+	case CoapCodeUnauthorized:
+		return "401 Unauthorized"
+	case CoapCodeBadOption:
+		return "402 Bad Option"
+	case CoapCodeForbidden:
+		return "403 Forbidden"
+	case CoapCodeNotFound:
+		return "404 Not Found"
+	case CoapCodeMethodNotAllowed:
+		return "405 Method Not Allowed"
+	case CoapCodeNotAcceptable:
+		return "406 Not Acceptable"
+	case CoapCodePreconditionFailed:
+		return "412 Precondition Failed"
+	case CoapCodeRequestEntityTooLarge:
+		return "413 Request Entity Too Large"
+	case CoapCodeUnsupportedContentFormat:
+		return "415 Unsupported Content Format"
+	case CoapCodeInternalServerError:
+		return "500 Internal Server Error"
+	case CoapCodeNotImplemented:
+		return "501 Not Implemented"
+	case CoapCodeBadGateway:
+		return "502 Bad Gateway"
+	case CoapCodeServiceUnavailable:
+		return "503 Service Unavailable"
+	case CoapCodeGatewayTimeout:
+		return "504 Gateway Timeout"
+	case CoapCodeProxyingNotSupported:
+		return "505 Proxying Not Supported"
+	default:
+		return "Unknown"
+	}
+}
+
+func (c CoapCode) Group() string {
+	if c > 64 && c < 96 {
+		return "2.xx"
+	} else if c > 127 && c < 144 {
+		return "4.xx"
+	} else if c > 159 && c < 166 {
+		return "5.xx"
+	}
+	return "others"
+}
+
 func (c *CoapCode) IsRegisteredMethod() bool {
 	return (*c > 0 && *c <= 4)
 }

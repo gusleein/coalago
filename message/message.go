@@ -454,7 +454,7 @@ func (m *CoAPMessage) ToReadableString() string {
 	return fmt.Sprintf(
 		"%v\t%v\t%v\t%v\t%v\t[%v]",
 		typeString(m.Type),
-		coapCodeToString(m.Code),
+		m.Code.String(),
 		m.GetSchemeString(),
 		m.GetTokenString(),
 		m.MessageID,
