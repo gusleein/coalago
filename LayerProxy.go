@@ -96,7 +96,6 @@ func isValideProxyMode(coala *Coala, message *m.CoAPMessage) bool {
 
 // Prepares a message to send to the final recipient
 func makeMessageFromProxyToRecepient(message *m.CoAPMessage) (proxyMessage *m.CoAPMessage, address net.Addr, err error) {
-	message.RemoveOptions(m.OptionURIPath)
 	proxyURI := message.GetOptionProxyURIasString()
 
 	parsedURL, err := url.Parse(proxyURI)
