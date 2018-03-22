@@ -12,7 +12,6 @@ import (
 	"github.com/coalalib/coalago/network"
 	"github.com/coalalib/coalago/network/session"
 	"github.com/coalalib/coalago/pools"
-	"github.com/coalalib/coalago/queue"
 	"github.com/coalalib/coalago/resource"
 	"github.com/op/go-logging"
 )
@@ -40,7 +39,6 @@ type Coala struct {
 
 	Pools *pools.AllPools
 
-	senderPool  *queue.Queue
 	reciverPool *sync.Map
 
 	privatekey []byte
@@ -54,13 +52,7 @@ func NewListen(port int) *Coala {
 	coala := new(Coala)
 	coala.Pools = pools.NewPools()
 
-	coala.senderPool = queue.New()
 	coala.reciverPool = &sync.Map{}
-
-	for i := 0; i < 1; i++ {
-		go messagePoolSender(coala, coala.senderPool, coala.reciverPool)
-
-	}
 
 	coala.dataChannel = &DataChannel{
 		Handshake:   make(chan *m.CoAPMessage),

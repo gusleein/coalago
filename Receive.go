@@ -38,11 +38,9 @@ func (coala *Coala) listenConnection() {
 
 func rawBufferHandler(coala *Coala, message *m.CoAPMessage, senderAddr net.Addr) {
 	message.Sender = senderAddr
-	// fmt.Printf("\n|<----- %s\t%s\n\n", senderAddr, message.ToReadableString())
+	// fmt.Printf("\n|<----- %s\t%s\tPAYLOAD: %s\n\n", senderAddr, message.ToReadableString(), "message.Payload.String()")
 
 	if coala.receiveLayerStack.OnReceive(message) {
-		coala.senderPool.RemoveByKey(message.GetMessageIDString() + senderAddr.String())
-
 		ic, _ := coala.reciverPool.Load(message.GetMessageIDString() + message.Sender.String())
 		if ic != nil {
 			coala.reciverPool.Delete(message.GetMessageIDString() + message.Sender.String())

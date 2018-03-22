@@ -1,55 +1,76 @@
 package coalago
 
 import (
+	"errors"
 	"net"
-	"sync"
+	"time"
 
 	m "github.com/coalalib/coalago/message"
 	"github.com/coalalib/coalago/network"
-	"github.com/coalalib/coalago/queue"
 )
 
 func (coala *Coala) Send(message *m.CoAPMessage, address net.Addr) (response *m.CoAPMessage, err error) {
-	var (
-		callback CoalaCallback
-		wg       sync.WaitGroup
-	)
-	if message.Type == m.CON {
-		wg.Add(1)
-		callback = func(r *m.CoAPMessage, e error) {
-			response = r
-			err = e
-			wg.Done()
-		}
-	}
-
-	coala.sendMessage(message, address, callback, coala.senderPool, coala.reciverPool)
-	wg.Wait()
-
-	return
+	return coala.sendMessage(message, address)
 }
 
-func (coala *Coala) sendMessage(message *m.CoAPMessage, address net.Addr, callback CoalaCallback, messagePool *queue.Queue, callbackPool *sync.Map) {
+func (coala *Coala) sendMessage(message *m.CoAPMessage, address net.Addr) (response *m.CoAPMessage, err error) {
+	var (
+		callback CoalaCallback
+		errChan  = make(chan error)
+	)
+	if message.Type == m.CON {
+		callback = func(r *m.CoAPMessage, e error) {
+			response = r
+			errChan <- err
+		}
+	}
 	address = network.NewAddress(address.String())
 	message.Recipient = address
 
 	if callback != nil {
-		message.Callback = callback
-		callbackPool.Store(message.GetMessageIDString()+message.Recipient.String(), callback)
+		coala.reciverPool.Store(message.GetMessageIDString()+message.Recipient.String(), callback)
 	}
 
 	shouldContinue, err := coala.sendLayerStack.OnSend(message, address)
 	if err != nil {
-		callbackPool.Delete(message.GetMessageIDString() + message.Recipient.String())
-		callback(nil, err)
-		return
+		coala.reciverPool.Delete(message.GetMessageIDString() + message.Recipient.String())
+		return nil, err
 	}
 	if !shouldContinue {
-		return
+		return nil, nil
 	}
 
-	messagePool.Push(message.GetMessageIDString()+address.String(), message)
-	return
+	message.LastSent = time.Now()
+	if message.Attempts > 1 {
+		coala.Metrics.Retransmissions.Inc()
+	}
+
+LabelRetransmit:
+	message.Attempts++
+	sendToSocket(coala, message, message.Recipient)
+
+	if message.Type == m.ACK {
+		return nil, nil
+	}
+
+LabelRepeatWaiting:
+	select {
+	case <-time.Tick(time.Second * 3):
+		if time.Since(message.LastSent) < 3 {
+			goto LabelRepeatWaiting
+		}
+
+		if message.Attempts >= 3 {
+			coala.reciverPool.Delete(message.GetMessageIDString() + message.Recipient.String())
+			coala.Metrics.ExpiredMessages.Inc()
+			err = errors.New("Max attempts")
+			return nil, err
+		}
+
+		goto LabelRetransmit
+	case err = <-errChan:
+		return response, err
+	}
 }
 
 func sendToSocket(coala *Coala, message *m.CoAPMessage, address net.Addr) error {
@@ -58,7 +79,7 @@ func sendToSocket(coala *Coala, message *m.CoAPMessage, address net.Addr) error 
 		return err
 	}
 
-	// fmt.Printf("\n|-----> %v\t%v\n\n", address, message.ToReadableString())
+	// fmt.Printf("\n|-----> %v\t%v\tPAYLOAD: %v\n\n", address, message.ToReadableString(), "message.Payload.String()")
 	_, err = coala.connection.WriteTo(data, address)
 	if err != nil {
 		coala.Metrics.SentMessageError.Inc()
