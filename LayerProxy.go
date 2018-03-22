@@ -27,8 +27,8 @@ func (layer *ProxyLayer) OnReceive(coala *Coala, message *m.CoAPMessage) bool {
 			return false
 		}
 
-		coala.GetAllPools().ProxySessions.Store(string(proxyMessage.Token)+address.String(), message.Sender)
-		coala.GetAllPools().ProxySessions.Store(string(proxyMessage.Token)+message.Sender.String(), address)
+		coala.GetAllPools().ProxyPool.Set(string(proxyMessage.Token)+address.String(), message.Sender)
+		coala.GetAllPools().ProxyPool.Set(string(proxyMessage.Token)+message.Sender.String(), address)
 
 		coala.Metrics.ProxiedMessages.Inc()
 		sendToSocket(coala, proxyMessage, address)
@@ -36,13 +36,13 @@ func (layer *ProxyLayer) OnReceive(coala *Coala, message *m.CoAPMessage) bool {
 		return false
 	}
 
-	addrSender, ok := coala.GetAllPools().ProxySessions.Load(string(message.Token) + message.Sender.String())
-	if !ok {
+	addrSender := coala.GetAllPools().ProxyPool.Get(string(message.Token) + message.Sender.String())
+	if addrSender == nil {
 		return true
 	}
 
 	message.IsProxies = true
-	sendToSocket(coala, message, addrSender.(net.Addr))
+	sendToSocket(coala, message, addrSender)
 
 	return false
 }
@@ -60,8 +60,8 @@ func (layer *ProxyLayer) OnSend(coala *Coala, message *m.CoAPMessage, address ne
 		return true, nil
 	}
 
-	_, ok := coala.GetAllPools().ProxySessions.Load(message.GetProxyKeySender(address))
-	if ok {
+	addr := coala.GetAllPools().ProxyPool.Get(message.GetProxyKeySender(address))
+	if addr != nil {
 		return false, nil
 	}
 

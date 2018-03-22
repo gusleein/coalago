@@ -1,7 +1,6 @@
 package pools
 
 import (
-	"sync"
 	"time"
 
 	"github.com/coalalib/coalago/pools/StoragePools"
@@ -10,6 +9,7 @@ import (
 const (
 	SESSIONS_POOL_NAME       = "sessions"
 	SENDEDMESSAGES_POOL_NAME = "sendmessages"
+	PROXY_POOL_NAME          = "proxy"
 )
 
 var (
@@ -17,6 +17,7 @@ var (
 
 	SESSIONS_POOL_EXPIRATION  = time.Second * 60 * 5
 	SENDEDMESSAGES_EXPIRATION = time.Second * 4
+	PROXY_EXPIRATION          = time.Second * 4
 
 	Pools AllPools
 )
@@ -25,6 +26,7 @@ var (
 	ListPools = map[string]time.Duration{
 		SESSIONS_POOL_NAME:       SESSIONS_POOL_EXPIRATION,
 		SENDEDMESSAGES_POOL_NAME: SENDEDMESSAGES_EXPIRATION,
+		PROXY_POOL_NAME:          PROXY_EXPIRATION,
 	}
 )
 
@@ -32,7 +34,7 @@ type AllPools struct {
 	storage               *StoragePools.Storage
 	Sessions              sessionsPool
 	ExpectedHandshakePool *ExpectedHandshakerPool
-	ProxySessions         sync.Map
+	ProxyPool             proxyPool
 	SendMessages          sendedMessagePool
 }
 
@@ -43,6 +45,7 @@ func NewPools() *AllPools {
 		Sessions:              sessionsPool{storage: s},
 		ExpectedHandshakePool: newExpectedHandshakePool(),
 		SendMessages:          sendedMessagePool{storage: s},
+		ProxyPool:             proxyPool{storage: s},
 	}
 
 	for k, v := range ListPools {

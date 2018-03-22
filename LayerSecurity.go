@@ -76,7 +76,7 @@ func (layer *SecurityLayer) OnSend(coala *Coala, message *m.CoAPMessage, address
 	// Perform the Handshake (if necessary)
 	err := handshake(coala, message, currentSession, address)
 	if err != nil {
-		log.Error(err, message.ToReadableString(), message.Sender.String(), currentSession)
+		log.Error(err, message.ToReadableString(), currentSession)
 		coala.GetAllPools().ExpectedHandshakePool.Delete(key)
 		return false, err
 	}
