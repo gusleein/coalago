@@ -5,8 +5,6 @@ import (
 	"errors"
 	"net"
 
-	"github.com/coalalib/coalago/common"
-
 	m "github.com/coalalib/coalago/message"
 	"github.com/coalalib/coalago/network/session"
 )
@@ -44,7 +42,7 @@ func handshake(coala *Coala, message *m.CoAPMessage, session *session.SecuredSes
 	return session.Verify(signature)
 }
 
-func outgoingHandshake(coala common.SenderIface, origMessage *m.CoAPMessage, myPublicKey []byte, address net.Addr) ([]byte, error) {
+func outgoingHandshake(coala *Coala, origMessage *m.CoAPMessage, myPublicKey []byte, address net.Addr) ([]byte, error) {
 	message := m.NewCoAPMessage(m.CON, m.GET)
 	message.AddOption(m.OptionHandshakeType, m.CoapHandshakeTypeClientHello)
 	message.Payload = m.NewBytesPayload(myPublicKey)
@@ -85,7 +83,7 @@ func outgoingHandshake(coala common.SenderIface, origMessage *m.CoAPMessage, myP
 	return peerPublicKey, nil
 }
 
-func incomingHandshake(coala common.SenderIface, publicKey []byte, origMessage *m.CoAPMessage) error {
+func incomingHandshake(coala *Coala, publicKey []byte, origMessage *m.CoAPMessage) error {
 	message := m.NewCoAPMessageId(m.ACK, m.CoapCodeContent, origMessage.MessageID)
 	message.AddOption(m.OptionHandshakeType, m.CoapHandshakeTypePeerHello)
 	message.Payload = m.NewBytesPayload(publicKey)
