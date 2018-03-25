@@ -8,7 +8,6 @@ import (
 	"time"
 
 	m "github.com/coalalib/coalago/message"
-	"github.com/coalalib/coalago/metrics"
 	"github.com/coalalib/coalago/network"
 	"github.com/coalalib/coalago/network/session"
 	"github.com/coalalib/coalago/pools"
@@ -35,7 +34,7 @@ type Coala struct {
 
 	receiveLayerStack *LayersStack
 	sendLayerStack    *LayersStack
-	Metrics           *metrics.MetricsList
+	Metrics           *MetricsList
 
 	Pools *pools.AllPools
 
@@ -63,7 +62,7 @@ func NewListen(port int) *Coala {
 	coala.proxyEnabled = false
 
 	coala.receiveLayerStack, coala.sendLayerStack = NewLayersStacks(coala)
-	coala.Metrics = new(metrics.MetricsList)
+	coala.Metrics = NewMetricList(coala)
 
 	// Init Resource Discovery
 	coala.initResourceDiscovery()
@@ -198,7 +197,7 @@ func (coala *Coala) GetSessionForAddress(udpAddr net.Addr) *session.SecuredSessi
 			log.Error(err)
 			return nil
 		}
-		coala.Metrics.Sessions.Inc()
+		coala.Metrics.SessionsRate.Inc()
 		coala.SetSessionForAddress(securedSession, udpAddr)
 	}
 
@@ -288,6 +287,6 @@ func (coala *Coala) GetPrivateKey() []byte {
 	return coala.privatekey
 }
 
-func (coala *Coala) GetMetrics() *metrics.MetricsList {
+func (coala *Coala) GetMetrics() *MetricsList {
 	return coala.Metrics
 }
