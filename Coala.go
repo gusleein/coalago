@@ -9,10 +9,10 @@ import (
 
 	m "github.com/coalalib/coalago/message"
 	"github.com/coalalib/coalago/network"
-	"github.com/coalalib/coalago/network/session"
 	"github.com/coalalib/coalago/pools"
 	"github.com/coalalib/coalago/resource"
 	"github.com/op/go-logging"
+	cache "github.com/patrickmn/go-cache"
 )
 
 const (
@@ -36,7 +36,9 @@ type Coala struct {
 	sendLayerStack    *LayersStack
 	Metrics           *MetricsList
 
-	Pools *pools.AllPools
+	Pools         *pools.AllPools
+	Sessions      *cache.Cache
+	ProxySessions *cache.Cache
 
 	reciverPool *sync.Map
 
@@ -44,13 +46,12 @@ type Coala struct {
 }
 
 func NewListen(port int) *Coala {
-	log.Info("Start Listen Coala on port:", port)
-
 	var err error
 
 	coala := new(Coala)
 	coala.Pools = pools.NewPools()
-
+	coala.Sessions = cache.New(SESSIONS_POOL_EXPIRATION, time.Second)
+	coala.ProxySessions = cache.New(SESSIONS_POOL_EXPIRATION, time.Second)
 	coala.reciverPool = &sync.Map{}
 
 	coala.dataChannel = &DataChannel{
@@ -176,7 +177,7 @@ func (coala *Coala) DisableProxy() {
 }
 
 func (coala *Coala) SessionCount() int {
-	return coala.Pools.Sessions.Count()
+	return coala.Sessions.ItemCount()
 }
 
 func (coala *Coala) Stop() {
@@ -186,27 +187,6 @@ func (coala *Coala) Stop() {
 	if coala.connection != nil {
 		coala.connection.Close()
 	}
-}
-
-func (coala *Coala) GetSessionForAddress(udpAddr net.Addr) *session.SecuredSession {
-	securedSession := coala.Pools.Sessions.Get(udpAddr.String())
-	var err error
-	if securedSession == nil || securedSession.Curve == nil {
-		securedSession, err = session.NewSecuredSession(coala.GetPrivateKey())
-		if err != nil {
-			log.Error(err)
-			return nil
-		}
-		coala.Metrics.SessionsRate.Inc()
-		coala.SetSessionForAddress(securedSession, udpAddr)
-	}
-
-	return securedSession
-}
-
-func (coala *Coala) SetSessionForAddress(securedSession *session.SecuredSession, udpAddr net.Addr) {
-	coala.Pools.Sessions.Set(udpAddr.String(), coala.privatekey, securedSession)
-	coala.Metrics.Sessions.Set(int64(coala.Pools.Sessions.Count()))
 }
 
 func (coala *Coala) initResourceDiscovery() {

@@ -7,7 +7,6 @@ import (
 )
 
 func (s *Storage) AddPool(poolName string, expiration, interval time.Duration) {
-	log.Info("Add pool: ", poolName, expiration, interval)
 	cacheObject := cache.New(expiration, interval)
 	s.setPool(poolName, cacheObject)
 }

@@ -71,7 +71,7 @@ func (s sessionMetric) Dec() {
 }
 
 func (s sessionMetric) Count() int64 {
-	return int64(s.c.Pools.Sessions.Count())
+	return int64(s.c.Sessions.ItemCount())
 }
 
 func (s sessionMetric) Set(c int64) {

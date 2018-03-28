@@ -18,12 +18,12 @@ type LayersStack struct {
 
 func NewLayersStacks(coala *Coala) (receiveStack *LayersStack, sendStack *LayersStack) {
 	arqLayer := newLayerARQ(coala)
+	secLayer := newSecurityLayer()
 
 	stackReceive := [...]Layer{
 		// &ResponseLayer{},
 		&ProxyLayer{},
-		&HandshakeLayer{},
-		&SecurityLayer{},
+		secLayer,
 		arqLayer,
 		&ResourceDiscoveryLayer{},
 		&RequestLayer{},
@@ -32,7 +32,7 @@ func NewLayersStacks(coala *Coala) (receiveStack *LayersStack, sendStack *Layers
 	stackSend := [...]Layer{
 		&ProxyLayer{},
 		arqLayer,
-		&SecurityLayer{},
+		secLayer,
 
 		//&ResponseLayer{},
 	}
