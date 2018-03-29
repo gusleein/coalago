@@ -51,16 +51,8 @@ func outgoingHandshake(coala *Coala, origMessage *m.CoAPMessage, myPublicKey []b
 
 	var peerPublicKey []byte
 
-	key := message.GetMessageIDString() + message.GetTokenString() + address.String()
-
-	coala.GetAllPools().ExpectedHandshakePool.NewElement(key)
-	if err := coala.GetAllPools().ExpectedHandshakePool.Set(key, message); err != nil {
-		log.Error("Error adding message to the handshake pool. Error: ", err, message.ToReadableString())
-	}
-
 	respMsg, err := coala.Send(message, address)
 	if err != nil {
-		coala.GetAllPools().ExpectedHandshakePool.Delete(key)
 		log.Error("Cannot send HELLO", err)
 		return nil, err
 	}

@@ -29,15 +29,10 @@ func RandomMessageID() uint16 {
 	return uint16(rand.Intn(65535))
 }
 
-// GenerateToken generates a random token by a given length
-var genChars = []rune("abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ1234567890")
-
 func GenerateToken(l int) []byte {
-	token := make([]rune, l)
-	for i := range token {
-		token[i] = genChars[rand.Intn(len(genChars))]
-	}
-	return []byte(string(token))
+	token := make([]byte, l)
+	rand.Read(token)
+	return token
 }
 
 // type to sort the coap options list (which is mandatory) prior to transmission

@@ -130,16 +130,6 @@ func (layer *SecurityLayer) OnSend(coala *Coala, message *m.CoAPMessage, address
 		addressSession = address.String()
 	}
 
-	key := message.GetMessageIDString() + message.GetTokenString() + addressSession
-
-	if !coala.GetAllPools().ExpectedHandshakePool.IsEmpty(key) {
-		if err := coala.GetAllPools().ExpectedHandshakePool.Set(key, message); err != nil {
-			log.Error("Error adding message to the handshake pool. Error: ", err, message.ToReadableString())
-			return false, err
-		}
-
-	}
-
 	currentSession := layer.GetSessionForAddress(coala, addressSession)
 
 	if currentSession == nil {
@@ -152,7 +142,6 @@ func (layer *SecurityLayer) OnSend(coala *Coala, message *m.CoAPMessage, address
 	err = handshake(coala, message, currentSession, address)
 	if err != nil {
 		log.Error(err, message.ToReadableString(), currentSession)
-		coala.GetAllPools().ExpectedHandshakePool.Delete(key)
 		return false, err
 	}
 
@@ -160,16 +149,7 @@ func (layer *SecurityLayer) OnSend(coala *Coala, message *m.CoAPMessage, address
 	err = Encrypt(message, address, currentSession.AEAD)
 	if err != nil {
 		log.Error(err, message.ToReadableString(), message.Sender.String(), currentSession)
-		coala.GetAllPools().ExpectedHandshakePool.Delete(key)
 		return false, err
-	}
-
-	for {
-		msg := coala.GetAllPools().ExpectedHandshakePool.Pull(key)
-		if msg == nil {
-			coala.GetAllPools().ExpectedHandshakePool.Delete(key)
-			break
-		}
 	}
 
 	return true, nil

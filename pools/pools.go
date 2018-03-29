@@ -29,19 +29,17 @@ var (
 )
 
 type AllPools struct {
-	storage               *StoragePools.Storage
-	ExpectedHandshakePool *ExpectedHandshakerPool
-	ProxyPool             proxyPool
-	SendMessages          sendedMessagePool
+	storage      *StoragePools.Storage
+	ProxyPool    proxyPool
+	SendMessages sendedMessagePool
 }
 
 func NewPools() *AllPools {
 	s := StoragePools.NewStoragePool()
 	a := &AllPools{
-		storage:               s,
-		ExpectedHandshakePool: newExpectedHandshakePool(),
-		SendMessages:          sendedMessagePool{storage: s},
-		ProxyPool:             proxyPool{storage: s},
+		storage:      s,
+		SendMessages: sendedMessagePool{storage: s},
+		ProxyPool:    proxyPool{storage: s},
 	}
 
 	for k, v := range ListPools {

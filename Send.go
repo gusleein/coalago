@@ -55,7 +55,7 @@ LabelRetransmit:
 
 LabelRepeatWaiting:
 	select {
-	case <-time.Tick(time.Second * 3):
+	case <-time.After(time.Second * 3):
 		if time.Since(message.LastSent) < 3 {
 			goto LabelRepeatWaiting
 		}
