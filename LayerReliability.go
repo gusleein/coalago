@@ -16,7 +16,7 @@ func (layer *ReliabilityLayer) OnReceive(coala *Coala, message *m.CoAPMessage) b
 
 	key := fmt.Sprintf("%s%s%s", message.GetTokenString(), message.GetMessageIDString(), message.Sender.String())
 
-	if _, ok := coala.InProcessingsRequests.Get(key); !ok {
+	if _, ok := coala.InProcessingsRequests.Get(key); ok {
 		return false
 	}
 
