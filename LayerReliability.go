@@ -1,6 +1,7 @@
 package coalago
 
 import (
+	"fmt"
 	"net"
 
 	m "github.com/coalalib/coalago/message"
@@ -13,9 +14,16 @@ func (layer *ReliabilityLayer) OnReceive(coala *Coala, message *m.CoAPMessage) b
 		return true
 	}
 
+	key := fmt.Sprintf("%s%s%s", message.GetTokenString(), message.GetMessageIDString(), message.Sender.String())
+
+	if _, ok := coala.InProcessingsRequests.Get(key); !ok {
+		return false
+	}
+
+	coala.InProcessingsRequests.SetDefault(key, struct{}{})
 	return true
 }
 
-func (layer *ReliabilityLayer) OnSend(coala *Coala, message *m.CoAPMessage, address net.Addr) bool {
-	return true
+func (layer *ReliabilityLayer) OnSend(coala *Coala, message *m.CoAPMessage, address net.Addr) (bool, error) {
+	return true, nil
 }

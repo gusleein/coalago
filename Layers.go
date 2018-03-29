@@ -21,10 +21,10 @@ func NewLayersStacks(coala *Coala) (receiveStack *LayersStack, sendStack *Layers
 	secLayer := newSecurityLayer()
 
 	stackReceive := [...]Layer{
-		// &ResponseLayer{},
 		&ProxyLayer{},
 		secLayer,
 		arqLayer,
+		&ReliabilityLayer{},
 		&ResourceDiscoveryLayer{},
 		&RequestLayer{},
 	}

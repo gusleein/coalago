@@ -36,9 +36,10 @@ type Coala struct {
 	sendLayerStack    *LayersStack
 	Metrics           *MetricsList
 
-	Pools         *pools.AllPools
-	Sessions      *cache.Cache
-	ProxySessions *cache.Cache
+	Pools                 *pools.AllPools
+	Sessions              *cache.Cache
+	ProxySessions         *cache.Cache
+	InProcessingsRequests *cache.Cache
 
 	reciverPool *sync.Map
 
@@ -52,6 +53,8 @@ func NewListen(port int) *Coala {
 	coala.Pools = pools.NewPools()
 	coala.Sessions = cache.New(SESSIONS_POOL_EXPIRATION, time.Second)
 	coala.ProxySessions = cache.New(SESSIONS_POOL_EXPIRATION, time.Second)
+	coala.InProcessingsRequests = cache.New(10*time.Second, time.Second)
+
 	coala.reciverPool = &sync.Map{}
 
 	coala.dataChannel = &DataChannel{
