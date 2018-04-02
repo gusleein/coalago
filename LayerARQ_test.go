@@ -37,7 +37,29 @@ func TestBlock1(t *testing.T) {
 		panic(err)
 	}
 	if !bytes.Equal(resp.Payload.Bytes(), expectedResponse) {
-		panic(fmt.Sprintf("Expected response: %s\nActual response: %s\n", expectedResponse, resp.Payload.Bytes()))
+		panic(fmt.Sprintf("Expected response: %s\n\nActual response: %s\n", expectedResponse, resp.Payload.Bytes()))
+	}
+}
+
+func TestBlock2(t *testing.T) {
+	var stringPayload string
+	for i := 0; i < 4; i++ {
+		stringPayload += strings.Repeat(fmt.Sprintf("%d", i), MAX_PAYLOAD_SIZE)
+	}
+
+	expectedResponse := []byte(stringPayload)
+
+	c := newClient()
+	s := newServer()
+	addResourceForBlock2(s, expectedResponse)
+	message := newMessageForTestBlock2()
+	address, _ := net.ResolveUDPAddr("udp", fmt.Sprintf("127.0.0.1:%d", portForTest))
+	resp, err := c.Send(message, address)
+	if err != nil {
+		panic(err)
+	}
+	if !bytes.Equal(resp.Payload.Bytes(), expectedResponse) {
+		panic(fmt.Sprintf("Expected response: %s\n\nActual response: %s\n", expectedResponse, resp.Payload.Bytes()))
 	}
 }
 
@@ -52,7 +74,7 @@ func newServer() *Coala {
 func addResourceForBlock1(coala *Coala, expectedPayload []byte, expectedResponse []byte) *Coala {
 	coala.AddPOSTResource(pathTestBlock1, func(message *m.CoAPMessage) *resource.CoAPResourceHandlerResult {
 		if !bytes.Equal(message.Payload.Bytes(), expectedPayload) {
-			panic(fmt.Sprintf("Expected payload: %s\nActual payload: %s\n", expectedPayload, message.Payload.Bytes()))
+			panic(fmt.Sprintf("Expected payload: %s\n\nActual payload: %s\n", expectedPayload, message.Payload.Bytes()))
 		}
 
 		resp := m.NewBytesPayload(expectedResponse)
@@ -61,9 +83,23 @@ func addResourceForBlock1(coala *Coala, expectedPayload []byte, expectedResponse
 	return coala
 }
 
+func addResourceForBlock2(coala *Coala, expectedResponse []byte) *Coala {
+	coala.AddGETResource(pathTestBlock2, func(message *m.CoAPMessage) *resource.CoAPResourceHandlerResult {
+		resp := m.NewBytesPayload(expectedResponse)
+		return resource.NewResponse(resp, m.CoapCodeContent)
+	})
+	return coala
+}
+
 func newMessageForTestBlock1(expectedPayload []byte) *m.CoAPMessage {
 	message := m.NewCoAPMessage(m.CON, m.POST)
 	message.Payload = m.NewBytesPayload(expectedPayload)
 	message.SetURIPath(pathTestBlock1)
+	return message
+}
+
+func newMessageForTestBlock2() *m.CoAPMessage {
+	message := m.NewCoAPMessage(m.CON, m.GET)
+	message.SetURIPath(pathTestBlock2)
 	return message
 }
