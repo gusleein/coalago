@@ -74,7 +74,6 @@ func (l layerARQ) process(incomingMessage *m.CoAPMessage, blockOptionCode m.Opti
 			l.sendMoreData(incomingMessage.GetTokenString(), windowSize)
 			if incomingMessage.Code != m.CoapCodeContinue {
 				origMessage := sendState.GetOriginalMessage()
-
 				l.txStates.Delete(incomingMessage.GetTokenString())
 				incomingMessage.MessageID = origMessage.MessageID
 
@@ -133,14 +132,14 @@ func (l layerARQ) process(incomingMessage *m.CoAPMessage, blockOptionCode m.Opti
 					l.emptyAcks.Delete(incomingMessage.GetTokenString())
 				}
 
-				l.coala.sendMessage(ackMessage, ackMessage.Recipient)
+				l.sendARQmessage(ackMessage, ackMessage.Recipient, nil)
 				return true
 			}
 			return false
 		}
 
 		ackMessage.Code = m.CoapCodeContinue
-		l.coala.sendMessage(ackMessage, ackMessage.Recipient)
+		l.sendARQmessage(ackMessage, ackMessage.Recipient, nil)
 	}
 
 	return false
@@ -164,7 +163,7 @@ func (l layerARQ) emptyACKHandler(incomingMessage *m.CoAPMessage) bool {
 
 			ackMessage := ackTo(incomingMessage, m.CoapCodeEmpty)
 
-			l.coala.sendMessage(ackMessage, ackMessage.Recipient)
+			l.sendARQmessage(ackMessage, ackMessage.Recipient, nil)
 
 			incomingMessage.Code = receiveState.initMessage.Code
 			return true

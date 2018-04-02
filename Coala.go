@@ -41,6 +41,8 @@ type Coala struct {
 	ProxySessions         *cache.Cache
 	InProcessingsRequests *cache.Cache
 
+	pendingsMessage *Queue
+
 	reciverPool *sync.Map
 
 	privatekey []byte
@@ -62,6 +64,13 @@ func NewListen(port int) *Coala {
 		StopSend:    make(chan bool, 1),
 		StopReceive: make(chan bool, 1),
 	}
+
+	coala.pendingsMessage = NewQueue()
+
+	for i := 0; i < 4; i++ {
+		go pendingMessagesReader(coala, coala.pendingsMessage, coala.reciverPool)
+	}
+
 	// Default values
 	coala.proxyEnabled = false
 

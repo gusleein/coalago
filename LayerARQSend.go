@@ -43,7 +43,7 @@ func (l *layerARQ) ARQSendHandler(message *m.CoAPMessage, address net.Addr) (isC
 	l.txStates.Set(originalMessage.GetTokenString(), state)
 	l.sendMoreData(originalMessage.GetTokenString(), windowSize)
 
-	return false
+	return true
 }
 
 func getWindowSize(message *m.CoAPMessage) int {

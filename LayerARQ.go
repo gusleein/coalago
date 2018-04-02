@@ -14,19 +14,27 @@ const (
 )
 
 type layerARQ struct {
-	coala     *Coala
-	rxStates  *ARQStatesPool
-	txStates  *ARQStatesPool
-	emptyAcks *sync.Map
+	coala    *Coala
+	rxStates *ARQStatesPool
+	txStates *ARQStatesPool
+
+	pendingMessages *Queue
+	callbackPool    *sync.Map
+	emptyAcks       *sync.Map
 }
 
 func newLayerARQ(coala *Coala) layerARQ {
 	l := layerARQ{
-		coala:    coala,
-		rxStates: NewARQStatesPool(),
-		txStates: NewARQStatesPool(),
-		// callbackPool: &sync.Map{},
-		emptyAcks: &sync.Map{},
+		coala:           coala,
+		rxStates:        NewARQStatesPool(),
+		txStates:        NewARQStatesPool(),
+		pendingMessages: NewQueue(),
+		callbackPool:    &sync.Map{},
+		emptyAcks:       &sync.Map{},
+	}
+
+	for i := 0; i < 4; i++ {
+		go pendingMessagesReader(coala, l.pendingMessages, l.callbackPool)
 	}
 
 	return l
@@ -38,6 +46,9 @@ func (l layerARQ) OnReceive(coala *Coala, message *m.CoAPMessage) bool {
 
 func (l layerARQ) OnSend(coala *Coala, message *m.CoAPMessage, address net.Addr) (bool, error) {
 	return l.ARQSendHandler(message, address), nil
+}
+func (l layerARQ) sendARQmessage(message *m.CoAPMessage, address net.Addr, callback CoalaCallback) {
+	l.coala.sendMessage(message, address, callback, l.pendingMessages, l.callbackPool)
 }
 
 func (l layerARQ) sendMoreData(token string, windowSize int) {
@@ -52,16 +63,17 @@ func (l layerARQ) sendMoreData(token string, windowSize int) {
 			break
 		}
 
-		_, err := l.coala.sendMessage(msg, msg.Recipient)
-		if err != nil {
-			l.txStates.Delete(token)
-			clb, ok := l.coala.reciverPool.Load(state.origMessage.GetMessageIDString() + msg.Recipient.String())
-			if ok {
-				clb.(CoalaCallback)(nil, errors.New("arq "+err.Error()))
-			}
-			l.coala.reciverPool.Delete(token)
+		l.sendARQmessage(msg, msg.Recipient, func(rsp *m.CoAPMessage, err error) {
+			if err != nil {
+				l.txStates.Delete(token)
+				clb, ok := l.coala.reciverPool.Load(state.origMessage.GetMessageIDString() + msg.Recipient.String())
+				if ok {
+					clb.(CoalaCallback)(nil, errors.New("arq "+err.Error()))
+				}
+				l.coala.reciverPool.Delete(token)
 
-			return
-		}
+				return
+			}
+		})
 	}
 }
