@@ -112,11 +112,9 @@ func (l layerARQ) process(incomingMessage *m.CoAPMessage, blockOptionCode m.Opti
 
 				incomingMessage.Payload = m.NewBytesPayload(receiveState.GetData())
 				incomingMessage.Code = receiveState.GetInitiatingMessage().Code
-
 				if id, ok := l.emptyAcks.Load(incomingMessage.GetTokenString()); ok {
 					incomingMessage.MessageID = id.(uint16)
 				}
-
 				return true
 
 			}
