@@ -31,7 +31,7 @@ func (l *layerARQ) ARQSendHandler(message *m.CoAPMessage, address net.Addr) (isC
 		emptyAckMessage.Payload = m.NewEmptyPayload()
 		emptyAckMessage.AddOption(m.OptionSelectiveRepeatWindowSize, windowSize)
 
-		l.coala.Send(emptyAckMessage, message.Recipient)
+		l.sendARQmessage(emptyAckMessage, message.Recipient, nil)
 		blockOption = m.OptionBlock2
 
 	case m.CON:
