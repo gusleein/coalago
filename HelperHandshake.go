@@ -81,8 +81,7 @@ func incomingHandshake(coala *Coala, publicKey []byte, origMessage *m.CoAPMessag
 	message.Payload = m.NewBytesPayload(publicKey)
 	message.Token = origMessage.Token
 
-	_, err := coala.Send(message, origMessage.Sender)
-	if err != nil {
+	if err := sendToSocket(coala, message, origMessage.Sender); err != nil {
 		log.Error("Can't send HELLO", err)
 		return err
 	}
