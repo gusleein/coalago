@@ -7,13 +7,13 @@ import (
 type Element struct {
 	next, prev *Element
 	queue      *Queue
-	key        string
+	key        poolID
 	Value      interface{}
 }
 
 type Queue struct {
 	root     Element
-	m        map[string]*Element
+	m        map[poolID]*Element
 	len      int
 	mx       sync.Mutex
 	callback func()
@@ -23,7 +23,7 @@ func (q *Queue) Init() *Queue {
 	q.root.next = &q.root
 	q.root.prev = &q.root
 	q.len = 0
-	q.m = make(map[string]*Element)
+	q.m = make(map[poolID]*Element)
 	q.mx = sync.Mutex{}
 	return q
 }
@@ -57,7 +57,7 @@ func (q *Queue) Pop() *Element {
 	return e
 }
 
-func (q *Queue) Push(key string, v interface{}) {
+func (q *Queue) Push(key poolID, v interface{}) {
 	q.mx.Lock()
 	q.lazyInit()
 	e := q.insertValue(v, q.root.prev)
@@ -76,7 +76,7 @@ func (q *Queue) moveToBack(e *Element) {
 	q.insert(q.remove(e), q.root.prev)
 }
 
-func (q *Queue) RemoveByKey(key string) *Element {
+func (q *Queue) RemoveByKey(key poolID) *Element {
 	q.mx.Lock()
 	defer q.mx.Unlock()
 	e, ok := q.m[key]

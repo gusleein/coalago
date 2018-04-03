@@ -37,8 +37,6 @@ type CoAPMessage struct {
 
 	PublicKey     []byte
 	PeerPublicKey []byte
-
-	Callback func(*CoAPMessage, error)
 }
 
 func NewCoAPMessage(messageType CoapType, messageCode CoapCode) *CoAPMessage {

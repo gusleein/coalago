@@ -4,7 +4,6 @@ import (
 	"bytes"
 	"net"
 	"strconv"
-	"sync"
 	"time"
 
 	m "github.com/coalalib/coalago/message"
@@ -42,8 +41,7 @@ type Coala struct {
 	InProcessingsRequests *cache.Cache
 
 	pendingsMessage *Queue
-
-	reciverPool *sync.Map
+	acknowledgePool *ackPool
 
 	privatekey []byte
 }
@@ -57,7 +55,7 @@ func NewListen(port int) *Coala {
 	coala.ProxySessions = cache.New(SESSIONS_POOL_EXPIRATION, time.Second)
 	coala.InProcessingsRequests = cache.New(10*time.Second, time.Second)
 
-	coala.reciverPool = &sync.Map{}
+	coala.acknowledgePool = newAckPool()
 
 	coala.dataChannel = &DataChannel{
 		Handshake:   make(chan *m.CoAPMessage),
@@ -68,7 +66,7 @@ func NewListen(port int) *Coala {
 	coala.pendingsMessage = NewQueue()
 
 	for i := 0; i < 4; i++ {
-		go pendingMessagesReader(coala, coala.pendingsMessage, coala.reciverPool)
+		go pendingMessagesReader(coala, coala.pendingsMessage, coala.acknowledgePool)
 	}
 
 	// Default values

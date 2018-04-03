@@ -2,7 +2,6 @@ package coalago
 
 import (
 	"errors"
-	"sync"
 	"time"
 
 	m "github.com/coalalib/coalago/message"
@@ -12,7 +11,7 @@ var (
 	ErrMaxAttempts = errors.New("Max attempts")
 )
 
-func pendingMessagesReader(coala *Coala, senderPool *Queue, receiverPool *sync.Map) {
+func pendingMessagesReader(coala *Coala, senderPool *Queue, acknowledgePool *ackPool) {
 	for {
 		im := senderPool.Pop()
 
@@ -39,11 +38,9 @@ func pendingMessagesReader(coala *Coala, senderPool *Queue, receiverPool *sync.M
 
 		if message.Attempts > 3 {
 			coala.Metrics.ExpiredMessages.Inc()
-			ci, _ := receiverPool.Load(message.GetMessageIDString() + message.Recipient.String())
-			if ci != nil {
-				receiverPool.Delete(message.GetMessageIDString() + message.Recipient.String())
-				callback := ci.(CoalaCallback)
-				go callback(nil, errors.New("timed out"))
+			callback := acknowledgePool.GetAndDelete(newPoolID(message.MessageID, message.Token, message.Recipient))
+			if callback != nil {
+				go callback(nil, errors.New("mac attempts"))
 			}
 			senderPool.Remove(im)
 			continue
