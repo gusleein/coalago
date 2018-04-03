@@ -2,6 +2,7 @@ package coalago
 
 import (
 	"net"
+	"time"
 
 	m "github.com/coalalib/coalago/message"
 	"github.com/coalalib/coalago/network"
@@ -15,7 +16,11 @@ func (coala *Coala) Send(message *m.CoAPMessage, address net.Addr) (response *m.
 	if message.Type == m.CON {
 		callback = func(r *m.CoAPMessage, e error) {
 			response = r
-			chErr <- err
+			select {
+			case <-time.After(time.Millisecond * 100):
+			case chErr <- err:
+			}
+
 		}
 	}
 
