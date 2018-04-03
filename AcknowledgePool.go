@@ -13,13 +13,6 @@ func newAckPool() *ackPool {
 	}
 }
 
-func (a *ackPool) Get(key poolID) CoalaCallback {
-	a.locker.Lock()
-	v, _ := a.m[key]
-	a.locker.Unlock()
-	return v
-}
-
 func (a *ackPool) Load(key poolID, v CoalaCallback) {
 	a.locker.Lock()
 	a.m[key] = v

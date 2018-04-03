@@ -40,7 +40,7 @@ func pendingMessagesReader(coala *Coala, senderPool *Queue, acknowledgePool *ack
 			coala.Metrics.ExpiredMessages.Inc()
 			callback := acknowledgePool.GetAndDelete(newPoolID(message.MessageID, message.Token, message.Recipient))
 			if callback != nil {
-				go callback(nil, errors.New("mac attempts"))
+				callback(nil, errors.New("max attempts"))
 			}
 			senderPool.Remove(im)
 			continue

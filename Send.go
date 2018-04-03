@@ -17,7 +17,7 @@ func (coala *Coala) Send(message *m.CoAPMessage, address net.Addr) (response *m.
 		callback = func(r *m.CoAPMessage, e error) {
 			response = r
 			select {
-			case <-time.After(time.Millisecond * 100):
+			case <-time.After(time.Millisecond * 1):
 			case chErr <- err:
 			}
 
