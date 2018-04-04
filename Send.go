@@ -22,10 +22,12 @@ func (coala *Coala) Send(message *m.CoAPMessage, address net.Addr) (response *m.
 			}
 
 		}
-	}
 
-	coala.sendMessage(message, address, callback, coala.pendingsMessage, coala.acknowledgePool)
-	err = <-chErr
+		coala.sendMessage(message, address, callback, coala.pendingsMessage, coala.acknowledgePool)
+		err = <-chErr
+	} else {
+		coala.sendMessage(message, address, callback, coala.pendingsMessage, coala.acknowledgePool)
+	}
 
 	return
 }
