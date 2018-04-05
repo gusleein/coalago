@@ -58,7 +58,7 @@ func (l layerARQ) sendMoreData(token string, windowSize int) {
 				l.txStates.Delete(token)
 				callback := l.coala.acknowledgePool.GetAndDelete(newPoolID(state.origMessage.MessageID, state.origMessage.Token, state.origMessage.Recipient))
 				if callback != nil {
-					callback(nil, err)
+					callback(rsp, err)
 				}
 				return
 			}

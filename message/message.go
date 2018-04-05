@@ -81,9 +81,7 @@ func Deserialize(data []byte) (*CoAPMessage, error) {
 
 	// Token
 	if tokenLength > 0 {
-		// msg.Token = make([]byte, tokenLength)
 		msg.Token = data[DataTokenStart : DataTokenStart+tokenLength]
-		// copy(msg.Token, token)
 	}
 
 	/*

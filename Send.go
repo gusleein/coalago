@@ -9,26 +9,22 @@ import (
 )
 
 func (coala *Coala) Send(message *m.CoAPMessage, address net.Addr) (response *m.CoAPMessage, err error) {
-	var (
-		callback CoalaCallback
-		chErr    = make(chan error)
-	)
+	chErr := make(chan error)
+
 	if message.Type == m.CON {
-		callback = func(r *m.CoAPMessage, e error) {
+		callback := func(r *m.CoAPMessage, e error) {
 			response = r
 			select {
 			case <-time.After(time.Millisecond * 10):
-			case chErr <- err:
+			case chErr <- e:
 			}
-
 		}
 
 		coala.sendMessage(message, address, callback, coala.pendingsMessage, coala.acknowledgePool)
 		err = <-chErr
 	} else {
-		coala.sendMessage(message, address, callback, coala.pendingsMessage, coala.acknowledgePool)
+		coala.sendMessage(message, address, nil, coala.pendingsMessage, coala.acknowledgePool)
 	}
-
 	return
 }
 
