@@ -38,8 +38,11 @@ func (coala *Coala) sendMessage(message *m.CoAPMessage, address net.Addr, callba
 
 	shouldContinue, err := coala.sendLayerStack.OnSend(message, address)
 	if err != nil {
-		callbackPool.Delete(newPoolID(message.MessageID, message.Token, message.Recipient))
-		callback(nil, err)
+		if callback != nil {
+			callbackPool.Delete(newPoolID(message.MessageID, message.Token, message.Recipient))
+			callback(nil, err)
+		}
+
 		return
 	}
 	if !shouldContinue {
