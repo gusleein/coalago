@@ -25,5 +25,10 @@ func (layer *ReliabilityLayer) OnReceive(coala *Coala, message *m.CoAPMessage) b
 }
 
 func (layer *ReliabilityLayer) OnSend(coala *Coala, message *m.CoAPMessage, address net.Addr) (bool, error) {
+	if message.Type == m.ACK {
+		key := fmt.Sprintf("%s%s%s", message.GetTokenString(), message.GetMessageIDString(), address.String())
+		coala.InProcessingsRequests.Delete(key)
+	}
+
 	return true, nil
 }
