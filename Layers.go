@@ -21,8 +21,8 @@ func NewLayersStacks(coala *Coala) (receiveStack *LayersStack, sendStack *Layers
 	secLayer := newSecurityLayer()
 
 	stackReceive := [...]Layer{
-		&ReliabilityLayer{},
 		&ProxyLayer{},
+		&ReliabilityLayer{},
 		secLayer,
 		arqLayer,
 		&ResourceDiscoveryLayer{},
@@ -31,6 +31,7 @@ func NewLayersStacks(coala *Coala) (receiveStack *LayersStack, sendStack *Layers
 
 	stackSend := [...]Layer{
 		&ProxyLayer{},
+		&ReliabilityLayer{},
 		arqLayer,
 		secLayer,
 
