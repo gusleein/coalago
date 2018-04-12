@@ -22,9 +22,9 @@ func NewLayersStacks(coala *Coala) (receiveStack *LayersStack, sendStack *Layers
 
 	stackReceive := [...]Layer{
 		&ProxyLayer{},
-		&ReliabilityLayer{},
 		secLayer,
 		arqLayer,
+		&ReliabilityLayer{},
 		&ResourceDiscoveryLayer{},
 		&RequestLayer{},
 	}
