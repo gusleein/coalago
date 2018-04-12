@@ -75,6 +75,8 @@ func (l layerARQ) process(incomingMessage *m.CoAPMessage, blockOptionCode m.Opti
 			if incomingMessage.Code != m.CoapCodeContinue {
 				origMessage := sendState.GetOriginalMessage()
 				l.txStates.Delete(incomingMessage.GetTokenString())
+				l.rxStates.Delete(incomingMessage.GetTokenString())
+
 				incomingMessage.MessageID = origMessage.MessageID
 
 				if incomingMessage.Code == m.CoapCodeEmpty {
@@ -108,6 +110,7 @@ func (l layerARQ) process(incomingMessage *m.CoAPMessage, blockOptionCode m.Opti
 
 		if receiveState.IsTransferCompleted() {
 			if blockOptionCode == m.OptionBlock1 {
+				l.txStates.Delete(incomingMessage.GetTokenString())
 				l.rxStates.Delete(incomingMessage.GetTokenString())
 
 				incomingMessage.Payload = m.NewBytesPayload(receiveState.GetData())
