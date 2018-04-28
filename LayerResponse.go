@@ -9,13 +9,9 @@ import (
 type ResponseLayer struct{}
 
 func (layer *ResponseLayer) OnReceive(coala *Coala, message *m.CoAPMessage) bool {
-	if message.Code == m.CoapCodeEmpty && message.Type == m.CON {
-		// Ping Message! Send RST!
-		rst := m.NewCoAPMessageId(m.RST, m.CoapCodeEmpty, message.MessageID)
-		coala.Send(rst, message.Sender)
-		return false
+	if message.Type == m.ACK {
+		coala.pendingsMessage.RemoveByKey(newPoolID(message.MessageID, message.Token, message.Sender))
 	}
-
 	return true
 }
 

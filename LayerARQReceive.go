@@ -75,7 +75,6 @@ func (l layerARQ) process(incomingMessage *m.CoAPMessage, blockOptionCode m.Opti
 			if incomingMessage.Code != m.CoapCodeContinue {
 				origMessage := sendState.GetOriginalMessage()
 				l.txStates.Delete(incomingMessage.GetTokenString())
-				l.rxStates.Delete(incomingMessage.GetTokenString())
 
 				incomingMessage.MessageID = origMessage.MessageID
 
