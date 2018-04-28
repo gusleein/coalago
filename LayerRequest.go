@@ -69,9 +69,7 @@ func returnResultFromResource(coala *Coala, message *m.CoAPMessage, handlerResul
 	responseMessage.Payload = handlerResult.Payload
 
 	// Replicate Token of the original message if any
-	if message.Token != nil && len(message.Token) > 0 {
-		responseMessage.Token = message.Token
-	}
+	responseMessage.Token = message.Token
 
 	// Setup additional Content Format description if necessary
 	if handlerResult.MediaType >= 0 {
