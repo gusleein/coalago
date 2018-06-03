@@ -2,6 +2,7 @@ package message
 
 import (
 	"bytes"
+	"context"
 	"encoding/binary"
 	"fmt"
 	"net"
@@ -37,6 +38,8 @@ type CoAPMessage struct {
 
 	PublicKey     []byte
 	PeerPublicKey []byte
+
+	Context context.Context
 }
 
 func NewCoAPMessage(messageType CoapType, messageCode CoapCode) *CoAPMessage {
