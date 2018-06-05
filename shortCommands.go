@@ -66,7 +66,7 @@ func constructMessage(code m.CoapCode, url string) (*m.CoAPMessage, error) {
 	if scheme == "coap" {
 		message.SetSchemeCOAP()
 	} else if scheme == "coaps" {
-		message.SetSchemeCOAP()
+		message.SetSchemeCOAPS()
 	} else {
 		return nil, ErrUndefinedScheme
 	}
