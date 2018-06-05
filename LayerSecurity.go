@@ -40,6 +40,7 @@ func (layer *SecurityLayer) OnReceive(coala *Coala, message *m.CoAPMessage) bool
 		if currentSession == nil || currentSession.AEAD == nil {
 			responseMessage := m.NewCoAPMessageId(m.ACK, m.CoapCodeUnauthorized, message.MessageID)
 			responseMessage.AddOption(m.OptionSessionNotFound, 1)
+			responseMessage.Token = message.Token
 			sendToSocket(coala, responseMessage, message.Sender)
 			return false
 		}
@@ -49,6 +50,7 @@ func (layer *SecurityLayer) OnReceive(coala *Coala, message *m.CoAPMessage) bool
 		if err != nil {
 			responseMessage := m.NewCoAPMessageId(m.ACK, m.CoapCodeUnauthorized, message.MessageID)
 			responseMessage.AddOption(m.OptionSessionExpired, 1)
+			responseMessage.Token = message.Token
 			sendToSocket(coala, responseMessage, message.Sender)
 
 			return false
