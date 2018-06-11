@@ -17,14 +17,16 @@ type layerARQ struct {
 	rxStates  *ARQStatesPool
 	txStates  *ARQStatesPool
 	emptyAcks *sync.Map
+	receiveMX *sync.Mutex
 }
 
-func newLayerARQ(coala *Coala) layerARQ {
-	l := layerARQ{
+func newLayerARQ(coala *Coala) *layerARQ {
+	l := &layerARQ{
 		coala:     coala,
 		rxStates:  NewARQStatesPool(),
 		txStates:  NewARQStatesPool(),
 		emptyAcks: &sync.Map{},
+		receiveMX: new(sync.Mutex),
 	}
 
 	return l

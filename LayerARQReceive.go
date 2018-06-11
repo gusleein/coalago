@@ -79,6 +79,8 @@ func (l layerARQ) process(incomingMessage *m.CoAPMessage, blockOptionCode m.Opti
 				incomingMessage.MessageID = origMessage.MessageID
 
 				if incomingMessage.Code == m.CoapCodeEmpty {
+					l.receiveMX.Lock()
+					defer l.receiveMX.Unlock()
 					return l.emptyACKHandler(incomingMessage)
 				}
 
@@ -89,6 +91,8 @@ func (l layerARQ) process(incomingMessage *m.CoAPMessage, blockOptionCode m.Opti
 		}
 
 	case m.CON:
+		l.receiveMX.Lock()
+		defer l.receiveMX.Unlock()
 		receiveState := l.rxStates.Get(incomingMessage.GetTokenString())
 		if receiveState == nil {
 			receiveState = NewReceiveState(windowSize, incomingMessage)
