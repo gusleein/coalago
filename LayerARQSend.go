@@ -39,9 +39,9 @@ func (l *layerARQ) ARQSendHandler(message *m.CoAPMessage, address net.Addr) (isC
 		blockOption = m.OptionBlock1
 	}
 
-	state := NewSendState(originalMessage.Payload.Bytes(), windowSize, blockOption, MAX_PAYLOAD_SIZE, originalMessage)
-	l.txStates.Set(originalMessage.GetTokenString(), state)
-	l.sendMoreData(originalMessage.GetTokenString(), windowSize)
+	sendState := NewSendState(originalMessage.Payload.Bytes(), windowSize, blockOption, MAX_PAYLOAD_SIZE, originalMessage)
+	l.txStates.Set(originalMessage.GetTokenString(), sendState)
+	l.sendMoreData(originalMessage.GetTokenString(), windowSize, sendState)
 
 	return false
 }

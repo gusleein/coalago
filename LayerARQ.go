@@ -17,7 +17,6 @@ type layerARQ struct {
 	rxStates  *ARQStatesPool
 	txStates  *ARQStatesPool
 	emptyAcks *sync.Map
-	receiveMX *sync.Mutex
 }
 
 func newLayerARQ(coala *Coala) *layerARQ {
@@ -26,7 +25,6 @@ func newLayerARQ(coala *Coala) *layerARQ {
 		rxStates:  NewARQStatesPool(),
 		txStates:  NewARQStatesPool(),
 		emptyAcks: &sync.Map{},
-		receiveMX: new(sync.Mutex),
 	}
 
 	return l
@@ -43,14 +41,9 @@ func (l layerARQ) sendARQmessage(message *m.CoAPMessage, address net.Addr, callb
 	l.coala.sendMessage(message, address, callback, l.coala.pendingsMessage, l.coala.acknowledgePool)
 }
 
-func (l layerARQ) sendMoreData(token string, windowSize int) {
-	state := l.txStates.Get(token)
-	if state == nil {
-		return
-	}
-
+func (l layerARQ) sendMoreData(token string, windowSize int, sendState *ARQState) {
 	for {
-		msg := state.PopBlock(windowSize)
+		msg := sendState.PopBlock(windowSize)
 		if msg == nil {
 			break
 		}
@@ -58,7 +51,7 @@ func (l layerARQ) sendMoreData(token string, windowSize int) {
 		l.sendARQmessage(msg, msg.Recipient, func(rsp *m.CoAPMessage, err error) {
 			if err != nil {
 				l.txStates.Delete(token)
-				callback := l.coala.acknowledgePool.GetAndDelete(newPoolID(state.origMessage.MessageID, state.origMessage.Token, state.origMessage.Recipient))
+				callback := l.coala.acknowledgePool.GetAndDelete(newPoolID(sendState.origMessage.MessageID, sendState.origMessage.Token, sendState.origMessage.Recipient))
 				if callback != nil {
 					callback(rsp, err)
 				}
