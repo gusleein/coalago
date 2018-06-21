@@ -38,7 +38,6 @@ func (a *ARQStatesPool) Delete(key string) {
 type ARQState struct {
 	origMessage *m.CoAPMessage
 	initMessage *m.CoAPMessage
-	Callbacks   *sync.Map
 
 	blockSize   int
 	blockOption m.OptionCode
