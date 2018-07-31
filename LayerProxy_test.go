@@ -34,7 +34,7 @@ func TestProxyWithSimpleMessage(t *testing.T) {
 		panic(err)
 	}
 	if !bytes.Equal(resp.Payload.Bytes(), expectedResponse) {
-		panic(fmt.Sprintf("Expected response: %s\n\nActual response: %s\n", expectedResponse, resp.Payload.Bytes()))
+		panic(fmt.Sprintf(" Expected response: %s\n\nActual response: %s\n", expectedResponse, resp.Payload.Bytes()))
 	}
 }
 
