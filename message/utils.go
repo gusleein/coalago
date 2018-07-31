@@ -4,29 +4,27 @@ import (
 	"encoding/binary"
 	"errors"
 	"math/rand"
+	"sync/atomic"
 	"time"
 )
 
 // GenerateMessageId generate a uint16 Message ID
-var currentMessageID uint16
+var currentMessageID int32
 
 func init() {
 	rand.Seed(time.Now().UnixNano())
-	currentMessageID = uint16(rand.Intn(65535))
+	currentMessageID = int32(rand.Intn(65535))
 }
 
 //TODO  move to session context
 func GenerateMessageID() uint16 {
-	if currentMessageID < 65535 {
-		currentMessageID++
+	if atomic.LoadInt32(&currentMessageID) < 65535 {
+		atomic.AddInt32(&currentMessageID, 1)
 	} else {
-		currentMessageID = 1
+		atomic.StoreInt32(&currentMessageID, 1)
 	}
-	return currentMessageID
-}
 
-func RandomMessageID() uint16 {
-	return uint16(rand.Intn(65535))
+	return uint16(atomic.LoadInt32(&currentMessageID))
 }
 
 func GenerateToken(l int) []byte {

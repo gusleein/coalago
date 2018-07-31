@@ -32,13 +32,13 @@ func TestSimple(t *testing.T) {
 	addResourceForBlock1(s, expectedPayload, expectedResponse)
 
 	var wg sync.WaitGroup
-	var count int
-	for i := 0; i < 400; i++ {
+	// var count int
+	for i := 0; i < 4000; i++ {
 		wg.Add(1)
 		go func() {
 			message := newMessageForTestBlock1(expectedPayload)
 			address, _ := net.ResolveUDPAddr("udp", fmt.Sprintf("127.0.0.1:%d", portForTest))
-			count++
+			// count++
 			resp, err := c.Send(message, address)
 			if err != nil {
 				panic(err)
@@ -47,7 +47,6 @@ func TestSimple(t *testing.T) {
 				panic(fmt.Sprintf("Expected response: %s\n\nActual response: %s\n", expectedResponse, resp.Payload.Bytes()))
 			}
 			wg.Done()
-
 		}()
 	}
 

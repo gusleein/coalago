@@ -1,19 +1,21 @@
 package window
 
+import "sync/atomic"
+
 type SlidingWindow struct {
-	offset int
+	offset int32
 	values []interface{}
 }
 
 func NewSlidingWindow(size int, offset int) *SlidingWindow {
 	return &SlidingWindow{
-		offset: offset,
+		offset: int32(offset),
 		values: make([]interface{}, size),
 	}
 }
 
 func (s *SlidingWindow) GetOffset() int {
-	return s.offset
+	return int(atomic.LoadInt32(&s.offset))
 }
 
 func (s *SlidingWindow) GetSize() int {
@@ -21,7 +23,7 @@ func (s *SlidingWindow) GetSize() int {
 }
 
 func (s *SlidingWindow) Set(number int, value interface{}) {
-	windowIndex := number - s.offset
+	windowIndex := number - int(atomic.LoadInt32(&s.offset))
 
 	if windowIndex > len(s.values)-1 {
 		return
@@ -44,7 +46,8 @@ func (s *SlidingWindow) Advance() interface{} {
 
 	copy(s.values, s.values[1:])
 	s.values[len(s.values)-1] = nil
-	s.offset++
+
+	atomic.AddInt32(&s.offset, 1)
 
 	return firstBlock
 }
@@ -54,5 +57,5 @@ func (s *SlidingWindow) GetValue(windowIndex int) interface{} {
 }
 
 func (s *SlidingWindow) Tail() int {
-	return s.offset + len(s.values) - 1
+	return int(atomic.LoadInt32(&s.offset)) + len(s.values) - 1
 }
