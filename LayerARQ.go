@@ -9,7 +9,7 @@ import (
 
 const (
 	DEFAULT_WINDOW_SIZE = 70
-	MAX_PAYLOAD_SIZE    = 512
+	MAX_PAYLOAD_SIZE    = 1024
 )
 
 type layerARQ struct {
