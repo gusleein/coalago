@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"net"
 	"strings"
+	"sync"
 	"testing"
 
 	m "github.com/coalalib/coalago/message"
@@ -18,11 +19,10 @@ var (
 	pathTestBlockMix     = "/testblockmix"
 )
 
-func TestBlock1(t *testing.T) {
+func TestSimple(t *testing.T) {
 	var stringPayload string
-	for i := 0; i < 4; i++ {
-		stringPayload += strings.Repeat(fmt.Sprintf("%d", i), MAX_PAYLOAD_SIZE)
-	}
+
+	stringPayload = "hello"
 
 	expectedPayload := []byte(stringPayload)
 	expectedResponse := []byte("Hello from Coala!:)")
@@ -30,25 +30,70 @@ func TestBlock1(t *testing.T) {
 	c := newClient()
 	s := newServer()
 	addResourceForBlock1(s, expectedPayload, expectedResponse)
-	message := newMessageForTestBlock1(expectedPayload)
-	address, _ := net.ResolveUDPAddr("udp", fmt.Sprintf("127.0.0.1:%d", portForTest))
-	resp, err := c.Send(message, address)
-	if err != nil {
-		panic(err)
+
+	var wg sync.WaitGroup
+	var count int
+	for i := 0; i < 400; i++ {
+		wg.Add(1)
+		go func() {
+			message := newMessageForTestBlock1(expectedPayload)
+			address, _ := net.ResolveUDPAddr("udp", fmt.Sprintf("127.0.0.1:%d", portForTest))
+			count++
+			resp, err := c.Send(message, address)
+			if err != nil {
+				panic(err)
+			}
+			if !bytes.Equal(resp.Payload.Bytes(), expectedResponse) {
+				panic(fmt.Sprintf("Expected response: %s\n\nActual response: %s\n", expectedResponse, resp.Payload.Bytes()))
+			}
+			wg.Done()
+
+		}()
 	}
-	if !bytes.Equal(resp.Payload.Bytes(), expectedResponse) {
-		panic(fmt.Sprintf("Expected response: %s\n\nActual response: %s\n", expectedResponse, resp.Payload.Bytes()))
+
+	wg.Wait()
+
+	// time.Sleep(9 * time.Second)
+
+}
+
+func TestBlock1(t *testing.T) {
+	var stringPayload string
+
+	stringPayload += strings.Repeat("a", 10*MAX_PAYLOAD_SIZE)
+
+	expectedPayload := []byte(stringPayload)
+	expectedResponse := []byte("Hello from Coala!:)")
+
+	c := newClient()
+	s := newServer()
+	addResourceForBlock1(s, expectedPayload, expectedResponse)
+	var wg sync.WaitGroup
+	for i := 0; i < 10; i++ {
+		wg.Add(1)
+		go func() {
+			message := newMessageForTestBlock1(expectedPayload)
+			address, _ := net.ResolveUDPAddr("udp", fmt.Sprintf("127.0.0.1:%d", portForTest))
+			resp, err := c.Send(message, address)
+			if err != nil {
+				panic(err)
+			}
+			if !bytes.Equal(resp.Payload.Bytes(), expectedResponse) {
+				panic(fmt.Sprintf("Expected response: %s\n\nActual response: %s\n", expectedResponse, resp.Payload.Bytes()))
+			}
+			wg.Done()
+		}()
 	}
+	wg.Wait()
 }
 
 func TestBlock2(t *testing.T) {
 	var stringPayload string
-	for i := 0; i < 4; i++ {
+	for i := 0; i < 100; i++ {
 		stringPayload += strings.Repeat(fmt.Sprintf("%d", i), MAX_PAYLOAD_SIZE)
 	}
 
 	expectedResponse := []byte(stringPayload)
-
 	c := newClient()
 	s := newServer()
 	addResourceForBlock2(s, expectedResponse)
@@ -65,7 +110,7 @@ func TestBlock2(t *testing.T) {
 
 func TestBlockMix(t *testing.T) {
 	var stringPayload string
-	for i := 0; i < 4; i++ {
+	for i := 0; i < 1000; i++ {
 		stringPayload += strings.Repeat(fmt.Sprintf("%d", i), MAX_PAYLOAD_SIZE)
 	}
 
@@ -74,16 +119,25 @@ func TestBlockMix(t *testing.T) {
 	c := newClient()
 	s := newServer()
 	addResourceForBlockMix(s, expectedResponse)
-
-	message := newMessageForTestMix(expectedResponse)
+	var wg sync.WaitGroup
 	address, _ := net.ResolveUDPAddr("udp", fmt.Sprintf("127.0.0.1:%d", portForTest))
-	resp, err := c.Send(message, address)
-	if err != nil {
-		panic(err)
+
+	for i := 0; i < 2; i++ {
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+			message := newMessageForTestMix(expectedResponse)
+			resp, err := c.Send(message, address)
+			if err != nil {
+				panic(err)
+			}
+			if !bytes.Equal(resp.Payload.Bytes(), expectedResponse) {
+				panic(fmt.Sprintf("Expected response: %s\n\nActual response: %s\n", expectedResponse, resp.Payload.Bytes()))
+			}
+		}()
 	}
-	if !bytes.Equal(resp.Payload.Bytes(), expectedResponse) {
-		panic(fmt.Sprintf("Expected response: %s\n\nActual response: %s\n", expectedResponse, resp.Payload.Bytes()))
-	}
+
+	wg.Wait()
 }
 
 func newClient() *Coala {
