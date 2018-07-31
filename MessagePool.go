@@ -15,7 +15,6 @@ func pendingMessagesReader(coala *Coala, senderPool chan *m.CoAPMessage, acknowl
 	for {
 		message := <-senderPool
 
-		// fmt.Println("!", message.MessageID)
 		if message.Type != m.CON {
 			sendToSocket(coala, message, message.Recipient)
 			continue
