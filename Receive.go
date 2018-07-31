@@ -41,9 +41,10 @@ func rawBufferHandler(coala *Coala, message *m.CoAPMessage, senderAddr net.Addr)
 	// fmt.Printf("\n|<----- %s\t%s\n\n", senderAddr, message.ToReadableString())
 
 	if coala.receiveLayerStack.OnReceive(message) {
-		callback := coala.acknowledgePool.GetAndDelete(newPoolID(message.MessageID, message.Token, message.Sender))
-		if callback != nil {
-			callback(message, nil)
-		}
+		coala.acknowledgePool.DoDelete(
+			newPoolID(message.MessageID, message.Token, message.Sender),
+			message,
+			nil,
+		)
 	}
 }

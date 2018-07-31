@@ -65,7 +65,7 @@ func NewListen(port int) *Coala {
 		StopReceive: make(chan bool, 1),
 	}
 
-	coala.pendingsMessage = make(chan *m.CoAPMessage, 32000)
+	coala.pendingsMessage = make(chan *m.CoAPMessage, 65536)
 
 	go pendingMessagesReader(coala, coala.pendingsMessage, coala.acknowledgePool)
 

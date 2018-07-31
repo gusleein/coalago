@@ -1,6 +1,10 @@
 package coalago
 
-import "sync"
+import (
+	"sync"
+
+	m "github.com/coalalib/coalago/message"
+)
 
 type ackPool struct {
 	m      map[poolID]CoalaCallback
@@ -25,12 +29,14 @@ func (a *ackPool) Delete(key poolID) {
 	a.locker.Unlock()
 }
 
-func (a *ackPool) GetAndDelete(key poolID) CoalaCallback {
+func (a *ackPool) DoDelete(key poolID, message *m.CoAPMessage, err error) {
 	a.locker.Lock()
-	v, _ := a.m[key]
+	v, ok := a.m[key]
 	delete(a.m, key)
 	a.locker.Unlock()
-	return v
+	if ok {
+		v(message, err)
+	}
 }
 
 func (a *ackPool) IsExists(key poolID) bool {

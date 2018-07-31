@@ -33,10 +33,11 @@ func pendingMessagesReader(coala *Coala, senderPool chan *m.CoAPMessage, acknowl
 
 		if message.Attempts > 3 {
 			coala.Metrics.ExpiredMessages.Inc()
-			callback := acknowledgePool.GetAndDelete(newPoolID(message.MessageID, message.Token, message.Recipient))
-			if callback != nil {
-				callback(nil, ErrMaxAttempts)
-			}
+			go acknowledgePool.DoDelete(
+				newPoolID(message.MessageID, message.Token, message.Recipient),
+				nil,
+				ErrMaxAttempts,
+			)
 			continue
 		}
 

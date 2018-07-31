@@ -48,15 +48,19 @@ func (l layerARQ) sendMoreData(token string, windowSize int, sendState *ARQState
 			break
 		}
 
+		var once sync.Once
 		l.sendARQmessage(msg, msg.Recipient, func(rsp *m.CoAPMessage, err error) {
-			if err != nil {
-				l.txStates.Delete(token)
-				callback := l.coala.acknowledgePool.GetAndDelete(newPoolID(sendState.origMessage.MessageID, sendState.origMessage.Token, sendState.origMessage.Recipient))
-				if callback != nil {
-					callback(rsp, err)
+			once.Do(func() {
+				if err != nil {
+					l.txStates.Delete(token)
+					go l.coala.acknowledgePool.DoDelete(
+						newPoolID(sendState.origMessage.MessageID, sendState.origMessage.Token, sendState.origMessage.Recipient),
+						rsp,
+						err,
+					)
+					return
 				}
-				return
-			}
+			})
 		})
 	}
 }
