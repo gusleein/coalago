@@ -1,9 +1,10 @@
 package coalago
 
 import (
-	"bytes"
+	"fmt"
 	"net"
-	"strconv"
+	"strings"
+	"sync"
 	"time"
 
 	m "github.com/coalalib/coalago/message"
@@ -25,7 +26,7 @@ var (
 
 type Coala struct {
 	connection network.UDPConnection
-	resources  []*resource.CoAPResource // We don't need it to be concurrent safe
+	resources  sync.Map
 
 	dataChannel *DataChannel
 
@@ -40,7 +41,8 @@ type Coala struct {
 	ProxySessions         *cache.Cache
 	InProcessingsRequests *cache.Cache
 
-	pendingsMessage *Queue
+	pendingsMessage chan *m.CoAPMessage
+
 	acknowledgePool *ackPool
 
 	privatekey []byte
@@ -63,11 +65,9 @@ func NewListen(port int) *Coala {
 		StopReceive: make(chan bool, 1),
 	}
 
-	coala.pendingsMessage = NewQueue()
+	coala.pendingsMessage = make(chan *m.CoAPMessage, 32000)
 
-	for i := 0; i < 4; i++ {
-		go pendingMessagesReader(coala, coala.pendingsMessage, coala.acknowledgePool)
-	}
+	go pendingMessagesReader(coala, coala.pendingsMessage, coala.acknowledgePool)
 
 	// Default values
 	coala.proxyEnabled = false
@@ -76,7 +76,7 @@ func NewListen(port int) *Coala {
 	coala.Metrics = NewMetricList(coala)
 
 	// Init Resource Discovery
-	coala.initResourceDiscovery()
+	// coala.initResourceDiscovery()
 
 	//TODO  remove on production
 	coala.initResourceTestsMirror()
@@ -140,43 +140,19 @@ func (coala *Coala) AddDELETEResource(path string, handler resource.CoAPResource
 	coala.AddResource(resource.NewCoAPResource(m.CoapMethodDelete, path, handler))
 }
 
-func (coala *Coala) AddResource(resource *resource.CoAPResource) {
-	coala.resources = append(coala.resources, resource)
+func (coala *Coala) AddResource(res *resource.CoAPResource) {
+	key := res.Path + fmt.Sprint(res.Method)
+	coala.resources.Store(key, res)
 }
 
-func (coala *Coala) GetResourcesForPath(path string) []*resource.CoAPResource {
-	var result []*resource.CoAPResource
-
-	for _, resource := range coala.resources {
-		if resource.DoesMatchPath(path) {
-			result = append(result, resource)
-		}
+func (coala *Coala) GetResourceForPathAndMethod(path string, method m.CoapMethod) *resource.CoAPResource {
+	path = strings.Trim(path, "/ ")
+	key := path + fmt.Sprint(method)
+	res, ok := coala.resources.Load(key)
+	if ok {
+		return res.(*resource.CoAPResource)
 	}
-
-	return result
-}
-
-func (coala *Coala) GetResourcesForPathAndMethod(path string, method m.CoapMethod) []*resource.CoAPResource {
-	var result []*resource.CoAPResource
-	for _, resource := range coala.resources {
-		if resource.DoesMatchPathAndMethod(path, method) {
-			result = append(result, resource)
-		}
-	}
-
-	return result
-}
-
-func (coala *Coala) RemoveResourceByHash(hash string) *Coala {
-	for r, res := range coala.resources {
-		if res.Hash == hash {
-			coala.resources[r] = coala.resources[len(coala.resources)-1]
-			coala.resources[len(coala.resources)-1] = nil
-			coala.resources = coala.resources[:len(coala.resources)-1]
-			break
-		}
-	}
-	return coala
+	return nil
 }
 
 func (coala *Coala) EnableProxy() {
@@ -199,43 +175,43 @@ func (coala *Coala) Stop() {
 	}
 }
 
-func (coala *Coala) initResourceDiscovery() {
-	coala.AddGETResource("/.well-known/core", func(message *m.CoAPMessage) *resource.CoAPResourceHandlerResult {
-		var buf bytes.Buffer
-		for i, r := range coala.resources {
-			if r.Path != ".well-known/core" {
-				i++
+// func (coala *Coala) initResourceDiscovery() {
+// 	coala.AddGETResource("/.well-known/core", func(message *m.CoAPMessage) *resource.CoAPResourceHandlerResult {
+// 		var buf bytes.Buffer
+// 		for i, r := range coala.resources {
+// 			if r.Path != ".well-known/core" {
+// 				i++
 
-				buf.WriteString("</")
-				buf.WriteString(r.Path)
-				buf.WriteString(">")
+// 				buf.WriteString("</")
+// 				buf.WriteString(r.Path)
+// 				buf.WriteString(">")
 
-				// Media Types
-				lenMt := len(r.MediaTypes)
-				if lenMt > 0 {
-					buf.WriteString(";ct=")
-					for idx, mt := range r.MediaTypes {
+// 				// Media Types
+// 				lenMt := len(r.MediaTypes)
+// 				if lenMt > 0 {
+// 					buf.WriteString(";ct=")
+// 					for idx, mt := range r.MediaTypes {
 
-						buf.WriteString(strconv.Itoa(int(mt)))
-						if idx+1 < lenMt {
-							buf.WriteString(" ")
-						}
-					}
-				}
+// 						buf.WriteString(strconv.Itoa(int(mt)))
+// 						if idx+1 < lenMt {
+// 							buf.WriteString(" ")
+// 						}
+// 					}
+// 				}
 
-				// no commas at the end for the last element
-				if i != len(coala.resources) {
-					buf.WriteString(",")
-				}
-			}
-		}
+// 				// no commas at the end for the last element
+// 				if i != len(coala.resources) {
+// 					buf.WriteString(",")
+// 				}
+// 			}
+// 		}
 
-		handlerResult := resource.NewResponse(m.NewBytesPayload(buf.Bytes()), m.CoapCodeContent)
-		handlerResult.MediaType = m.MediaTypeApplicationLinkFormat
+// 		handlerResult := resource.NewResponse(m.NewBytesPayload(buf.Bytes()), m.CoapCodeContent)
+// 		handlerResult.MediaType = m.MediaTypeApplicationLinkFormat
 
-		return handlerResult
-	})
-}
+// 		return handlerResult
+// 	})
+// }
 
 type DataChannel struct {
 	StopSend    chan bool

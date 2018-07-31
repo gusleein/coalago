@@ -11,33 +11,23 @@ var (
 	ErrMaxAttempts = errors.New("Max attempts")
 )
 
-func pendingMessagesReader(coala *Coala, senderPool *Queue, acknowledgePool *ackPool) {
+func pendingMessagesReader(coala *Coala, senderPool chan *m.CoAPMessage, acknowledgePool *ackPool) {
 	for {
-		im := senderPool.Pop()
-
-		if im == nil {
-			continue
-		}
-
-		message := im.Value.(*m.CoAPMessage)
+		message := <-senderPool
 
 		if message.Type != m.CON {
-			im := senderPool.Remove(im)
-			if im != nil {
-				message = im.Value.(*m.CoAPMessage)
-				sendToSocket(coala, message, message.Recipient)
-			}
+			sendToSocket(coala, message, message.Recipient)
 			continue
 		}
 
 		if time.Since(message.LastSent).Seconds() < 3 {
+			senderPool <- message
 			continue
 		}
 
 		message.Attempts++
 
 		if message.Attempts > 3 {
-			senderPool.Remove(im)
 			coala.Metrics.ExpiredMessages.Inc()
 			callback := acknowledgePool.GetAndDelete(newPoolID(message.MessageID, message.Token, message.Recipient))
 			if callback != nil {
@@ -50,6 +40,7 @@ func pendingMessagesReader(coala *Coala, senderPool *Queue, acknowledgePool *ack
 		if message.Attempts > 1 {
 			coala.Metrics.Retransmissions.Inc()
 		}
+
 		sendToSocket(coala, message, message.Recipient)
 	}
 }

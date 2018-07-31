@@ -13,32 +13,28 @@ func (layer *RequestLayer) OnReceive(coala *Coala, message *m.CoAPMessage) bool 
 	if message.Code <= 0 || message.Code > 4 {
 		return true
 	}
-	resources := coala.GetResourcesForPathAndMethod(message.GetURIPath(), message.GetMethod())
+	resource := coala.GetResourceForPathAndMethod(message.GetURIPath(), message.GetMethod())
 
-	if len(resources) == 0 {
-		resources = coala.GetResourcesForPath(message.GetURIPath())
-	}
-
-	if len(resources) == 0 && message.Type == m.CON {
-		return noResource(coala, message)
-	}
-
-	for _, resource := range resources {
-		// check the Method (405 error code handler)
-		if resource.Method != message.GetMethod() {
-			return methodNotAllowed(coala, message)
-		}
-
-		if handlerResult := resource.Handler(message); handlerResult != nil {
-			if message.Type == m.NON {
-				return false
-			}
-			return returnResultFromResource(coala, message, handlerResult)
-		}
-
+	if resource == nil {
 		if message.Type == m.CON {
-			return noResultResourceHandler(coala, message)
+			return noResource(coala, message)
 		}
+		return false
+	}
+
+	if resource.Method != message.GetMethod() {
+		return methodNotAllowed(coala, message)
+	}
+
+	if handlerResult := resource.Handler(message); handlerResult != nil {
+		if message.Type == m.NON {
+			return false
+		}
+		return returnResultFromResource(coala, message, handlerResult)
+	}
+
+	if message.Type == m.CON {
+		return noResultResourceHandler(coala, message)
 	}
 
 	return false

@@ -28,7 +28,7 @@ func (coala *Coala) Send(message *m.CoAPMessage, address net.Addr) (response *m.
 	return
 }
 
-func (coala *Coala) sendMessage(message *m.CoAPMessage, address net.Addr, callback CoalaCallback, messagePool *Queue, callbackPool *ackPool) {
+func (coala *Coala) sendMessage(message *m.CoAPMessage, address net.Addr, callback CoalaCallback, messagePool chan *m.CoAPMessage, callbackPool *ackPool) {
 	address = network.NewAddress(address.String())
 	message.Recipient = address
 
@@ -49,7 +49,7 @@ func (coala *Coala) sendMessage(message *m.CoAPMessage, address net.Addr, callba
 		return
 	}
 
-	messagePool.Push(newPoolID(message.MessageID, message.Token, address), message)
+	messagePool <- message
 	return
 }
 
