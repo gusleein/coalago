@@ -9,9 +9,6 @@ import (
 type ResponseLayer struct{}
 
 func (layer *ResponseLayer) OnReceive(coala *Coala, message *m.CoAPMessage) bool {
-	if message.Type == m.ACK {
-		coala.pendingsMessage.RemoveByKey(newPoolID(message.MessageID, message.Token, message.Sender))
-	}
 	return true
 }
 

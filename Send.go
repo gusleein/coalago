@@ -2,6 +2,7 @@ package coalago
 
 import (
 	"net"
+	"sync"
 	"time"
 
 	m "github.com/coalalib/coalago/message"
@@ -11,13 +12,17 @@ import (
 func (coala *Coala) Send(message *m.CoAPMessage, address net.Addr) (response *m.CoAPMessage, err error) {
 	chErr := make(chan error)
 
+	var once sync.Once
 	if message.Type == m.CON {
 		callback := func(r *m.CoAPMessage, e error) {
-			response = r
-			select {
-			case <-time.After(time.Millisecond * 10):
-			case chErr <- e:
-			}
+			once.Do(func() {
+				response = r
+				select {
+				case <-time.After(time.Millisecond * 10):
+				case chErr <- e:
+				}
+			})
+
 		}
 
 		coala.sendMessage(message, address, callback, coala.pendingsMessage, coala.acknowledgePool)

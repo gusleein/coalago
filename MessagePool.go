@@ -15,8 +15,13 @@ func pendingMessagesReader(coala *Coala, senderPool chan *m.CoAPMessage, acknowl
 	for {
 		message := <-senderPool
 
+		// fmt.Println("!", message.MessageID)
 		if message.Type != m.CON {
 			sendToSocket(coala, message, message.Recipient)
+			continue
+		}
+
+		if !acknowledgePool.IsExists(newPoolID(message.MessageID, message.Token, message.Recipient)) {
 			continue
 		}
 
@@ -42,5 +47,6 @@ func pendingMessagesReader(coala *Coala, senderPool chan *m.CoAPMessage, acknowl
 		}
 
 		sendToSocket(coala, message, message.Recipient)
+		senderPool <- message
 	}
 }

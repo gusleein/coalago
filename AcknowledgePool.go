@@ -4,7 +4,7 @@ import "sync"
 
 type ackPool struct {
 	m      map[poolID]CoalaCallback
-	locker sync.Mutex
+	locker sync.RWMutex
 }
 
 func newAckPool() *ackPool {
@@ -31,4 +31,11 @@ func (a *ackPool) GetAndDelete(key poolID) CoalaCallback {
 	delete(a.m, key)
 	a.locker.Unlock()
 	return v
+}
+
+func (a *ackPool) IsExists(key poolID) bool {
+	a.locker.RLock()
+	_, ok := a.m[key]
+	a.locker.RUnlock()
+	return ok
 }
