@@ -37,7 +37,7 @@ func NewCoAPResource(method m.CoapMethod, path string, handler CoAPResourceHandl
 	io.WriteString(h, strconv.FormatInt(time.Now().UnixNano(), 10))
 	hash := h.Sum(nil)
 
-	return &CoAPResource{Method: method, Path: path, Handler: handler, Hash: string(hash[:])}
+	return &CoAPResource{Method: method, Path: path, Handler: handler, Hash: string(hash)}
 }
 
 func (resource *CoAPResource) DoesMatchPath(path string) bool {

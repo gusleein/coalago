@@ -388,7 +388,7 @@ func (m *CoAPMessage) GetTokenLength() uint8 {
 }
 
 func (m *CoAPMessage) GetTokenString() string {
-	return string(m.Token[:])
+	return string(m.Token)
 }
 
 func (m *CoAPMessage) GetMessageIDString() string {
@@ -425,7 +425,7 @@ func (m *CoAPMessage) SetURIPath(fullPath string) {
 	}
 }
 
-func (m *CoAPMessage) SetURIQuery(k string, v string) {
+func (m *CoAPMessage) SetURIQuery(k, v string) {
 	m.AddOption(OptionURIQuery, k+"="+v)
 }
 
@@ -539,11 +539,9 @@ func EscapeString(s string) string {
 }
 
 func escapeChar(s string) string {
-	switch s {
-	case "&":
+	if s == "&" {
 		return "%26"
 	}
-
 	return s
 }
 

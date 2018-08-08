@@ -1,63 +1,52 @@
 package coalago
 
 import (
-	"net"
-
 	m "github.com/coalalib/coalago/message"
 	"github.com/coalalib/coalago/resource"
 )
 
-type RequestLayer struct{}
-
-func (layer *RequestLayer) OnReceive(coala *Coala, message *m.CoAPMessage) bool {
+func requestOnReceive(server *Server, message *m.CoAPMessage) bool {
 	if message.Code <= 0 || message.Code > 4 {
 		return true
 	}
-	resource := coala.GetResourceForPathAndMethod(message.GetURIPath(), message.GetMethod())
-
+	resource := server.getResourceForPathAndMethod(message.GetURIPath(), message.GetMethod())
 	if resource == nil {
 		if message.Type == m.CON {
-			return noResource(coala, message)
+			return noResource(server, message)
 		}
 		return false
 	}
 
 	if resource.Method != message.GetMethod() {
-		return methodNotAllowed(coala, message)
+		return methodNotAllowed(server, message)
 	}
 
 	if handlerResult := resource.Handler(message); handlerResult != nil {
 		if message.Type == m.NON {
 			return false
 		}
-		return returnResultFromResource(coala, message, handlerResult)
+		return returnResultFromResource(server, message, handlerResult)
 	}
 
 	if message.Type == m.CON {
-		return noResultResourceHandler(coala, message)
+		return noResultResourceHandler(server, message)
 	}
 
 	return false
 }
 
-func (layer *RequestLayer) OnSend(coala *Coala, message *m.CoAPMessage, address net.Addr) (bool, error) {
-	return true, nil
-}
-
-func methodNotAllowed(coala *Coala, message *m.CoAPMessage) bool {
+func methodNotAllowed(server *Server, message *m.CoAPMessage) bool {
 	responseMessage := m.NewCoAPMessageId(m.ACK, m.CoapCodeMethodNotAllowed, message.MessageID)
 	responseMessage.Payload = m.NewStringPayload("Method is not allowed for requested resource")
 	if message.Token != nil && len(message.Token) > 0 {
 		responseMessage.Token = message.Token
 	}
-
 	responseMessage.CloneOptions(message, m.OptionBlock1, m.OptionBlock2)
-	coala.Send(responseMessage, message.Sender)
-
+	server.sr.SendTo(responseMessage, message.Sender)
 	return false
 }
 
-func returnResultFromResource(coala *Coala, message *m.CoAPMessage, handlerResult *resource.CoAPResourceHandlerResult) bool {
+func returnResultFromResource(server *Server, message *m.CoAPMessage, handlerResult *resource.CoAPResourceHandlerResult) bool {
 	// @TODO: Validate Response code! handlerResult.Code
 
 	// Create ACK response with the same ID and given reponse Code
@@ -83,14 +72,11 @@ func returnResultFromResource(coala *Coala, message *m.CoAPMessage, handlerResul
 	}
 	responseMessage.CloneOptions(message, m.OptionBlock1, m.OptionBlock2, m.OptionSelectiveRepeatWindowSize)
 
-	_, err := coala.Send(responseMessage, message.Sender)
-	if err != nil {
-		return true
-	}
-	return false
+	_, err := server.sr.SendTo(responseMessage, message.Sender)
+	return err != nil
 }
 
-func noResultResourceHandler(coala *Coala, message *m.CoAPMessage) bool {
+func noResultResourceHandler(server *Server, message *m.CoAPMessage) bool {
 	responseMessage := m.NewCoAPMessageId(m.ACK, m.CoapCodeInternalServerError, message.MessageID)
 	responseMessage.Payload = m.NewStringPayload("No Result was returned by Resource Handler")
 	if message.Token != nil && len(message.Token) > 0 {
@@ -98,25 +84,19 @@ func noResultResourceHandler(coala *Coala, message *m.CoAPMessage) bool {
 	}
 	responseMessage.CloneOptions(message, m.OptionBlock1, m.OptionBlock2)
 
-	_, err := coala.Send(responseMessage, message.Sender)
-	if err != nil {
-		return true
-	}
-	return false
+	_, err := server.sr.SendTo(responseMessage, message.Sender)
+	return err != nil
 }
 
-func noResource(coala *Coala, message *m.CoAPMessage) bool {
+func noResource(server *Server, message *m.CoAPMessage) bool {
 	responseMessage := m.NewCoAPMessageId(m.ACK, m.CoapCodeNotFound, message.MessageID)
 	responseMessage.Payload = m.NewStringPayload("Requested resource " + message.GetURIPath() + " does not exist")
 	if message.Token != nil && len(message.Token) > 0 {
 		responseMessage.Token = message.Token
 	}
 	responseMessage.CloneOptions(message, m.OptionBlock1, m.OptionBlock2)
+	responseMessage.Recipient = message.Sender
 
-	_, err := coala.Send(responseMessage, message.Sender)
-
-	if err != nil {
-		return true
-	}
-	return false
+	_, err := server.sr.SendTo(responseMessage, message.Sender)
+	return err != nil
 }
