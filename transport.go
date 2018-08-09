@@ -147,7 +147,6 @@ func (sr *transport) sendPackets(packets []*packet, shift int) error {
 				}
 				packets[i].attempts++
 				packets[i].lastSend = time.Now()
-
 				if err := sr.sendToSocket(packets[i].message); err != nil {
 					return err
 				}
@@ -428,7 +427,7 @@ func (sr *transport) receiveARQBlock2(inputMessage *CoAPMessage) (rsp *CoAPMessa
 		if totalBlocks == len(buf) {
 			b := []byte{}
 			for i := 0; i < totalBlocks; i++ {
-				b = append(b, buf[0]...)
+				b = append(b, buf[i]...)
 			}
 			inputMessage.Payload = NewBytesPayload(b)
 			ack := ackTo(inputMessage, CoapCodeEmpty)
