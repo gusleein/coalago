@@ -12,7 +12,7 @@ import (
 var (
 	ErrUndefinedScheme = errors.New("undefined scheme")
 	ErrMaxAttempts     = errors.New("max attempts")
-	MAX_PAYLOAD_SIZE   = 512
+	MAX_PAYLOAD_SIZE   = 1024
 )
 
 type Response struct {
