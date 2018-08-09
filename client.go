@@ -16,8 +16,9 @@ var (
 )
 
 type Response struct {
-	Body []byte
-	Code CoapCode
+	Body          []byte
+	Code          CoapCode
+	PeerPublicKey []byte
 }
 
 type Client struct {
@@ -38,6 +39,28 @@ func (c *Client) GET(url string, options ...*CoAPMessageOption) (*Response, erro
 		return nil, err
 	}
 	return clientSendCONMessage(message, message.Recipient.String())
+}
+
+func (c *Client) Send(message *CoAPMessage, addr string, options ...*CoAPMessageOption) (*Response, error) {
+	message.AddOptions(options)
+
+	conn, err := globalPoolConnections.Dial(addr)
+	if err != nil {
+		return nil, err
+	}
+
+	defer conn.Close()
+
+	sr := newtransport(conn)
+	resp, err := sr.Send(message)
+	if err != nil {
+		return nil, err
+	}
+	r := new(Response)
+	r.Body = resp.Payload.Bytes()
+	r.Code = resp.Code
+	r.PeerPublicKey = resp.PeerPublicKey
+	return r, nil
 }
 
 func (c *Client) POST(data []byte, url string, options ...*CoAPMessageOption) (*Response, error) {
@@ -69,7 +92,7 @@ func clientSendCONMessage(message *CoAPMessage, addr string) (*Response, error) 
 	r := new(Response)
 	r.Body = resp.Payload.Bytes()
 	r.Code = resp.Code
-
+	r.PeerPublicKey = resp.PeerPublicKey
 	return r, nil
 }
 
@@ -80,9 +103,8 @@ func clientSendCON(message *CoAPMessage, addr string) (resp *CoAPMessage, err er
 	}
 
 	defer conn.Close()
-
 	sr := newtransport(conn)
-	return sr.sendCON(message)
+	return sr.Send(message)
 }
 
 func constructMessage(code CoapCode, url string) (*CoAPMessage, error) {

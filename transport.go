@@ -33,7 +33,7 @@ func (sr *transport) Send(message *CoAPMessage) (resp *CoAPMessage, err error) {
 	switch message.Type {
 	case CON:
 		return sr.sendCON(message)
-	case RST:
+	case RST, NON:
 		return nil, sr.sendToSocket(message)
 	default:
 		return nil, ErrUnsupportedType
