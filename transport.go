@@ -192,6 +192,7 @@ func (sr *transport) sendARQBlock1CON(message *CoAPMessage) (*CoAPMessage, error
 	state.payload = message.Payload.Bytes()
 	state.lenght = len(state.payload)
 	state.origMessage = message
+	state.blockSize = MAX_PAYLOAD_SIZE
 
 	packets := []*packet{}
 
@@ -266,6 +267,7 @@ func (sr *transport) sendARQBlock2ACK(input chan *CoAPMessage, message *CoAPMess
 	state.payload = message.Payload.Bytes()
 	state.lenght = len(state.payload)
 	state.origMessage = message
+	state.blockSize = MAX_PAYLOAD_SIZE
 
 	packets := []*packet{}
 

@@ -246,7 +246,7 @@ func optionCodeToString(option OptionCode) string {
 }
 
 func constructNextBlock(blockType OptionCode, s *stateSend) (*CoAPMessage, bool) {
-	s.stop = s.start + MAX_PAYLOAD_SIZE
+	s.stop = s.start + s.blockSize
 	if s.stop > s.lenght {
 		s.stop = s.lenght
 	}
@@ -260,6 +260,7 @@ func constructNextBlock(blockType OptionCode, s *stateSend) (*CoAPMessage, bool)
 		blockbyte,
 		blockType,
 		s.nextNumBlock,
+		s.blockSize,
 		DEFAULT_WINDOW_SIZE,
 		isMore,
 	)
@@ -282,7 +283,16 @@ func ackTo(origMessage *CoAPMessage, code CoapCode) *CoAPMessage {
 	return result
 }
 
-func newBlockingMessage(origMessage *CoAPMessage, recipient net.Addr, frame []byte, optionBlock OptionCode, blockNum, windowSize int, isMore bool) *CoAPMessage {
+func newBlockingMessage(
+	origMessage *CoAPMessage,
+	recipient net.Addr,
+	frame []byte,
+	optionBlock OptionCode,
+	blockNum,
+	blockSize,
+	windowSize int,
+	isMore bool,
+) *CoAPMessage {
 	msg := NewCoAPMessage(CON, origMessage.Code)
 	if origMessage.GetScheme() == COAPS_SCHEME {
 		msg.SetSchemeCOAPS()
@@ -296,7 +306,7 @@ func newBlockingMessage(origMessage *CoAPMessage, recipient net.Addr, frame []by
 	queries := origMessage.GetOptions(OptionURIQuery)
 	msg.AddOptions(queries)
 
-	b := newBlock(isMore, blockNum, MAX_PAYLOAD_SIZE)
+	b := newBlock(isMore, blockNum, blockSize)
 
 	msg.AddOption(optionBlock, b.ToInt())
 	msg.Recipient = recipient
@@ -310,6 +320,7 @@ type stateSend struct {
 	start        int
 	stop         int
 	nextNumBlock int
+	blockSize    int
 	origMessage  *CoAPMessage
 	payload      []byte
 }
