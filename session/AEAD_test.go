@@ -1,27 +1,26 @@
-package crypto
+package session
 
 import (
-	"crypto/rand"
 	"bytes"
+	"crypto/rand"
 	"fmt"
 
 	"testing"
 )
 
-
 func TestSealOpen(t *testing.T) {
 	var (
 		alice, bob                       *AEAD
 		keyAlice, keyBob, ivAlice, ivBob []byte
-		err 							 error
+		err                              error
 	)
 
 	// Prepare
 
 	keyAlice = make([]byte, 16)
-	keyBob   = make([]byte, 16)
+	keyBob = make([]byte, 16)
 	ivAlice = make([]byte, 4)
-	ivBob   = make([]byte, 4)
+	ivBob = make([]byte, 4)
 	rand.Reader.Read(keyAlice)
 	rand.Reader.Read(keyBob)
 	rand.Reader.Read(ivAlice)

@@ -4,13 +4,11 @@ import (
 	"bytes"
 	"crypto/sha256"
 	"errors"
-
-	"github.com/coalalib/coalago/crypto"
 )
 
 type SecuredSession struct {
-	Curve         *crypto.Curve25519
-	AEAD          *crypto.AEAD
+	Curve         *Curve25519
+	AEAD          *AEAD
 	PeerPublicKey []byte
 	UpdatedAt     int
 }
@@ -19,10 +17,10 @@ func NewSecuredSession(privateKey []byte) (session *SecuredSession, err error) {
 	session = new(SecuredSession)
 
 	if len(privateKey) == 0 {
-		session.Curve, err = crypto.NewCurve25519()
+		session.Curve, err = NewCurve25519()
 	} else {
 		privateKeySHA256 := sha256.Sum256(privateKey)
-		session.Curve, err = crypto.NewStaticCurve25519(privateKeySHA256)
+		session.Curve, err = NewStaticCurve25519(privateKeySHA256)
 	}
 	if err != nil {
 		return nil, err
@@ -30,9 +28,9 @@ func NewSecuredSession(privateKey []byte) (session *SecuredSession, err error) {
 	return
 }
 
-func NewStaticSecuredSession(privateKey [crypto.KEY_SIZE]byte) (session *SecuredSession, err error) {
+func NewStaticSecuredSession(privateKey [KEY_SIZE]byte) (session *SecuredSession, err error) {
 	session = new(SecuredSession)
-	session.Curve, err = crypto.NewStaticCurve25519(privateKey)
+	session.Curve, err = NewStaticCurve25519(privateKey)
 	if err != nil {
 		return nil, err
 	}
@@ -79,13 +77,13 @@ func (session *SecuredSession) Verify(peerSignature []byte) error {
 
 	   var info []byte // Should be some public data
 	*/
-	peerKey, myKey, peerIV, myIV, err := crypto.DeriveKeysFromSharedSecret(sharedSecret, nil, nil)
+	peerKey, myKey, peerIV, myIV, err := DeriveKeysFromSharedSecret(sharedSecret, nil, nil)
 	if err != nil {
 		return err
 	}
 
 	// OK! Session is started! We can communicate now with AES Ephemeral Key!
-	session.AEAD, err = crypto.NewAEAD(peerKey, myKey, peerIV, myIV)
+	session.AEAD, err = NewAEAD(peerKey, myKey, peerIV, myIV)
 
 	return err
 }
@@ -109,13 +107,13 @@ func (session *SecuredSession) PeerVerify(peerSignature []byte) error {
 		return err
 	}
 
-	peerKey, myKey, peerIV, myIV, err := crypto.DeriveKeysFromSharedSecret(sharedSecret, nil, nil)
+	peerKey, myKey, peerIV, myIV, err := DeriveKeysFromSharedSecret(sharedSecret, nil, nil)
 	if err != nil {
 		return err
 	}
 
 	// OK! Session is started! We can communicate now with AES Ephemeral Key!
-	session.AEAD, err = crypto.NewAEAD(myKey, peerKey, myIV, peerIV)
+	session.AEAD, err = NewAEAD(myKey, peerKey, myIV, peerIV)
 
 	return err
 }

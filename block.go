@@ -4,8 +4,8 @@ import (
 	"math"
 )
 
-func NewBlock(moreBlocks bool, num, size int) *Block {
-	block := &Block{
+func newBlock(moreBlocks bool, num, size int) *block {
+	block := &block{
 		BlockNumber: num,
 		BlockSize:   size,
 		MoreBlocks:  moreBlocks,
@@ -13,21 +13,21 @@ func NewBlock(moreBlocks bool, num, size int) *Block {
 	return block
 }
 
-func NewBlockFromInt(blockValue int) *Block {
-	block := &Block{}
+func newBlockFromInt(blockValue int) *block {
+	block := &block{}
 
 	block.FromInt(blockValue)
 
 	return block
 }
 
-type Block struct {
+type block struct {
 	BlockNumber int
 	MoreBlocks  bool
 	BlockSize   int
 }
 
-func (block *Block) ToInt() int {
+func (block *block) ToInt() int {
 	if block.BlockSize > 1024 || block.BlockSize <= 0 {
 		return 0
 	}
@@ -46,7 +46,7 @@ func (block *Block) ToInt() int {
 	return value
 }
 
-func (block *Block) FromInt(blockValue int) error {
+func (block *block) FromInt(blockValue int) error {
 	num := blockValue >> 4
 	m := (blockValue & 8) >> 3
 	szx := blockValue & 7

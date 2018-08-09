@@ -38,11 +38,11 @@ type CoAPMessage struct {
 
 func NewCoAPMessage(messageType CoapType, messageCode CoapCode) *CoAPMessage {
 	return &CoAPMessage{
-		MessageID: GenerateMessageID(),
+		MessageID: generateMessageID(),
 		Type:      messageType,
 		Code:      messageCode,
 		Payload:   NewEmptyPayload(),
-		Token:     GenerateToken(6),
+		Token:     generateToken(6),
 	}
 }
 
@@ -51,7 +51,7 @@ func NewCoAPMessageId(messageType CoapType, messageCode CoapCode, messageID uint
 		MessageID: messageID,
 		Type:      messageType,
 		Code:      messageCode,
-		Token:     GenerateToken(6),
+		Token:     generateToken(6),
 	}
 }
 
@@ -206,7 +206,7 @@ func Serialize(msg *CoAPMessage) ([]byte, error) {
 	buf.Write(msg.Token)
 
 	// Sort Options
-	sort.Sort(SortOptions(msg.Options))
+	sort.Sort(sortOptions(msg.Options))
 
 	lastOptionCode := 0
 	for _, opt := range msg.Options {
@@ -471,18 +471,18 @@ func (m *CoAPMessage) IsProxied() bool {
 	return m.GetOption(OptionProxyURI) != nil
 }
 
-func (m *CoAPMessage) GetBlock1() *Block {
+func (m *CoAPMessage) GetBlock1() *block {
 	optionBlock1 := m.GetOption(OptionBlock1)
 	if optionBlock1 != nil {
-		return NewBlockFromInt(optionBlock1.IntValue())
+		return newBlockFromInt(optionBlock1.IntValue())
 	}
 	return nil
 }
 
-func (m *CoAPMessage) GetBlock2() *Block {
+func (m *CoAPMessage) GetBlock2() *block {
 	optionBlock2 := m.GetOption(OptionBlock2)
 	if optionBlock2 != nil {
-		return NewBlockFromInt(optionBlock2.IntValue())
+		return newBlockFromInt(optionBlock2.IntValue())
 	}
 	return nil
 }

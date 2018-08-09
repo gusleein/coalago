@@ -33,7 +33,7 @@ func securityClientSend(tr *transport, sessions *cache.Cache, privatekey []byte,
 	}
 
 	// Encrypt message payload
-	err = Encrypt(message, addr, currentSession.AEAD)
+	err = encrypt(message, addr, currentSession.AEAD)
 	if err != nil {
 		return err
 	}
@@ -100,7 +100,7 @@ func securityReceive(tr *transport, sessions *cache.Cache, privatekey []byte, me
 		}
 
 		// Decrypt message payload
-		err := Decrypt(message, currentSession.AEAD)
+		err := decrypt(message, currentSession.AEAD)
 		if err != nil {
 			responseMessage := NewCoAPMessageId(ACK, CoapCodeUnauthorized, message.MessageID)
 			responseMessage.AddOption(OptionSessionExpired, 1)
@@ -219,7 +219,7 @@ func newClientHelloMessage(origMessage *CoAPMessage, myPublicKey []byte) *CoAPMe
 	message := NewCoAPMessage(CON, POST)
 	message.AddOption(OptionHandshakeType, CoapHandshakeTypeClientHello)
 	message.Payload = NewBytesPayload(myPublicKey)
-	message.Token = GenerateToken(6)
+	message.Token = generateToken(6)
 	message.CloneOptions(origMessage, OptionProxyURI)
 	return message
 }

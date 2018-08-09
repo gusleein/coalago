@@ -1,4 +1,4 @@
-package crypto
+package session
 
 import (
 	//"crypto/rand"
@@ -19,7 +19,7 @@ func TestKeyDerivation(t *testing.T) {
 		t.Fail()
 	}
 
-	mySecret, err   := myCurve.GenerateSharedSecret(peerCurve.GetPublicKey())
+	mySecret, err := myCurve.GenerateSharedSecret(peerCurve.GetPublicKey())
 	peerSecret, err := peerCurve.GenerateSharedSecret(myCurve.GetPublicKey())
 
 	if !bytes.Equal(mySecret, peerSecret) {
@@ -37,10 +37,8 @@ func TestKeyDerivation(t *testing.T) {
 		t.Fail()
 	}
 
-
 	fmt.Println(peerKey, myKey, peerIV, myIV)
 	fmt.Println(peerKey2, myKey2, peerIV2, myIV2)
-
 
 	myAEAD, err := NewAEAD(peerKey, myKey, peerIV, myIV)
 	if err != nil {
@@ -85,7 +83,7 @@ func BenchmarkKeyDerivation(b *testing.B) {
 			panic(err)
 		}
 
-		mySecret, err   := myCurve.GenerateSharedSecret(peerCurve.GetPublicKey())
+		mySecret, err := myCurve.GenerateSharedSecret(peerCurve.GetPublicKey())
 		peerSecret, err := peerCurve.GenerateSharedSecret(myCurve.GetPublicKey())
 
 		peerKey, myKey, peerIV, myIV, err := DeriveKeysFromSharedSecret(mySecret, nil, nil)

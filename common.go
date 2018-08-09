@@ -21,7 +21,7 @@ func init() {
 	currentMessageID = int32(rand.Intn(65535))
 }
 
-func GenerateMessageID() uint16 {
+func generateMessageID() uint16 {
 	if atomic.LoadInt32(&currentMessageID) < 65535 {
 		atomic.AddInt32(&currentMessageID, 1)
 	} else {
@@ -31,20 +31,20 @@ func GenerateMessageID() uint16 {
 	return uint16(atomic.LoadInt32(&currentMessageID))
 }
 
-func GenerateToken(l int) []byte {
+func generateToken(l int) []byte {
 	token := make([]byte, l)
 	rand.Read(token)
 	return token
 }
 
 // type to sort the coap options list (which is mandatory) prior to transmission
-type SortOptions []*CoAPMessageOption
+type sortOptions []*CoAPMessageOption
 
-func (opts SortOptions) Len() int {
+func (opts sortOptions) Len() int {
 	return len(opts)
 }
 
-func (opts SortOptions) Swap(i, j int) {
+func (opts sortOptions) Swap(i, j int) {
 	opts[i], opts[j] = opts[j], opts[i]
 
 	// Check change order of the pathes option.
@@ -58,7 +58,7 @@ func (opts SortOptions) Swap(i, j int) {
 	}
 }
 
-func (opts SortOptions) Less(i, j int) bool {
+func (opts sortOptions) Less(i, j int) bool {
 	return opts[i].Code < opts[j].Code
 }
 
@@ -296,9 +296,9 @@ func newBlockingMessage(origMessage *CoAPMessage, recipient net.Addr, frame []by
 	queries := origMessage.GetOptions(OptionURIQuery)
 	msg.AddOptions(queries)
 
-	block := NewBlock(isMore, blockNum, MAX_PAYLOAD_SIZE)
+	b := newBlock(isMore, blockNum, MAX_PAYLOAD_SIZE)
 
-	msg.AddOption(optionBlock, block.ToInt())
+	msg.AddOption(optionBlock, b.ToInt())
 	msg.Recipient = recipient
 
 	return msg

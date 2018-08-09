@@ -4,16 +4,16 @@ import (
 	"net"
 	"net/url"
 
-	"github.com/coalalib/coalago/crypto"
+	"github.com/coalalib/coalago/session"
 )
 
-func Encrypt(message *CoAPMessage, address net.Addr, aead *crypto.AEAD) error {
+func encrypt(message *CoAPMessage, address net.Addr, aead *session.AEAD) error {
 	if message.Payload != nil && message.Payload.Length() != 0 {
 		var associatedData []byte
 		message.Payload = NewBytesPayload(aead.Seal(message.Payload.Bytes(), message.MessageID, associatedData))
 	}
 
-	err := EncryptionOptions(message, address, aead)
+	err := encryptionOptions(message, address, aead)
 	if err != nil {
 		return err
 	}
@@ -21,7 +21,7 @@ func Encrypt(message *CoAPMessage, address net.Addr, aead *crypto.AEAD) error {
 	return nil
 }
 
-func Decrypt(message *CoAPMessage, aead *crypto.AEAD) error {
+func decrypt(message *CoAPMessage, aead *session.AEAD) error {
 	if message.Payload != nil && message.Payload.Length() != 0 {
 		var associatedData []byte
 		newPayload, err := aead.Open(message.Payload.Bytes(), message.MessageID, associatedData)
@@ -32,10 +32,10 @@ func Decrypt(message *CoAPMessage, aead *crypto.AEAD) error {
 	}
 
 	message.PublicKey = aead.PeerKey
-	return DecryptionOptions(message, aead)
+	return decryptionOptions(message, aead)
 }
 
-func EncryptionOptions(message *CoAPMessage, address net.Addr, aead *crypto.AEAD) error {
+func encryptionOptions(message *CoAPMessage, address net.Addr, aead *session.AEAD) error {
 	var associatedData []byte
 
 	coapsURI := aead.Seal([]byte(message.GetURI(address.String())), message.MessageID, associatedData)
@@ -46,7 +46,7 @@ func EncryptionOptions(message *CoAPMessage, address net.Addr, aead *crypto.AEAD
 	return nil
 }
 
-func DecryptionOptions(message *CoAPMessage, aead *crypto.AEAD) error {
+func decryptionOptions(message *CoAPMessage, aead *session.AEAD) error {
 	coapsURIOption := message.GetOption(OptionСoapsUri)
 	if coapsURIOption == nil {
 		return nil

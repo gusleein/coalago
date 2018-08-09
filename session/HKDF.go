@@ -1,8 +1,8 @@
-package crypto
+package session
 
-import(
-	"io"
+import (
 	"crypto/sha256"
+	"io"
 
 	"golang.org/x/crypto/hkdf"
 )
@@ -18,9 +18,9 @@ func DeriveKeysFromSharedSecret(sharedSecret, salt, info []byte) ([]byte, []byte
 	}
 
 	peerKey := s[:keyLen]
-	myKey   := s[keyLen : 2*keyLen]
-	peerIV  := s[2*keyLen : 2*keyLen+4]
-	myIV    := s[2*keyLen+4:]
+	myKey := s[keyLen : 2*keyLen]
+	peerIV := s[2*keyLen : 2*keyLen+4]
+	myIV := s[2*keyLen+4:]
 
 	return peerKey, myKey, peerIV, myIV, nil
 }
