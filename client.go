@@ -30,28 +30,34 @@ func NewClient() *Client {
 	return c
 }
 
-func (c *Client) GET(url string) (*Response, error) {
+func (c *Client) GET(url string, options ...*CoAPMessageOption) (*Response, error) {
 	message, err := constructMessage(GET, url)
+	message.AddOptions(options)
+
 	if err != nil {
 		return nil, err
 	}
 	return clientSendCONMessage(message, message.Recipient.String())
 }
 
-func (c *Client) POST(data []byte, url string) (*Response, error) {
+func (c *Client) POST(data []byte, url string, options ...*CoAPMessageOption) (*Response, error) {
 	message, err := constructMessage(POST, url)
 	if err != nil {
 		return nil, err
 	}
+	message.AddOptions(options)
+
 	message.Payload = NewBytesPayload(data)
 	return clientSendCONMessage(message, message.Recipient.String())
 }
 
-func (c *Client) DELETE(data []byte, url string) (*Response, error) {
+func (c *Client) DELETE(data []byte, url string, options ...*CoAPMessageOption) (*Response, error) {
 	message, err := constructMessage(DELETE, url)
 	if err != nil {
 		return nil, err
 	}
+	message.AddOptions(options)
+
 	return clientSendCONMessage(message, message.Recipient.String())
 }
 
