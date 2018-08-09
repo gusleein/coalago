@@ -48,6 +48,21 @@ func (s *Server) Listen(addr string) (err error) {
 	}
 }
 
+func (s *Server) Serve(conn *net.UDPConn) {
+	c := new(connection)
+	c.conn = conn
+	s.sr = newtransport(c)
+}
+
+func (s *Server) ServeMessage(message *CoAPMessage) {
+	s.sr.ReceiveMessage(message, func(message *CoAPMessage, err error) {
+		if err != nil {
+			return
+		}
+		requestOnReceive(s, message)
+	})
+}
+
 func (s *Server) addResource(res *CoAPResource) {
 	key := res.Path + fmt.Sprint(res.Method)
 	s.resources.Store(key, res)

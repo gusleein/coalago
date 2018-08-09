@@ -447,6 +447,15 @@ func (sr *transport) receiveARQBlock2(inputMessage *CoAPMessage) (rsp *CoAPMessa
 	}
 }
 
+func (sr *transport) ReceiveMessage(message *CoAPMessage, respHandler func(*CoAPMessage, error)) {
+	message, err := preparationReceivingMessage(sr, message)
+	if err != nil {
+		return
+	}
+
+	sr.messageHandlerSelector(message, respHandler)
+}
+
 func (sr *transport) ReceiveOnce(respHandler func(*CoAPMessage, error)) {
 	readBuf := make([]byte, 1500)
 start:
@@ -458,7 +467,7 @@ start:
 		goto start
 	}
 
-	message, err := preparationReceivingMessage(sr, readBuf[:n], senderAddr)
+	message, err := preparationReceivingBuffer(sr, readBuf[:n], senderAddr)
 	if err != nil {
 		goto start
 	}
@@ -524,13 +533,21 @@ func preparationSendingMessage(tr *transport, message *CoAPMessage, addr net.Add
 	return buf, nil
 }
 
-func preparationReceivingMessage(tr *transport, data []byte, senderAddr net.Addr) (*CoAPMessage, error) {
+func preparationReceivingBuffer(tr *transport, data []byte, senderAddr net.Addr) (*CoAPMessage, error) {
 	message, err := Deserialize(data)
 	if err != nil {
 		return nil, err
 	}
 	message.Sender = senderAddr
 
+	if securityReceive(tr, tr.sessions, nil, message) {
+		return message, nil
+	}
+
+	return nil, errors.New("Session error")
+}
+
+func preparationReceivingMessage(tr *transport, message *CoAPMessage) (*CoAPMessage, error) {
 	if securityReceive(tr, tr.sessions, nil, message) {
 		return message, nil
 	}
