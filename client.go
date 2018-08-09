@@ -155,5 +155,9 @@ func parseURI(uri string) (path, scheme string, queries url.Values, addr net.Add
 }
 
 func isBigPayload(message *CoAPMessage) bool {
-	return message.Payload.Length() > MAX_PAYLOAD_SIZE
+	if message.Payload != nil {
+		return message.Payload.Length() > MAX_PAYLOAD_SIZE
+	}
+
+	return false
 }

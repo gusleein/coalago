@@ -581,6 +581,9 @@ func (p *StringCoAPMessagePayload) String() string {
 
 // Represents a message payload containing an array of bytes
 func NewBytesPayload(v []byte) CoAPMessagePayload {
+	if v == nil {
+		v = []byte{}
+	}
 	return &BytesPayload{
 		content: v,
 	}
