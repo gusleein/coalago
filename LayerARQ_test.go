@@ -10,9 +10,6 @@ import (
 	"sync"
 	"testing"
 	"time"
-
-	m "github.com/coalalib/coalago/message"
-	"github.com/coalalib/coalago/resource"
 )
 
 func init() {
@@ -38,13 +35,13 @@ func TestSimple(t *testing.T) {
 
 	c := NewClient()
 	s := NewServer()
-	s.AddPOSTResource(pathTestBlock1, func(message *m.CoAPMessage) *resource.CoAPResourceHandlerResult {
+	s.AddPOSTResource(pathTestBlock1, func(message *CoAPMessage) *CoAPResourceHandlerResult {
 		if !bytes.Equal(message.Payload.Bytes(), expectedPayload) {
 			panic(fmt.Sprintf("Expected payload: %s\n\nActual payload: %s\n", expectedPayload, message.Payload.Bytes()))
 		}
 
-		resp := m.NewBytesPayload(expectedResponse)
-		return resource.NewResponse(resp, m.CoapCodeChanged)
+		resp := NewBytesPayload(expectedResponse)
+		return NewResponse(resp, CoapCodeChanged)
 	})
 
 	go s.Listen(":1111")
@@ -77,7 +74,7 @@ func TestBlock1(t *testing.T) {
 
 	c := NewClient()
 	s := NewServer()
-	s.AddPOSTResource(pathTestBlock1, func(message *m.CoAPMessage) *resource.CoAPResourceHandlerResult {
+	s.AddPOSTResource(pathTestBlock1, func(message *CoAPMessage) *CoAPResourceHandlerResult {
 		if !bytes.Equal(message.Payload.Bytes(), expectedPayload) {
 			println(fmt.Sprintf("Expected len: %d\n\nActual len: %d\n", len(expectedPayload), message.Payload.Length()))
 			// panic(fmt.Sprintf("Expected payload: %s\n\nActual payload: %s\n", expectedPayload, message.Payload.Bytes()))
@@ -85,9 +82,9 @@ func TestBlock1(t *testing.T) {
 
 		}
 
-		resp := m.NewBytesPayload(expectedResponse)
+		resp := NewBytesPayload(expectedResponse)
 
-		return resource.NewResponse(resp, m.CoapCodeChanged)
+		return NewResponse(resp, CoapCodeChanged)
 	})
 
 	go s.Listen(":1111")
@@ -121,9 +118,9 @@ func TestBlock2(t *testing.T) {
 	c := NewClient()
 	s := NewServer()
 
-	s.AddGETResource(pathTestBlock2, func(message *m.CoAPMessage) *resource.CoAPResourceHandlerResult {
-		resp := m.NewBytesPayload(expectedResponse)
-		return resource.NewResponse(resp, m.CoapCodeContent)
+	s.AddGETResource(pathTestBlock2, func(message *CoAPMessage) *CoAPResourceHandlerResult {
+		resp := NewBytesPayload(expectedResponse)
+		return NewResponse(resp, CoapCodeContent)
 	})
 
 	go s.Listen(":1111")
@@ -162,16 +159,16 @@ func TestBlockMix(t *testing.T) {
 	c := NewClient()
 	s := NewServer()
 
-	s.AddPOSTResource(pathTestBlockMix, func(message *m.CoAPMessage) *resource.CoAPResourceHandlerResult {
+	s.AddPOSTResource(pathTestBlockMix, func(message *CoAPMessage) *CoAPResourceHandlerResult {
 		if !bytes.Equal(message.Payload.Bytes(), expectedResponse) {
 			println(fmt.Sprintf("Expected len: %d\n\nActual len: %d\n", len(expectedResponse), message.Payload.Length()))
 			panic(fmt.Sprintf("Expected payload: %s\n\nActual payload: %s\n", expectedResponse, message.Payload.Bytes()))
 		}
 
-		resp := m.NewBytesPayload(expectedResponse)
+		resp := NewBytesPayload(expectedResponse)
 		// time.Sleep(time.Second * 15)
 
-		return resource.NewResponse(resp, m.CoapCodeChanged)
+		return NewResponse(resp, CoapCodeChanged)
 	})
 
 	go s.Listen(":1111")

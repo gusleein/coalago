@@ -6,7 +6,6 @@ import (
 	"net/url"
 	"time"
 
-	m "github.com/coalalib/coalago/message"
 	cache "github.com/patrickmn/go-cache"
 )
 
@@ -18,7 +17,7 @@ var (
 
 type Response struct {
 	Body []byte
-	Code m.CoapCode
+	Code CoapCode
 }
 
 type Client struct {
@@ -32,7 +31,7 @@ func NewClient() *Client {
 }
 
 func (c *Client) GET(url string) (*Response, error) {
-	message, err := constructMessage(m.GET, url)
+	message, err := constructMessage(GET, url)
 	if err != nil {
 		return nil, err
 	}
@@ -40,23 +39,23 @@ func (c *Client) GET(url string) (*Response, error) {
 }
 
 func (c *Client) POST(data []byte, url string) (*Response, error) {
-	message, err := constructMessage(m.POST, url)
+	message, err := constructMessage(POST, url)
 	if err != nil {
 		return nil, err
 	}
-	message.Payload = m.NewBytesPayload(data)
+	message.Payload = NewBytesPayload(data)
 	return clientSendCONMessage(message, message.Recipient.String())
 }
 
 func (c *Client) DELETE(data []byte, url string) (*Response, error) {
-	message, err := constructMessage(m.DELETE, url)
+	message, err := constructMessage(DELETE, url)
 	if err != nil {
 		return nil, err
 	}
 	return clientSendCONMessage(message, message.Recipient.String())
 }
 
-func clientSendCONMessage(message *m.CoAPMessage, addr string) (*Response, error) {
+func clientSendCONMessage(message *CoAPMessage, addr string) (*Response, error) {
 	resp, err := clientSendCON(message, addr)
 	if err != nil {
 		return nil, err
@@ -68,7 +67,7 @@ func clientSendCONMessage(message *m.CoAPMessage, addr string) (*Response, error
 	return r, nil
 }
 
-func clientSendCON(message *m.CoAPMessage, addr string) (resp *m.CoAPMessage, err error) {
+func clientSendCON(message *CoAPMessage, addr string) (resp *CoAPMessage, err error) {
 	conn, err := globalPoolConnections.Dial(addr)
 	if err != nil {
 		return nil, err
@@ -80,13 +79,13 @@ func clientSendCON(message *m.CoAPMessage, addr string) (resp *m.CoAPMessage, er
 	return sr.sendCON(message)
 }
 
-func constructMessage(code m.CoapCode, url string) (*m.CoAPMessage, error) {
+func constructMessage(code CoapCode, url string) (*CoAPMessage, error) {
 	path, scheme, queries, addr, err := parseURI(url)
 	if err != nil {
 		return nil, err
 	}
 
-	message := m.NewCoAPMessage(m.CON, code)
+	message := NewCoAPMessage(CON, code)
 	switch scheme {
 	case "coap":
 		message.SetSchemeCOAP()
@@ -127,6 +126,6 @@ func parseURI(uri string) (path, scheme string, queries url.Values, addr net.Add
 	return
 }
 
-func isBigPayload(message *m.CoAPMessage) bool {
+func isBigPayload(message *CoAPMessage) bool {
 	return message.Payload.Length() > MAX_PAYLOAD_SIZE
 }

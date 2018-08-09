@@ -1,4 +1,4 @@
-package blockwise
+package coalago
 
 import (
 	"math"

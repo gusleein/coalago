@@ -5,13 +5,12 @@ import (
 	"net/url"
 
 	"github.com/coalalib/coalago/crypto"
-	m "github.com/coalalib/coalago/message"
 )
 
-func Encrypt(message *m.CoAPMessage, address net.Addr, aead *crypto.AEAD) error {
+func Encrypt(message *CoAPMessage, address net.Addr, aead *crypto.AEAD) error {
 	if message.Payload != nil && message.Payload.Length() != 0 {
 		var associatedData []byte
-		message.Payload = m.NewBytesPayload(aead.Seal(message.Payload.Bytes(), message.MessageID, associatedData))
+		message.Payload = NewBytesPayload(aead.Seal(message.Payload.Bytes(), message.MessageID, associatedData))
 	}
 
 	err := EncryptionOptions(message, address, aead)
@@ -22,33 +21,33 @@ func Encrypt(message *m.CoAPMessage, address net.Addr, aead *crypto.AEAD) error 
 	return nil
 }
 
-func Decrypt(message *m.CoAPMessage, aead *crypto.AEAD) error {
+func Decrypt(message *CoAPMessage, aead *crypto.AEAD) error {
 	if message.Payload != nil && message.Payload.Length() != 0 {
 		var associatedData []byte
 		newPayload, err := aead.Open(message.Payload.Bytes(), message.MessageID, associatedData)
 		if err != nil {
 			return err
 		}
-		message.Payload = m.NewBytesPayload(newPayload)
+		message.Payload = NewBytesPayload(newPayload)
 	}
 
 	message.PublicKey = aead.PeerKey
 	return DecryptionOptions(message, aead)
 }
 
-func EncryptionOptions(message *m.CoAPMessage, address net.Addr, aead *crypto.AEAD) error {
+func EncryptionOptions(message *CoAPMessage, address net.Addr, aead *crypto.AEAD) error {
 	var associatedData []byte
 
 	coapsURI := aead.Seal([]byte(message.GetURI(address.String())), message.MessageID, associatedData)
-	message.RemoveOptions(m.OptionURIPath)
-	message.RemoveOptions(m.OptionURIQuery)
-	message.AddOption(m.OptionСoapsUri, string(coapsURI))
+	message.RemoveOptions(OptionURIPath)
+	message.RemoveOptions(OptionURIQuery)
+	message.AddOption(OptionСoapsUri, string(coapsURI))
 
 	return nil
 }
 
-func DecryptionOptions(message *m.CoAPMessage, aead *crypto.AEAD) error {
-	coapsURIOption := message.GetOption(m.OptionСoapsUri)
+func DecryptionOptions(message *CoAPMessage, aead *crypto.AEAD) error {
+	coapsURIOption := message.GetOption(OptionСoapsUri)
 	if coapsURIOption == nil {
 		return nil
 	}
@@ -74,6 +73,6 @@ func DecryptionOptions(message *m.CoAPMessage, aead *crypto.AEAD) error {
 		message.SetURIQuery(k, v[0])
 	}
 
-	message.RemoveOptions(m.OptionСoapsUri)
+	message.RemoveOptions(OptionСoapsUri)
 	return nil
 }

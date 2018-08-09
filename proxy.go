@@ -5,7 +5,7 @@ package coalago
 // 	"net/url"
 // 	"strings"
 
-// 	m "github.com/coalalib/coalago/message"
+//
 // 	"github.com/labstack/gommon/log"
 // 	cache "github.com/patrickmn/go-cache"
 // )
@@ -44,7 +44,7 @@ package coalago
 // 			continue
 // 		}
 
-// 		message, err := m.Deserialize(buffer)
+// 		message, err := Deserialize(buffer)
 // 		if err != nil {
 // 			continue
 // 		}
@@ -58,7 +58,7 @@ package coalago
 // 			proxyMessage, address, err := makeMessageFromProxyToRecepient(message)
 
 // 			if err != nil {
-// 				sendResponseFromProxyToSenderAckMessage(coala, message, m.CoapCodeBadOption, "")
+// 				sendResponseFromProxyToSenderAckMessage(coala, message, CoapCodeBadOption, "")
 // 				return false
 // 			}
 
@@ -74,9 +74,9 @@ package coalago
 
 // }
 
-// func sendToSocket(conn net.UDPConn, message *m.CoAPMessage)
+// func sendToSocket(conn net.UDPConn, message   *CoAPMessage)
 
-// func proxyReceive(tr *transport, message *m.CoAPMessage) bool {
+// func proxyReceive(tr *transport, message   *CoAPMessage) bool {
 // 	if !coala.IsProxyMode() {
 // 		return true
 // 	}
@@ -89,7 +89,7 @@ package coalago
 // 		proxyMessage, address, err := makeMessageFromProxyToRecepient(message)
 
 // 		if err != nil {
-// 			sendResponseFromProxyToSenderAckMessage(coala, message, m.CoapCodeBadOption, "")
+// 			sendResponseFromProxyToSenderAckMessage(coala, message, CoapCodeBadOption, "")
 // 			return false
 // 		}
 
@@ -113,7 +113,7 @@ package coalago
 // 	return false
 // }
 
-// func proxySend(tr *transport, message *m.CoAPMessage, address net.Addr) (bool, error) {
+// func proxySend(tr *transport, message   *CoAPMessage, address net.Addr) (bool, error) {
 // 	if !coala.IsProxyMode() {
 // 		return true, nil
 // 	}
@@ -131,33 +131,33 @@ package coalago
 // }
 
 // // Sends ACK message to sender from proxy
-// func sendResponseFromProxyToSenderAckMessage(coala *Coala, message *m.CoAPMessage, code m.CoapCode, payload string) error {
+// func sendResponseFromProxyToSenderAckMessage(coala *Coala, message   *CoAPMessage, code CoapCode, payload string) error {
 // 	responseMessage := makeMessageFromProxyToSender(message, code)
 // 	responseMessage.SetStringPayload(payload)
 // 	sendToSocket(coala, responseMessage, message.Sender)
 // 	return nil
 // }
 
-// func isValideProxyMode(coala *Coala, message *m.CoAPMessage) bool {
+// func isValideProxyMode(coala *Coala, message   *CoAPMessage) bool {
 // 	proxyURI := message.GetOptionProxyURIasString()
 // 	proxyScheme := message.GetOptionProxyScheme()
 // 	if !coala.IsProxyMode() {
-// 		sendResponseFromProxyToSenderAckMessage(coala, message, m.CoapCodeProxyingNotSupported, "")
+// 		sendResponseFromProxyToSenderAckMessage(coala, message, CoapCodeProxyingNotSupported, "")
 // 		return false
 // 	}
 
-// 	if proxyScheme != m.COAP_SCHEME && proxyScheme != m.COAPS_SCHEME &&
+// 	if proxyScheme != COAP_SCHEME && proxyScheme != COAPS_SCHEME &&
 // 		!strings.HasPrefix(proxyURI, "coap") && !strings.HasPrefix(proxyURI, "coaps") {
 
 // 		log.Error("Proxy Scheme is invalid", proxyScheme, proxyURI)
-// 		sendResponseFromProxyToSenderAckMessage(coala, message, m.CoapCodeBadRequest, "Proxy Scheme is invalid")
+// 		sendResponseFromProxyToSenderAckMessage(coala, message, CoapCodeBadRequest, "Proxy Scheme is invalid")
 // 		return false
 // 	}
 // 	return true
 // }
 
 // // Prepares a message to send to the final recipient
-// func makeMessageFromProxyToRecepient(message *m.CoAPMessage) (proxyMessage *m.CoAPMessage, address net.Addr, err error) {
+// func makeMessageFromProxyToRecepient(message   *CoAPMessage) (proxyMessage   *CoAPMessage, address net.Addr, err error) {
 // 	proxyURI := message.GetOptionProxyURIasString()
 
 // 	parsedURL, err := url.Parse(proxyURI)
@@ -175,24 +175,24 @@ package coalago
 // 	deleteProxyOptions(proxyMessage)
 // 	proxyMessage.IsProxies = true
 
-// 	if observeOpt := message.GetOption(m.OptionObserve); observeOpt != nil {
-// 		message.AddOptions([]*m.CoAPMessageOption{observeOpt})
+// 	if observeOpt := message.GetOption( OptionObserve); observeOpt != nil {
+// 		message.AddOptions([]  *CoAPMessageOption{observeOpt})
 // 	}
 
 // 	return
 // }
 
-// func makeMessageFromProxyToSender(message *m.CoAPMessage, code m.CoapCode) (responseMessage *m.CoAPMessage) {
+// func makeMessageFromProxyToSender(message   *CoAPMessage, code CoapCode) (responseMessage   *CoAPMessage) {
 // 	responseMessage = message.Clone(false)
 // 	deleteProxyOptions(responseMessage)
 
-// 	responseMessage.Type = m.ACK
+// 	responseMessage.Type = ACK
 // 	responseMessage.Code = code
 
 // 	return
 // }
 
-// func deleteProxyOptions(message *m.CoAPMessage) {
-// 	message.RemoveOptions(m.OptionProxyScheme)
-// 	message.RemoveOptions(m.OptionProxyURI)
+// func deleteProxyOptions(message   *CoAPMessage) {
+// 	message.RemoveOptions( OptionProxyScheme)
+// 	message.RemoveOptions( OptionProxyURI)
 // }

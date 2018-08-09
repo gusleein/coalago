@@ -6,10 +6,7 @@ import (
 	"errors"
 
 	"github.com/coalalib/coalago/crypto"
-	"github.com/op/go-logging"
 )
-
-var log = logging.MustGetLogger("session")
 
 type SecuredSession struct {
 	Curve         *crypto.Curve25519
@@ -46,7 +43,6 @@ func (session *SecuredSession) GetSignature() ([]byte, error) {
 	// Generating Shared Secret based on: MyPrivateKey + PeerPublicKey
 	sharedSecret, err := session.Curve.GenerateSharedSecret(session.PeerPublicKey)
 	if err != nil {
-		log.Errorf(err.Error()+" key: %s, keylen: %v", string(session.PeerPublicKey[:]), len(session.PeerPublicKey))
 		return nil, err
 	}
 
@@ -59,7 +55,6 @@ func (session *SecuredSession) GetSignature() ([]byte, error) {
 func (session *SecuredSession) Verify(peerSignature []byte) error {
 	signature, err := session.GetSignature()
 	if err != nil {
-		log.Error(err.Error())
 		return err
 	}
 
@@ -67,14 +62,12 @@ func (session *SecuredSession) Verify(peerSignature []byte) error {
 	// Hash our Shared Secret to Compare with Peer's Signature!
 	if !bytes.Equal(signature, peerSignature) {
 		err2 := errors.New("signature and peerSignature are not Equal")
-		log.Error(err2.Error())
 		return err2
 	}
 
 	// Generating Shared Secret based on: MyPrivateKey + PeerPublicKey
 	sharedSecret, err := session.Curve.GenerateSharedSecret(session.PeerPublicKey)
 	if err != nil {
-		log.Error(err.Error())
 		return err
 	}
 
@@ -88,7 +81,6 @@ func (session *SecuredSession) Verify(peerSignature []byte) error {
 	*/
 	peerKey, myKey, peerIV, myIV, err := crypto.DeriveKeysFromSharedSecret(sharedSecret, nil, nil)
 	if err != nil {
-		log.Error(err.Error())
 		return err
 	}
 
@@ -101,7 +93,6 @@ func (session *SecuredSession) Verify(peerSignature []byte) error {
 func (session *SecuredSession) PeerVerify(peerSignature []byte) error {
 	signature, err := session.GetSignature()
 	if err != nil {
-		log.Error(err.Error())
 		return err
 	}
 
@@ -109,20 +100,17 @@ func (session *SecuredSession) PeerVerify(peerSignature []byte) error {
 	// Hash our Shared Secret to Compare with Peer's Signature!
 	if !bytes.Equal(signature, peerSignature) {
 		err2 := errors.New("signature and peerSignature are not Equal")
-		log.Error(err2.Error())
 		return err2
 	}
 
 	// Generating Shared Secret based on: MyPrivateKey + PeerPublicKey
 	sharedSecret, err := session.Curve.GenerateSharedSecret(session.PeerPublicKey)
 	if err != nil {
-		log.Error(err.Error())
 		return err
 	}
 
 	peerKey, myKey, peerIV, myIV, err := crypto.DeriveKeysFromSharedSecret(sharedSecret, nil, nil)
 	if err != nil {
-		log.Error(err.Error())
 		return err
 	}
 

@@ -7,7 +7,6 @@ import (
 	"sync"
 	"time"
 
-	m "github.com/coalalib/coalago/message"
 	cache "github.com/patrickmn/go-cache"
 )
 
@@ -30,27 +29,27 @@ func newtransport(conn dialer) *transport {
 	return sr
 }
 
-func (sr *transport) Send(message *m.CoAPMessage) (resp *m.CoAPMessage, err error) {
+func (sr *transport) Send(message *CoAPMessage) (resp *CoAPMessage, err error) {
 	switch message.Type {
-	case m.CON:
+	case CON:
 		return sr.sendCON(message)
-	case m.RST:
+	case RST:
 		return nil, sr.sendToSocket(message)
 	default:
 		return nil, ErrUnsupportedType
 	}
 }
 
-func (sr *transport) SendTo(message *m.CoAPMessage, addr net.Addr) (resp *m.CoAPMessage, err error) {
+func (sr *transport) SendTo(message *CoAPMessage, addr net.Addr) (resp *CoAPMessage, err error) {
 	switch message.Type {
-	case m.ACK, m.NON:
+	case ACK, NON:
 		return nil, sr.sendACKTo(message, addr)
 	default:
 		return nil, ErrUnsupportedType
 	}
 }
 
-func (sr *transport) sendCON(message *m.CoAPMessage) (resp *m.CoAPMessage, err error) {
+func (sr *transport) sendCON(message *CoAPMessage) (resp *CoAPMessage, err error) {
 	if isBigPayload(message) {
 		resp, err = sr.sendARQBlock1CON(message)
 		return
@@ -82,7 +81,7 @@ func (sr *transport) sendCON(message *m.CoAPMessage) (resp *m.CoAPMessage, err e
 			return nil, err
 		}
 
-		if resp.Type == m.ACK && resp.Code == m.CoapCodeEmpty {
+		if resp.Type == ACK && resp.Code == CoapCodeEmpty {
 			return sr.receiveARQBlock2(nil)
 		}
 
@@ -96,10 +95,10 @@ func (sr *transport) sendCON(message *m.CoAPMessage) (resp *m.CoAPMessage, err e
 	return
 }
 
-func (sr *transport) sendACKTo(message *m.CoAPMessage, addr net.Addr) (err error) {
-	if message.Type == m.ACK {
+func (sr *transport) sendACKTo(message *CoAPMessage, addr net.Addr) (err error) {
+	if message.Type == ACK {
 		if isBigPayload(message) {
-			ch := make(chan *m.CoAPMessage, 102400)
+			ch := make(chan *CoAPMessage, 102400)
 			id := addr.String() + message.GetTokenString()
 			sr.block2channels.Store(id, ch)
 
@@ -111,7 +110,7 @@ func (sr *transport) sendACKTo(message *m.CoAPMessage, addr net.Addr) (err error
 	return sr.sendToSocketByAddress(message, addr)
 }
 
-func (sr *transport) sendToSocket(message *m.CoAPMessage) error {
+func (sr *transport) sendToSocket(message *CoAPMessage) error {
 	buf, err := preparationSendingMessage(sr, message, sr.conn.RemoteAddr())
 	if err != nil {
 		return err
@@ -121,7 +120,7 @@ func (sr *transport) sendToSocket(message *m.CoAPMessage) error {
 	return err
 }
 
-func (sr *transport) sendToSocketByAddress(message *m.CoAPMessage, addr net.Addr) error {
+func (sr *transport) sendToSocketByAddress(message *CoAPMessage, addr net.Addr) error {
 
 	buf, err := preparationSendingMessage(sr, message, addr)
 	if err != nil {
@@ -189,7 +188,7 @@ func (sr *transport) sendPacketsToAddr(packets []*packet, shift int, addr net.Ad
 	return nil
 }
 
-func (sr *transport) sendARQBlock1CON(message *m.CoAPMessage) (*m.CoAPMessage, error) {
+func (sr *transport) sendARQBlock1CON(message *CoAPMessage) (*CoAPMessage, error) {
 	state := new(stateSend)
 	state.payload = message.Payload.Bytes()
 	state.lenght = len(state.payload)
@@ -198,7 +197,7 @@ func (sr *transport) sendARQBlock1CON(message *m.CoAPMessage) (*m.CoAPMessage, e
 	packets := []*packet{}
 
 	for {
-		blockMessage, end := constructNextBlock(m.OptionBlock1, state)
+		blockMessage, end := constructNextBlock(OptionBlock1, state)
 		packets = append(packets, &packet{
 			acked:   false,
 			message: blockMessage,
@@ -232,14 +231,14 @@ func (sr *transport) sendARQBlock1CON(message *m.CoAPMessage) (*m.CoAPMessage, e
 			continue
 		}
 
-		if resp.Type == m.ACK {
-			if resp.Type == m.ACK && resp.Code == m.CoapCodeEmpty {
+		if resp.Type == ACK {
+			if resp.Type == ACK && resp.Code == CoapCodeEmpty {
 				return sr.receiveARQBlock2(nil)
 			}
 			block := resp.GetBlock1()
 			if block != nil {
 				if len(packets) >= block.BlockNumber {
-					if resp.Code != m.CoapCodeContinue {
+					if resp.Code != CoapCodeContinue {
 						return resp, nil
 					}
 					packets[block.BlockNumber].acked = true
@@ -263,7 +262,7 @@ func (sr *transport) sendARQBlock1CON(message *m.CoAPMessage) (*m.CoAPMessage, e
 	}
 }
 
-func (sr *transport) sendARQBlock2ACK(input chan *m.CoAPMessage, message *m.CoAPMessage, addr net.Addr) error {
+func (sr *transport) sendARQBlock2ACK(input chan *CoAPMessage, message *CoAPMessage, addr net.Addr) error {
 	state := new(stateSend)
 	state.payload = message.Payload.Bytes()
 	state.lenght = len(state.payload)
@@ -279,7 +278,7 @@ func (sr *transport) sendARQBlock2ACK(input chan *m.CoAPMessage, message *m.CoAP
 	emptyAckMessage = nil
 
 	for {
-		blockMessage, end := constructNextBlock(m.OptionBlock2, state)
+		blockMessage, end := constructNextBlock(OptionBlock2, state)
 		packets = append(packets, &packet{
 			acked:   false,
 			message: blockMessage,
@@ -302,11 +301,11 @@ func (sr *transport) sendARQBlock2ACK(input chan *m.CoAPMessage, message *m.CoAP
 			if !bytes.Equal(resp.Token, message.Token) {
 				continue
 			}
-			if resp.Type == m.ACK {
+			if resp.Type == ACK {
 				block := resp.GetBlock2()
 				if block != nil {
 					if len(packets) >= block.BlockNumber {
-						if resp.Code != m.CoapCodeContinue {
+						if resp.Code != CoapCodeContinue {
 							return nil
 						}
 						packets[block.BlockNumber].acked = true
@@ -335,7 +334,7 @@ func (sr *transport) sendARQBlock2ACK(input chan *m.CoAPMessage, message *m.CoAP
 	}
 }
 
-func (sr *transport) receiveARQBlock1(input chan *m.CoAPMessage) (*m.CoAPMessage, error) {
+func (sr *transport) receiveARQBlock1(input chan *CoAPMessage) (*CoAPMessage, error) {
 	buf := make(map[int][]byte)
 	totalBlocks := -1
 
@@ -356,13 +355,13 @@ func (sr *transport) receiveARQBlock1(input chan *m.CoAPMessage) (*m.CoAPMessage
 				for i := 0; i < totalBlocks; i++ {
 					b = append(b, buf[i]...)
 				}
-				inputMessage.Payload = m.NewBytesPayload(b)
+				inputMessage.Payload = NewBytesPayload(b)
 
 				return inputMessage, nil
 			}
 
-			ack := ackTo(inputMessage, m.CoapCodeContinue)
-			ack.AddOption(m.OptionBlock1, block.ToInt())
+			ack := ackTo(inputMessage, CoapCodeContinue)
+			ack.AddOption(OptionBlock1, block.ToInt())
 			if err := sr.sendToSocketByAddress(ack, inputMessage.Sender); err != nil {
 				return nil, err
 			}
@@ -373,7 +372,7 @@ func (sr *transport) receiveARQBlock1(input chan *m.CoAPMessage) (*m.CoAPMessage
 	}
 }
 
-func (sr *transport) receiveARQBlock2(inputMessage *m.CoAPMessage) (rsp *m.CoAPMessage, err error) {
+func (sr *transport) receiveARQBlock2(inputMessage *CoAPMessage) (rsp *CoAPMessage, err error) {
 	buf := make(map[int][]byte)
 	totalBlocks := -1
 
@@ -391,14 +390,14 @@ func (sr *transport) receiveARQBlock2(inputMessage *m.CoAPMessage) (rsp *m.CoAPM
 				for i := 0; i < totalBlocks; i++ {
 					b = append(b, buf[0]...)
 				}
-				inputMessage.Payload = m.NewBytesPayload(b)
-				ack := ackTo(inputMessage, m.CoapCodeEmpty)
-				ack.AddOption(m.OptionBlock2, block.ToInt())
+				inputMessage.Payload = NewBytesPayload(b)
+				ack := ackTo(inputMessage, CoapCodeEmpty)
+				ack.AddOption(OptionBlock2, block.ToInt())
 				sr.sendToSocket(inputMessage)
 				return inputMessage, nil
 			}
-			ack := ackTo(inputMessage, m.CoapCodeContinue)
-			ack.AddOption(m.OptionBlock2, block.ToInt())
+			ack := ackTo(inputMessage, CoapCodeContinue)
+			ack.AddOption(OptionBlock2, block.ToInt())
 			sr.sendToSocket(inputMessage)
 		}
 	}
@@ -431,24 +430,24 @@ func (sr *transport) receiveARQBlock2(inputMessage *m.CoAPMessage) (rsp *m.CoAPM
 			for i := 0; i < totalBlocks; i++ {
 				b = append(b, buf[0]...)
 			}
-			inputMessage.Payload = m.NewBytesPayload(b)
-			ack := ackTo(inputMessage, m.CoapCodeEmpty)
-			ack.AddOption(m.OptionBlock1, block.ToInt())
+			inputMessage.Payload = NewBytesPayload(b)
+			ack := ackTo(inputMessage, CoapCodeEmpty)
+			ack.AddOption(OptionBlock1, block.ToInt())
 			if err = sr.sendToSocket(ack); err != nil {
 				return nil, err
 			}
 			return inputMessage, nil
 		}
 
-		ack := ackTo(inputMessage, m.CoapCodeContinue)
-		ack.AddOption(m.OptionBlock2, block.ToInt())
+		ack := ackTo(inputMessage, CoapCodeContinue)
+		ack.AddOption(OptionBlock2, block.ToInt())
 		if err = sr.sendToSocket(ack); err != nil {
 			return nil, err
 		}
 	}
 }
 
-func (sr *transport) ReceiveOnce(respHandler func(*m.CoAPMessage, error)) {
+func (sr *transport) ReceiveOnce(respHandler func(*CoAPMessage, error)) {
 	readBuf := make([]byte, 1500)
 start:
 	n, senderAddr, err := sr.conn.Listen(readBuf)
@@ -469,22 +468,22 @@ start:
 	sr.messageHandlerSelector(message, respHandler)
 }
 
-func (sr *transport) messageHandlerSelector(message *m.CoAPMessage, respHandler func(*m.CoAPMessage, error)) {
+func (sr *transport) messageHandlerSelector(message *CoAPMessage, respHandler func(*CoAPMessage, error)) {
 	block1 := message.GetBlock1()
 	block2 := message.GetBlock2()
 
 	id := message.Sender.String() + string(message.Token)
 	var (
 		c  interface{}
-		ch chan *m.CoAPMessage
+		ch chan *CoAPMessage
 		ok bool
 	)
 
 	if block1 != nil {
 		c, ok = sr.block1channels.Load(id)
 		if !ok {
-			if message.Type == m.CON {
-				ch = make(chan *m.CoAPMessage, 102400)
+			if message.Type == CON {
+				ch = make(chan *CoAPMessage, 102400)
 				go func() {
 					resp, err := sr.receiveARQBlock1(ch)
 					sr.block1channels.Delete(id)
@@ -495,16 +494,16 @@ func (sr *transport) messageHandlerSelector(message *m.CoAPMessage, respHandler 
 				return
 			}
 		} else {
-			c.(chan *m.CoAPMessage) <- message
+			c.(chan *CoAPMessage) <- message
 			return
 		}
 	}
 
 	if block2 != nil {
-		if message.Type == m.ACK {
+		if message.Type == ACK {
 			c, ok = sr.block2channels.Load(id)
 			if ok {
-				c.(chan *m.CoAPMessage) <- message
+				c.(chan *CoAPMessage) <- message
 			}
 		}
 		return
@@ -512,12 +511,12 @@ func (sr *transport) messageHandlerSelector(message *m.CoAPMessage, respHandler 
 	go respHandler(message, nil)
 }
 
-func preparationSendingMessage(tr *transport, message *m.CoAPMessage, addr net.Addr) ([]byte, error) {
+func preparationSendingMessage(tr *transport, message *CoAPMessage, addr net.Addr) ([]byte, error) {
 	if err := securityClientSend(tr, tr.sessions, nil, message, addr); err != nil {
 		return nil, err
 	}
 
-	buf, err := m.Serialize(message)
+	buf, err := Serialize(message)
 	if err != nil {
 		return nil, err
 	}
@@ -525,8 +524,8 @@ func preparationSendingMessage(tr *transport, message *m.CoAPMessage, addr net.A
 	return buf, nil
 }
 
-func preparationReceivingMessage(tr *transport, data []byte, senderAddr net.Addr) (*m.CoAPMessage, error) {
-	message, err := m.Deserialize(data)
+func preparationReceivingMessage(tr *transport, data []byte, senderAddr net.Addr) (*CoAPMessage, error) {
+	message, err := Deserialize(data)
 	if err != nil {
 		return nil, err
 	}

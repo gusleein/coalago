@@ -1,22 +1,16 @@
-package message
+package coalago
 
 import (
 	"bytes"
 	"context"
 	"encoding/binary"
+	"encoding/json"
 	"fmt"
 	"net"
 	"sort"
 	"strconv"
 	"strings"
 	"time"
-
-	"github.com/coalalib/coalago/blockwise"
-	"github.com/op/go-logging"
-)
-
-var (
-	log = logging.MustGetLogger("coala.message")
 )
 
 // A Message object represents a CoAP payload
@@ -176,10 +170,8 @@ func Deserialize(data []byte) (*CoAPMessage, error) {
 				msg.Options = append(msg.Options, NewOption(optCode, string(optionValue)))
 			default:
 				if lastOptionID&0x01 == 1 {
-					log.Error("Unknown Critical Option id " + strconv.Itoa(int(lastOptionID)))
 					return msg, ErrUnknownCriticalOption
 				}
-				log.Error("Unknown Option id " + strconv.Itoa(int(lastOptionID)))
 			}
 
 			tmp = tmp[optionLength:]
@@ -479,18 +471,18 @@ func (m *CoAPMessage) IsProxied() bool {
 	return m.GetOption(OptionProxyURI) != nil
 }
 
-func (m *CoAPMessage) GetBlock1() *blockwise.Block {
+func (m *CoAPMessage) GetBlock1() *Block {
 	optionBlock1 := m.GetOption(OptionBlock1)
 	if optionBlock1 != nil {
-		return blockwise.NewBlockFromInt(optionBlock1.IntValue())
+		return NewBlockFromInt(optionBlock1.IntValue())
 	}
 	return nil
 }
 
-func (m *CoAPMessage) GetBlock2() *blockwise.Block {
+func (m *CoAPMessage) GetBlock2() *Block {
 	optionBlock2 := m.GetOption(OptionBlock2)
 	if optionBlock2 != nil {
-		return blockwise.NewBlockFromInt(optionBlock2.IntValue())
+		return NewBlockFromInt(optionBlock2.IntValue())
 	}
 	return nil
 }
@@ -547,4 +539,124 @@ func escapeChar(s string) string {
 
 func unescapeString(s string) string {
 	return strings.Replace(s, "%26", "&", -1)
+}
+
+// Represents the payload/content of a CoAP Message
+type CoAPMessagePayload interface {
+	Bytes() []byte
+	Length() int
+	String() string
+}
+
+/**
+ * String plain text Payload
+ * The most common
+ */
+
+// Instantiates a new message payload of type string
+func NewStringPayload(s string) CoAPMessagePayload {
+	return &StringCoAPMessagePayload{
+		content: s,
+	}
+}
+
+// Represents a message payload containing string value
+type StringCoAPMessagePayload struct {
+	content string
+}
+
+func (p *StringCoAPMessagePayload) Bytes() []byte {
+	return bytes.NewBufferString(p.content).Bytes()
+}
+func (p *StringCoAPMessagePayload) Length() int {
+	return len(p.content)
+}
+func (p *StringCoAPMessagePayload) String() string {
+	return p.content
+}
+
+/**
+ * Bytes Payload
+ */
+
+// Represents a message payload containing an array of bytes
+func NewBytesPayload(v []byte) CoAPMessagePayload {
+	return &BytesPayload{
+		content: v,
+	}
+}
+
+type BytesPayload struct {
+	content []byte
+}
+
+func (p *BytesPayload) Bytes() []byte {
+	return p.content
+}
+func (p *BytesPayload) Length() int {
+	return len(p.content)
+}
+func (p *BytesPayload) String() string {
+	return string(p.content)
+}
+
+/**
+ * XML Payload
+ * Just a copy of String Payload for now
+ */
+
+// Represents a message payload containing XML String
+type XMLPayload struct {
+	StringCoAPMessagePayload
+}
+
+/**
+ * Empty Payload
+ * Just a stub
+ */
+
+func NewEmptyPayload() CoAPMessagePayload {
+	return &EmptyPayload{}
+}
+
+// Represents an empty message payload
+type EmptyPayload struct{}
+
+func (p *EmptyPayload) Bytes() []byte {
+	return []byte{}
+}
+func (p *EmptyPayload) Length() int {
+	return 0
+}
+func (p *EmptyPayload) String() string {
+	return ""
+}
+
+/**
+ * JSON Payload
+ */
+
+func NewJSONPayload(obj interface{}) CoAPMessagePayload {
+	return &JSONPayload{
+		obj: obj,
+	}
+}
+
+// Represents a message payload containing JSON String
+type JSONPayload struct {
+	obj interface{}
+}
+
+func (p *JSONPayload) Bytes() []byte {
+	o, err := json.Marshal(p.obj)
+	if err != nil {
+		return []byte{}
+	}
+	return o
+}
+func (p *JSONPayload) Length() int {
+	return len(p.Bytes())
+}
+func (p *JSONPayload) String() string {
+	return string(p.Bytes())
 }

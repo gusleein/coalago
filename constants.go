@@ -1,4 +1,6 @@
-package message
+package coalago
+
+import "errors"
 
 const PayloadMarker = 0xff
 
@@ -239,4 +241,21 @@ const (
 	DataMsgIDStart = 2
 	DataMsgIDEnd   = 4
 	DataTokenStart = 4
+)
+
+var (
+	ErrPacketLengthLessThan4    = errors.New("Packet length less than 4 bytes")
+	ErrInvalidCoapVersion       = errors.New("Invalid CoAP version. Should be 1.")
+	ErrOptionLengthUsesValue15  = errors.New(("Message format error. Option length has reserved value of 15"))
+	ErrOptionDeltaUsesValue15   = errors.New(("Message format error. Option delta has reserved value of 15"))
+	ErrUnknownMessageType       = errors.New("Unknown message type")
+	ErrInvalidTokenLength       = errors.New("Invalid Token Length ( > 8)")
+	ErrUnknownCriticalOption    = errors.New("Unknown critical option encountered")
+	ErrUnsupportedMethod        = errors.New("Unsupported Method")
+	ErrNoMatchingRoute          = errors.New("No matching route found")
+	ErrUnsupportedContentFormat = errors.New("Unsupported Content-Format")
+	ErrNoMatchingMethod         = errors.New("No matching method")
+	ErrNilMessage               = errors.New("Message is nil")
+	ErrNilConn                  = errors.New("Connection object is nil")
+	ErrNilAddr                  = errors.New("Address cannot be nil")
 )

@@ -3,8 +3,6 @@ package coalago
 import (
 	"net"
 	"time"
-
-	m "github.com/coalalib/coalago/message"
 )
 
 var globalPoolConnections = newConnpool()
@@ -107,11 +105,11 @@ type packet struct {
 	acked    bool
 	attempts int
 	lastSend time.Time
-	message  *m.CoAPMessage
-	response *m.CoAPMessage
+	message  *CoAPMessage
+	response *CoAPMessage
 }
 
-func receiveMessage(tr *transport) (*m.CoAPMessage, error) {
+func receiveMessage(tr *transport) (*CoAPMessage, error) {
 	tr.conn.SetReadDeadline()
 
 	for {

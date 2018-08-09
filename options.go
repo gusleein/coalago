@@ -1,4 +1,4 @@
-package message
+package coalago
 
 import (
 	"strconv"
@@ -60,7 +60,6 @@ func (o *CoAPMessageOption) IntValue() int {
 	case string:
 		intVal, err := strconv.Atoi(o.Value.(string))
 		if err != nil {
-			log.Error("Error convert option type STRING to INT", err, o.Value)
 			return 0
 		}
 		return intVal

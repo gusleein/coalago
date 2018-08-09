@@ -6,14 +6,14 @@ package coalago
 
 // //TODO: delete afer test
 // func (coala *Coala) initResourceTestsMirror() {
-// 	coala.AddPOSTResource("/tests/mirror", func(message *m.CoAPMessage) *resource.CoAPResourceHandlerResult {
-// 		return resource.NewResponse(message.Payload, m.CoapCodeContent)
+// 	coala.AddPOSTResource("/tests/mirror", func(message   *CoAPMessage) *resource.CoAPResourceHandlerResult {
+// 		return resource.NewResponse(message.Payload, CoapCodeContent)
 // 	})
 // }
 
 // //TODO: delete afer test
 // func (coala *Coala) initResourceTestsBlock2() {
-// 	coala.AddGETResource("/tests/large", func(message *m.CoAPMessage) *resource.CoAPResourceHandlerResult {
+// 	coala.AddGETResource("/tests/large", func(message   *CoAPMessage) *resource.CoAPResourceHandlerResult {
 // 		sizeStr := message.GetURIQuery("size")
 // 		size, err := strconv.Atoi(sizeStr)
 // 		if err != nil {
@@ -23,10 +23,10 @@ package coalago
 // 		rand.Read(body)
 
 // 		//body := []byte("aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaabbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb") //ccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccdddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd")
-// 		return resource.NewResponse(m.NewBytesPayload(body), m.CoapCodeContent)
+// 		return resource.NewResponse( NewBytesPayload(body), CoapCodeContent)
 // 	})
 
-// 	coala.AddPOSTResource("/tests/large", func(message *m.CoAPMessage) *resource.CoAPResourceHandlerResult {
+// 	coala.AddPOSTResource("/tests/large", func(message   *CoAPMessage) *resource.CoAPResourceHandlerResult {
 // 		hash := message.GetURIQuery("hash")
 
 // 		var (
@@ -44,6 +44,6 @@ package coalago
 // 			resp = "FAILED"
 // 		}
 
-// 		return resource.NewResponse(m.NewStringPayload(resp), m.CoapCodeContent)
+// 		return resource.NewResponse( NewStringPayload(resp), CoapCodeContent)
 // 	})
 // }

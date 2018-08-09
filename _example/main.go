@@ -10,8 +10,6 @@ import (
 	"sync/atomic"
 
 	"github.com/coalalib/coalago"
-	m "github.com/coalalib/coalago/message"
-	"github.com/coalalib/coalago/resource"
 )
 
 var (
@@ -35,14 +33,14 @@ func main() {
 	switch mode {
 	case "server":
 		s := coalago.NewServer()
-		s.AddPOSTResource(pathTestBlock1, func(message *m.CoAPMessage) *resource.CoAPResourceHandlerResult {
+		s.AddPOSTResource(pathTestBlock1, func(message *CoAPMessage) *CoAPResourceHandlerResult {
 			if !bytes.Equal(message.Payload.Bytes(), expectedPayload) {
 				panic(fmt.Sprintf("Expected payload: %s\n\nActual payload: %s\n", expectedPayload, message.Payload.Bytes()))
 			}
 
-			resp := m.NewBytesPayload(expectedResponse)
+			resp := NewBytesPayload(expectedResponse)
 			// time.Sleep(time.Second * 15)
-			return resource.NewResponse(resp, m.CoapCodeChanged)
+			return NewResponse(resp, CoapCodeChanged)
 		})
 		log.Panic(s.Listen(":1111"))
 	case "client":

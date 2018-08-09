@@ -38,7 +38,7 @@ import (
 	"github.com/coalalib/coalago"
 	"github.com/coalalib/coalago/resource"
 
-	m "github.com/coalalib/coalago/message"
+	 
 )
 
 func main() {
@@ -49,9 +49,9 @@ func main() {
 func server() {
 	coalaServer := coalago.NewListen(5683)
 
-	coalaServer.AddGETResource("/parrot", func(message *m.CoAPMessage) *resource.CoAPResourceHandlerResult {
+	coalaServer.AddGETResource("/parrot", func(message   *CoAPMessage) *resource.CoAPResourceHandlerResult {
 		word := message.GetURIQuery("word")
-		handlerResult := resource.NewResponse(m.NewStringPayload(word), m.CoapCodeContent)
+		handlerResult := resource.NewResponse( NewStringPayload(word), CoapCodeContent)
 		return handlerResult
 	})
 
@@ -59,7 +59,7 @@ func server() {
 
 func client() {
 	coalaClient := coalago.NewCoala()
-	requestMessage := m.NewCoAPMessage(m.CON, m.GET)
+	requestMessage := NewCoAPMessage( CON, GET)
 	requestMessage.SetURIPath("/parrot")
 	requestMessage.SetURIQuery("word", "hello world!")
 

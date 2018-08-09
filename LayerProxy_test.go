@@ -7,7 +7,7 @@ package coalago
 // 	"strings"
 // 	"testing"
 
-// 	m "github.com/coalalib/coalago/message"
+//
 // 	"github.com/coalalib/coalago/resource"
 // )
 
@@ -68,23 +68,23 @@ package coalago
 // 	return p
 // }
 
-// func newProxiedMessageForTest(expectedPayload []byte) *m.CoAPMessage {
-// 	message := m.NewCoAPMessage(m.CON, m.POST)
+// func newProxiedMessageForTest(expectedPayload []byte)   *CoAPMessage {
+// 	message := NewCoAPMessage( CON, POST)
 // 	message.SetURIPath(pathTestProxy)
-// 	message.Payload = m.NewBytesPayload(expectedPayload)
+// 	message.Payload = NewBytesPayload(expectedPayload)
 // 	message.SetProxyURI(fmt.Sprintf("coap://127.0.0.1:%d", portForTestServer))
 
 // 	return message
 // }
 
 // func addResourceForProxy(coala *Coala, expectedPayload []byte) *Coala {
-// 	coala.AddPOSTResource(pathTestProxy, func(message *m.CoAPMessage) *resource.CoAPResourceHandlerResult {
+// 	coala.AddPOSTResource(pathTestProxy, func(message   *CoAPMessage) *resource.CoAPResourceHandlerResult {
 // 		if !bytes.Equal(message.Payload.Bytes(), expectedPayload) {
 // 			panic(fmt.Sprintf("Expected payload: %s\n\nActual payload: %s\n", expectedPayload, message.Payload.Bytes()))
 // 		}
 
-// 		resp := m.NewBytesPayload(expectedPayload)
-// 		return resource.NewResponse(resp, m.CoapCodeChanged)
+// 		resp := NewBytesPayload(expectedPayload)
+// 		return resource.NewResponse(resp, CoapCodeChanged)
 // 	})
 
 // 	return coala
