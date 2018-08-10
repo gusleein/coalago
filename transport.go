@@ -85,10 +85,6 @@ func (sr *transport) sendCON(message *CoAPMessage) (resp *CoAPMessage, err error
 			return sr.receiveARQBlock2(nil)
 		}
 
-		// if block := resp.GetBlock2(); block != nil {
-		// 	return receiveARQBlock2(conn, resp)
-		// }
-
 		break
 	}
 
@@ -153,6 +149,12 @@ func (sr *transport) sendPackets(packets []*packet, shift int) error {
 			}
 		} else {
 			acked++
+		}
+	}
+
+	if len(packets) == stop {
+		if time.Since(packets[len(packets)-1].lastSend) >= _3s {
+			return ErrMaxAttempts
 		}
 	}
 
@@ -525,6 +527,7 @@ func preparationSendingMessage(tr *transport, message *CoAPMessage, addr net.Add
 	if err := securityClientSend(tr, tr.sessions, nil, message, addr); err != nil {
 		return nil, err
 	}
+	// fmt.Println(time.Now().Format("15:04:05.000000000"), "\t---> send\t", message.ToReadableString())
 
 	buf, err := Serialize(message)
 	if err != nil {
@@ -540,6 +543,7 @@ func preparationReceivingBuffer(tr *transport, data []byte, senderAddr net.Addr)
 		return nil, err
 	}
 	message.Sender = senderAddr
+	// fmt.Println(time.Now().Format("15:04:05.000000000"), "\t<--- receive\t", message.ToReadableString())
 
 	if securityReceive(tr, tr.sessions, nil, message) {
 		return message, nil
@@ -549,6 +553,8 @@ func preparationReceivingBuffer(tr *transport, data []byte, senderAddr net.Addr)
 }
 
 func preparationReceivingMessage(tr *transport, message *CoAPMessage) (*CoAPMessage, error) {
+	// fmt.Println(time.Now().Format("15:04:05.000000000"), "\t<--- receive\t", message.ToReadableString())
+
 	if securityReceive(tr, tr.sessions, nil, message) {
 		return message, nil
 	}

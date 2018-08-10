@@ -443,11 +443,11 @@ func (m *CoAPMessage) ToReadableString() string {
 	}
 
 	return fmt.Sprintf(
-		"%v\t%v\t%v\t%v\t%v\t[%v]",
+		"%v\t%v\t%v\t%x\t%v\t[%v]",
 		typeString(m.Type),
 		m.Code.String(),
 		m.GetSchemeString(),
-		m.GetTokenString(),
+		m.Token,
 		m.MessageID,
 		options)
 }
