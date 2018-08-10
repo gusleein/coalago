@@ -56,6 +56,10 @@ func (c *Client) Send(message *CoAPMessage, addr string, options ...*CoAPMessage
 	if err != nil {
 		return nil, err
 	}
+	switch message.Type {
+	case NON, ACK:
+		return nil, nil
+	}
 	r := new(Response)
 	r.Body = resp.Payload.Bytes()
 	r.Code = resp.Code
