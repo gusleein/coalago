@@ -30,6 +30,13 @@ func NewServer() *Server {
 	return s
 }
 
+func NewServerWithPrivateKey(privatekey []byte) *Server {
+	s := NewServer()
+	s.privatekey = privatekey
+
+	return s
+}
+
 func (s *Server) Listen(addr string) (err error) {
 	conn, err := newListener(addr)
 	if err != nil {
@@ -37,7 +44,7 @@ func (s *Server) Listen(addr string) (err error) {
 	}
 
 	s.sr = newtransport(conn)
-
+	s.sr.privateKey = s.privatekey
 	for {
 		s.sr.ReceiveOnce(func(message *CoAPMessage, err error) {
 			if err != nil {
@@ -52,6 +59,8 @@ func (s *Server) Serve(conn *net.UDPConn) {
 	c := new(connection)
 	c.conn = conn
 	s.sr = newtransport(c)
+	s.sr.privateKey = s.privatekey
+
 }
 
 func (s *Server) ServeMessage(message *CoAPMessage) {

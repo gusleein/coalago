@@ -22,12 +22,19 @@ type Response struct {
 }
 
 type Client struct {
-	sessions *cache.Cache
+	sessions   *cache.Cache
+	privateKey []byte
 }
 
 func NewClient() *Client {
 	c := new(Client)
 	c.sessions = cache.New(SESSIONS_POOL_EXPIRATION, time.Second*10)
+	return c
+}
+
+func NewClientWithPrivateKey(pk []byte) *Client {
+	c := NewClient()
+	c.privateKey = pk
 	return c
 }
 
@@ -38,7 +45,7 @@ func (c *Client) GET(url string, options ...*CoAPMessageOption) (*Response, erro
 	if err != nil {
 		return nil, err
 	}
-	return clientSendCONMessage(message, message.Recipient.String())
+	return clientSendCONMessage(message, c.privateKey, message.Recipient.String())
 }
 
 func (c *Client) Send(message *CoAPMessage, addr string, options ...*CoAPMessageOption) (*Response, error) {
@@ -52,6 +59,8 @@ func (c *Client) Send(message *CoAPMessage, addr string, options ...*CoAPMessage
 	defer conn.Close()
 
 	sr := newtransport(conn)
+	sr.privateKey = c.privateKey
+
 	resp, err := sr.Send(message)
 	if err != nil {
 		return nil, err
@@ -75,7 +84,7 @@ func (c *Client) POST(data []byte, url string, options ...*CoAPMessageOption) (*
 	message.AddOptions(options)
 
 	message.Payload = NewBytesPayload(data)
-	return clientSendCONMessage(message, message.Recipient.String())
+	return clientSendCONMessage(message, c.privateKey, message.Recipient.String())
 }
 
 func (c *Client) DELETE(data []byte, url string, options ...*CoAPMessageOption) (*Response, error) {
@@ -85,11 +94,11 @@ func (c *Client) DELETE(data []byte, url string, options ...*CoAPMessageOption) 
 	}
 	message.AddOptions(options)
 
-	return clientSendCONMessage(message, message.Recipient.String())
+	return clientSendCONMessage(message, c.privateKey, message.Recipient.String())
 }
 
-func clientSendCONMessage(message *CoAPMessage, addr string) (*Response, error) {
-	resp, err := clientSendCON(message, addr)
+func clientSendCONMessage(message *CoAPMessage, privateKey []byte, addr string) (*Response, error) {
+	resp, err := clientSendCON(message, privateKey, addr)
 	if err != nil {
 		return nil, err
 	}
@@ -100,7 +109,7 @@ func clientSendCONMessage(message *CoAPMessage, addr string) (*Response, error) 
 	return r, nil
 }
 
-func clientSendCON(message *CoAPMessage, addr string) (resp *CoAPMessage, err error) {
+func clientSendCON(message *CoAPMessage, privateKey []byte, addr string) (resp *CoAPMessage, err error) {
 	conn, err := globalPoolConnections.Dial(addr)
 	if err != nil {
 		return nil, err
@@ -108,6 +117,8 @@ func clientSendCON(message *CoAPMessage, addr string) (resp *CoAPMessage, err er
 
 	defer conn.Close()
 	sr := newtransport(conn)
+	sr.privateKey = privateKey
+
 	return sr.Send(message)
 }
 
