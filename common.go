@@ -261,7 +261,7 @@ func constructNextBlock(blockType OptionCode, s *stateSend) (*CoAPMessage, bool)
 		blockType,
 		s.nextNumBlock,
 		s.blockSize,
-		DEFAULT_WINDOW_SIZE,
+		s.windowsize,
 		isMore,
 	)
 
@@ -323,6 +323,7 @@ type stateSend struct {
 	stop         int
 	nextNumBlock int
 	blockSize    int
+	windowsize   int
 	origMessage  *CoAPMessage
 	payload      []byte
 }

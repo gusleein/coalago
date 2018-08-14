@@ -3,6 +3,7 @@ package coalago
 import (
 	"bytes"
 	"errors"
+	"math"
 	"net"
 	"sync"
 	"time"
@@ -132,8 +133,8 @@ func (sr *transport) sendToSocketByAddress(message *CoAPMessage, addr net.Addr) 
 	return err
 }
 
-func (sr *transport) sendPackets(packets []*packet, shift int) error {
-	stop := shift + DEFAULT_WINDOW_SIZE
+func (sr *transport) sendPackets(packets []*packet, windowsize int, shift int) error {
+	stop := shift + windowsize
 	if stop >= len(packets) {
 		stop = len(packets)
 	}
@@ -166,8 +167,8 @@ func (sr *transport) sendPackets(packets []*packet, shift int) error {
 	return nil
 }
 
-func (sr *transport) sendPacketsToAddr(packets []*packet, shift int, addr net.Addr) error {
-	stop := shift + DEFAULT_WINDOW_SIZE
+func (sr *transport) sendPacketsToAddr(packets []*packet, windowsize int, shift int, addr net.Addr) error {
+	stop := shift + windowsize
 	if stop >= len(packets) {
 		stop = len(packets)
 	}
@@ -200,6 +201,12 @@ func (sr *transport) sendARQBlock1CON(message *CoAPMessage) (*CoAPMessage, error
 	state.lenght = len(state.payload)
 	state.origMessage = message
 	state.blockSize = MAX_PAYLOAD_SIZE
+	numblocks := math.Ceil(float64(state.lenght) / float64(MAX_PAYLOAD_SIZE))
+	if numblocks < DEFAULT_WINDOW_SIZE {
+		state.windowsize = int(numblocks)
+	} else {
+		state.windowsize = DEFAULT_WINDOW_SIZE
+	}
 
 	packets := []*packet{}
 
@@ -217,7 +224,7 @@ func (sr *transport) sendARQBlock1CON(message *CoAPMessage) (*CoAPMessage, error
 
 	var shift = 0
 
-	err := sr.sendPackets(packets, shift)
+	err := sr.sendPackets(packets, state.windowsize, shift)
 	if err != nil {
 		return nil, err
 	}
@@ -226,7 +233,7 @@ func (sr *transport) sendARQBlock1CON(message *CoAPMessage) (*CoAPMessage, error
 		resp, err := receiveMessage(sr)
 		if err != nil {
 			if err == ErrMaxAttempts {
-				if err = sr.sendPackets(packets, shift); err != nil {
+				if err = sr.sendPackets(packets, state.windowsize, shift); err != nil {
 					return nil, err
 				}
 				continue
@@ -259,7 +266,7 @@ func (sr *transport) sendARQBlock1CON(message *CoAPMessage) (*CoAPMessage, error
 							}
 						}
 
-						if err = sr.sendPackets(packets, shift); err != nil {
+						if err = sr.sendPackets(packets, state.windowsize, shift); err != nil {
 							return nil, err
 						}
 					}
@@ -275,6 +282,12 @@ func (sr *transport) sendARQBlock2ACK(input chan *CoAPMessage, message *CoAPMess
 	state.lenght = len(state.payload)
 	state.origMessage = message
 	state.blockSize = MAX_PAYLOAD_SIZE
+	numblocks := math.Ceil(float64(state.lenght) / float64(MAX_PAYLOAD_SIZE))
+	if numblocks < DEFAULT_WINDOW_SIZE {
+		state.windowsize = int(numblocks)
+	} else {
+		state.windowsize = DEFAULT_WINDOW_SIZE
+	}
 
 	packets := []*packet{}
 
@@ -299,7 +312,7 @@ func (sr *transport) sendARQBlock2ACK(input chan *CoAPMessage, message *CoAPMess
 
 	var shift = 0
 
-	if err := sr.sendPacketsToAddr(packets, shift, addr); err != nil {
+	if err := sr.sendPacketsToAddr(packets, state.windowsize, shift, addr); err != nil {
 		return err
 	}
 
@@ -327,7 +340,7 @@ func (sr *transport) sendARQBlock2ACK(input chan *CoAPMessage, message *CoAPMess
 								}
 							}
 
-							if err := sr.sendPacketsToAddr(packets, shift, addr); err != nil {
+							if err := sr.sendPacketsToAddr(packets, state.windowsize, shift, addr); err != nil {
 								return err
 							}
 						}
@@ -335,7 +348,7 @@ func (sr *transport) sendARQBlock2ACK(input chan *CoAPMessage, message *CoAPMess
 				}
 			}
 		case <-time.After(time.Second * 10):
-			if err := sr.sendPacketsToAddr(packets, shift, addr); err != nil {
+			if err := sr.sendPacketsToAddr(packets, state.windowsize, shift, addr); err != nil {
 				return err
 			}
 		}
