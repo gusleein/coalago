@@ -277,7 +277,7 @@ func ackTo(origMessage *CoAPMessage, code CoapCode) *CoAPMessage {
 	result := NewCoAPMessage(ACK, code)
 	result.MessageID = origMessage.MessageID
 	result.Token = origMessage.Token
-	result.CloneOptions(origMessage, OptionURIScheme)
+	result.CloneOptions(origMessage, OptionURIScheme, OptionSelectiveRepeatWindowSize, OptionBlock1, OptionBlock2)
 	result.Recipient = origMessage.Sender
 	if proxxyuri := origMessage.GetOptionProxyURIasString(); len(proxxyuri) > 0 {
 		result.SetProxyURI(proxxyuri)

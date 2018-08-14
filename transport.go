@@ -382,7 +382,7 @@ func (sr *transport) receiveARQBlock1(input chan *CoAPMessage) (*CoAPMessage, er
 			}
 
 			ack := ackTo(inputMessage, CoapCodeContinue)
-			ack.AddOption(OptionBlock1, block.ToInt())
+
 			if err := sr.sendToSocketByAddress(ack, inputMessage.Sender); err != nil {
 				return nil, err
 			}
@@ -413,13 +413,11 @@ func (sr *transport) receiveARQBlock2(inputMessage *CoAPMessage) (rsp *CoAPMessa
 				}
 				inputMessage.Payload = NewBytesPayload(b)
 				ack := ackTo(inputMessage, CoapCodeEmpty)
-				ack.AddOption(OptionBlock2, block.ToInt())
-				sr.sendToSocket(inputMessage)
+				sr.sendToSocket(ack)
 				return inputMessage, nil
 			}
 			ack := ackTo(inputMessage, CoapCodeContinue)
-			ack.AddOption(OptionBlock2, block.ToInt())
-			sr.sendToSocket(inputMessage)
+			sr.sendToSocket(ack)
 		}
 	}
 
@@ -453,7 +451,6 @@ func (sr *transport) receiveARQBlock2(inputMessage *CoAPMessage) (rsp *CoAPMessa
 			}
 			inputMessage.Payload = NewBytesPayload(b)
 			ack := ackTo(inputMessage, CoapCodeEmpty)
-			ack.AddOption(OptionBlock1, block.ToInt())
 			if err = sr.sendToSocket(ack); err != nil {
 				return nil, err
 			}
@@ -461,7 +458,6 @@ func (sr *transport) receiveARQBlock2(inputMessage *CoAPMessage) (rsp *CoAPMessa
 		}
 
 		ack := ackTo(inputMessage, CoapCodeContinue)
-		ack.AddOption(OptionBlock2, block.ToInt())
 		if err = sr.sendToSocket(ack); err != nil {
 			return nil, err
 		}
