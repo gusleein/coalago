@@ -513,7 +513,7 @@ func (sr *transport) messageHandlerSelector(message *CoAPMessage, respHandler fu
 				go func() {
 					resp, err := sr.receiveARQBlock1(ch)
 					sr.block1channels.Delete(id)
-					go respHandler(resp, err)
+					respHandler(resp, err)
 				}()
 				sr.block1channels.Store(id, ch)
 				ch <- message
