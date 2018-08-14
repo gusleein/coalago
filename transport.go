@@ -363,7 +363,7 @@ func (sr *transport) receiveARQBlock1(input chan *CoAPMessage) (*CoAPMessage, er
 		select {
 		case inputMessage := <-input:
 			block := inputMessage.GetBlock1()
-			if block == nil {
+			if block == nil || inputMessage.Type != CON {
 				continue
 			}
 			if !block.MoreBlocks {
@@ -401,7 +401,7 @@ func (sr *transport) receiveARQBlock2(inputMessage *CoAPMessage) (rsp *CoAPMessa
 
 	if inputMessage != nil {
 		block := inputMessage.GetBlock2()
-		if block != nil {
+		if block != nil && inputMessage.Type == CON {
 			if !block.MoreBlocks {
 				totalBlocks = block.BlockNumber + 1
 			}
@@ -435,7 +435,7 @@ func (sr *transport) receiveARQBlock2(inputMessage *CoAPMessage) (rsp *CoAPMessa
 		}
 
 		block := inputMessage.GetBlock2()
-		if block == nil {
+		if block == nil || inputMessage.Type != CON {
 			continue
 		}
 
@@ -523,6 +523,7 @@ func (sr *transport) messageHandlerSelector(message *CoAPMessage, respHandler fu
 			c.(chan *CoAPMessage) <- message
 			return
 		}
+		return
 	}
 
 	if block2 != nil {
