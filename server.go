@@ -118,3 +118,12 @@ func (s *Server) SetPrivateKey(privateKey []byte) {
 func (s *Server) GetPrivateKey() []byte {
 	return s.privatekey
 }
+
+func (s *Server) SendToSocket(message *CoAPMessage, addr string) error {
+	b, err := Serialize(message)
+	if err != nil {
+		return err
+	}
+	_, err = s.sr.conn.WriteTo(b, addr)
+	return err
+}
