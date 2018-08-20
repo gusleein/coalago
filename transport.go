@@ -183,6 +183,11 @@ func (sr *transport) sendPacketsToAddr(packets []*packet, windowsize int, shift 
 		stop = len(packets)
 	}
 
+	// need a more elegant solution
+	if shift == len(packets) {
+		return ErrMaxAttempts
+	}
+
 	_3s := time.Second * 3
 	var acked int
 	for i := 0; i < stop; i++ {
