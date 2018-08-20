@@ -72,15 +72,16 @@ func returnResultFromResource(server *Server, message *CoAPMessage, handlerResul
 }
 
 func noResultResourceHandler(server *Server, message *CoAPMessage) bool {
-	responseMessage := NewCoAPMessageId(ACK, CoapCodeInternalServerError, message.MessageID)
-	responseMessage.Payload = NewStringPayload("No Result was returned by Resource Handler")
-	if message.Token != nil && len(message.Token) > 0 {
-		responseMessage.Token = message.Token
-	}
-	responseMessage.CloneOptions(message, OptionBlock1, OptionBlock2)
+	// responseMessage := NewCoAPMessageId(ACK, CoapCodeInternalServerError, message.MessageID)
+	// responseMessage.Payload = NewStringPayload("No Result was returned by Resource Handler")
+	// if message.Token != nil && len(message.Token) > 0 {
+	// 	responseMessage.Token = message.Token
+	// }
+	// responseMessage.CloneOptions(message, OptionBlock1, OptionBlock2)
 
-	_, err := server.sr.SendTo(responseMessage, message.Sender)
-	return err != nil
+	// _, err := server.sr.SendTo(responseMessage, message.Sender)
+	// return err != nil
+	return false
 }
 
 func noResource(server *Server, message *CoAPMessage) bool {
