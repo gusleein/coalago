@@ -137,7 +137,6 @@ func receiveHandshake(tr *transport, sessions *cache.Cache, privatekey []byte, m
 
 	value := option.IntValue()
 	if value != CoapHandshakeTypeClientSignature && value != CoapHandshakeTypeClientHello {
-		MetricSuccessfulHandhshakes.Inc()
 		return true
 	}
 
