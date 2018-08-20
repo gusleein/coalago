@@ -70,9 +70,10 @@ func (sr *transport) sendCON(message *CoAPMessage) (resp *CoAPMessage, err error
 
 	for {
 		attempts++
-
+		MetricSentMessages.Inc()
 		_, err = sr.conn.Write(data)
 		if err != nil {
+			MetricSentMessageErrors.Inc()
 			return nil, err
 		}
 
@@ -117,7 +118,11 @@ func (sr *transport) sendToSocket(message *CoAPMessage) error {
 	if err != nil {
 		return err
 	}
+	MetricSentMessages.Inc()
 	_, err = sr.conn.Write(buf)
+	if err != nil {
+		MetricSentMessageErrors.Inc()
+	}
 	buf = nil
 	return err
 }
@@ -128,7 +133,11 @@ func (sr *transport) sendToSocketByAddress(message *CoAPMessage, addr net.Addr) 
 	if err != nil {
 		return err
 	}
+	MetricSentMessages.Inc()
 	_, err = sr.conn.WriteTo(buf, addr.String())
+	if err != nil {
+		MetricSentMessageErrors.Inc()
+	}
 	buf = nil
 	return err
 }
@@ -160,6 +169,7 @@ func (sr *transport) sendPackets(packets []*packet, windowsize int, shift int) e
 
 	if len(packets) == stop {
 		if time.Since(packets[len(packets)-1].lastSend) >= _3s {
+			MetricExpiredMessages.Inc()
 			return ErrMaxAttempts
 		}
 	}
@@ -179,6 +189,7 @@ func (sr *transport) sendPacketsToAddr(packets []*packet, windowsize int, shift 
 		if !packets[i].acked {
 			if time.Since(packets[i].lastSend) >= _3s {
 				if packets[i].attempts == 3 {
+					MetricExpiredMessages.Inc()
 					return ErrMaxAttempts
 				}
 				packets[i].attempts++
@@ -388,6 +399,7 @@ func (sr *transport) receiveARQBlock1(input chan *CoAPMessage) (*CoAPMessage, er
 			}
 
 		case <-time.After(time.Second * 18):
+			MetricExpiredMessages.Inc()
 			return nil, ErrMaxAttempts
 		}
 	}
@@ -557,6 +569,9 @@ func preparationReceivingBuffer(tr *transport, data []byte, senderAddr net.Addr)
 	if err != nil {
 		return nil, err
 	}
+
+	MetricReceivedMessages.Inc()
+
 	message.Sender = senderAddr
 	// fmt.Println(time.Now().Format("15:04:05.000000000"), "\t<--- receive\t", message.ToReadableString())
 

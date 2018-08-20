@@ -32,6 +32,8 @@ func securityClientSend(tr *transport, sessions *cache.Cache, privatekey []byte,
 		return err
 	}
 
+	MetricSuccessfulHandhshakes.Inc()
+
 	// Encrypt message payload
 	err = encrypt(message, addr, currentSession.AEAD)
 	if err != nil {
@@ -58,7 +60,7 @@ func getSessionForAddress(tr *transport, sessions *cache.Cache, privatekey []byt
 		if err != nil {
 			return nil
 		}
-		// coala.Metrics.SessionsRate.Inc()
+
 		setSessionForAddress(sessions, privatekey, securedSession, udpAddr)
 	}
 
@@ -70,7 +72,8 @@ func setSessionForAddress(sessions *cache.Cache, privatekey []byte, securedSessi
 		securedSession, _ = session.NewSecuredSession(privatekey)
 	}
 	sessions.SetDefault(udpAddr, securedSession)
-	// coala.Metrics.Sessions.Set(int64(coala.Sessions.ItemCount()))
+	MetricSessionsRate.Inc()
+	MetricSessionsCount.Set(int64(sessions.ItemCount()))
 }
 
 func securityReceive(tr *transport, sessions *cache.Cache, privatekey []byte, message *CoAPMessage) bool {
@@ -134,7 +137,7 @@ func receiveHandshake(tr *transport, sessions *cache.Cache, privatekey []byte, m
 
 	value := option.IntValue()
 	if value != CoapHandshakeTypeClientSignature && value != CoapHandshakeTypeClientHello {
-		// coala.GetMetrics().SuccessfulHandshakes.Inc()
+		MetricSuccessfulHandhshakes.Inc()
 		return true
 	}
 
@@ -152,7 +155,7 @@ func receiveHandshake(tr *transport, sessions *cache.Cache, privatekey []byte, m
 		}
 
 	}
-	// coala.GetMetrics().SuccessfulHandshakes.Inc()
+	MetricSuccessfulHandhshakes.Inc()
 
 	peerSession.UpdatedAt = int(time.Now().Unix())
 	setSessionForAddress(sessions, privatekey, peerSession, message.Sender.String())

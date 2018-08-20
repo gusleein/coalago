@@ -117,6 +117,7 @@ func receiveMessage(tr *transport) (*CoAPMessage, error) {
 		n, err := tr.conn.Read(buff)
 		if err != nil {
 			if neterr, ok := err.(net.Error); ok && neterr.Timeout() {
+				MetricExpiredMessages.Inc()
 				return nil, ErrMaxAttempts
 			}
 			return nil, err
