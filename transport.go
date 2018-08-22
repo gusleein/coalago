@@ -89,7 +89,7 @@ func (sr *transport) sendCON(message *CoAPMessage) (resp *CoAPMessage, err error
 		}
 
 		if resp.Type == ACK && resp.Code == CoapCodeEmpty {
-			return sr.receiveARQBlock2(nil)
+			return sr.receiveARQBlock2(message, nil)
 		}
 
 		break
@@ -263,7 +263,7 @@ func (sr *transport) sendARQBlock1CON(message *CoAPMessage) (*CoAPMessage, error
 
 		if resp.Type == ACK {
 			if resp.Type == ACK && resp.Code == CoapCodeEmpty {
-				return sr.receiveARQBlock2(nil)
+				return sr.receiveARQBlock2(message, nil)
 			}
 			block := resp.GetBlock1()
 			if block != nil {
@@ -397,7 +397,7 @@ func (sr *transport) receiveARQBlock1(input chan *CoAPMessage) (*CoAPMessage, er
 				return inputMessage, nil
 			}
 
-			ack := ackTo(inputMessage, CoapCodeContinue)
+			ack := ackTo(nil, inputMessage, CoapCodeContinue)
 
 			if err := sr.sendToSocketByAddress(ack, inputMessage.Sender); err != nil {
 				return nil, err
@@ -410,7 +410,7 @@ func (sr *transport) receiveARQBlock1(input chan *CoAPMessage) (*CoAPMessage, er
 	}
 }
 
-func (sr *transport) receiveARQBlock2(inputMessage *CoAPMessage) (rsp *CoAPMessage, err error) {
+func (sr *transport) receiveARQBlock2(origMessage *CoAPMessage, inputMessage *CoAPMessage) (rsp *CoAPMessage, err error) {
 	buf := make(map[int][]byte)
 	totalBlocks := -1
 
@@ -429,11 +429,11 @@ func (sr *transport) receiveARQBlock2(inputMessage *CoAPMessage) (rsp *CoAPMessa
 					b = append(b, buf[i]...)
 				}
 				inputMessage.Payload = NewBytesPayload(b)
-				ack := ackTo(inputMessage, CoapCodeEmpty)
+				ack := ackTo(origMessage, inputMessage, CoapCodeEmpty)
 				sr.sendToSocket(ack)
 				return inputMessage, nil
 			}
-			ack := ackTo(inputMessage, CoapCodeContinue)
+			ack := ackTo(origMessage, inputMessage, CoapCodeContinue)
 			sr.sendToSocket(ack)
 		}
 	}
@@ -467,14 +467,14 @@ func (sr *transport) receiveARQBlock2(inputMessage *CoAPMessage) (rsp *CoAPMessa
 				b = append(b, buf[i]...)
 			}
 			inputMessage.Payload = NewBytesPayload(b)
-			ack := ackTo(inputMessage, CoapCodeEmpty)
+			ack := ackTo(origMessage, inputMessage, CoapCodeEmpty)
 			if err = sr.sendToSocket(ack); err != nil {
 				return nil, err
 			}
 			return inputMessage, nil
 		}
 
-		ack := ackTo(inputMessage, CoapCodeContinue)
+		ack := ackTo(origMessage, inputMessage, CoapCodeContinue)
 		if err = sr.sendToSocket(ack); err != nil {
 			return nil, err
 		}
