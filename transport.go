@@ -589,7 +589,7 @@ func preparationReceivingBuffer(tr *transport, data []byte, senderAddr net.Addr)
 
 func preparationReceivingMessage(tr *transport, message *CoAPMessage) (*CoAPMessage, error) {
 	// fmt.Println(time.Now().Format("15:04:05.000000000"), "\t<--- receive\t", message.ToReadableString())
-
+	MetricReceivedMessages.Inc()
 	if securityReceive(tr, tr.sessions, tr.privateKey, message) {
 		return message, nil
 	}
