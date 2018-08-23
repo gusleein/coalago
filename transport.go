@@ -555,7 +555,7 @@ func (sr *transport) messageHandlerSelector(message *CoAPMessage, respHandler fu
 }
 
 func preparationSendingMessage(tr *transport, message *CoAPMessage, addr net.Addr) ([]byte, error) {
-	if err := securityClientSend(tr, globalSessions, tr.privateKey, message, addr); err != nil {
+	if err := securityClientSend(tr, message, addr); err != nil {
 		return nil, err
 	}
 	// fmt.Println(time.Now().Format("15:04:05.000000000"), "\t---> send\t", message.ToReadableString())
@@ -579,7 +579,7 @@ func preparationReceivingBuffer(tr *transport, data []byte, senderAddr net.Addr)
 	message.Sender = senderAddr
 	// fmt.Println(time.Now().Format("15:04:05.000000000"), "\t<--- receive\t", message.ToReadableString())
 
-	if securityReceive(tr, globalSessions, tr.privateKey, message) {
+	if securityReceive(tr, message) {
 		return message, nil
 	}
 
@@ -589,7 +589,7 @@ func preparationReceivingBuffer(tr *transport, data []byte, senderAddr net.Addr)
 func preparationReceivingMessage(tr *transport, message *CoAPMessage) (*CoAPMessage, error) {
 	// fmt.Println(time.Now().Format("15:04:05.000000000"), "\t<--- receive\t", message.ToReadableString())
 	MetricReceivedMessages.Inc()
-	if securityReceive(tr, globalSessions, tr.privateKey, message) {
+	if securityReceive(tr, message) {
 		return message, nil
 	}
 

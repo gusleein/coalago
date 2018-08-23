@@ -4,9 +4,6 @@ import (
 	"errors"
 	"net"
 	"net/url"
-	"time"
-
-	cache "github.com/patrickmn/go-cache"
 )
 
 var (
@@ -22,13 +19,11 @@ type Response struct {
 }
 
 type Client struct {
-	sessions   *cache.Cache
 	privateKey []byte
 }
 
 func NewClient() *Client {
 	c := new(Client)
-	c.sessions = cache.New(SESSIONS_POOL_EXPIRATION, time.Second*10)
 	return c
 }
 

@@ -14,6 +14,7 @@ type dialer interface {
 	Write(buf []byte) (int, error)
 	WriteTo(buf []byte, addr string) (int, error)
 	RemoteAddr() net.Addr
+	LocalAddr() net.Addr
 	SetReadDeadline()
 }
 
@@ -30,6 +31,10 @@ func (c *connection) Close() error {
 
 func (c *connection) RemoteAddr() net.Addr {
 	return c.conn.RemoteAddr()
+}
+
+func (c *connection) LocalAddr() net.Addr {
+	return c.conn.LocalAddr()
 }
 
 func (c *connection) Read(buff []byte) (int, error) {

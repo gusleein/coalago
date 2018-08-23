@@ -5,9 +5,6 @@ import (
 	"net"
 	"strings"
 	"sync"
-	"time"
-
-	cache "github.com/patrickmn/go-cache"
 )
 
 type rawData struct {
@@ -20,13 +17,10 @@ type Server struct {
 	sr          *transport
 	resources   sync.Map
 	privatekey  []byte
-	sessions    *cache.Cache
 }
 
 func NewServer() *Server {
 	s := new(Server)
-	s.sessions = cache.New(SESSIONS_POOL_EXPIRATION, time.Second*10)
-
 	return s
 }
 
