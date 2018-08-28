@@ -3,6 +3,7 @@ package coalago
 import (
 	"bytes"
 	"errors"
+	"fmt"
 	"math"
 	"net"
 	"sync"
@@ -47,7 +48,7 @@ func (sr *transport) Send(message *CoAPMessage) (resp *CoAPMessage, err error) {
 
 func (sr *transport) SendTo(message *CoAPMessage, addr net.Addr) (resp *CoAPMessage, err error) {
 	switch message.Type {
-	case ACK, NON:
+	case ACK, NON, RST:
 		return nil, sr.sendACKTo(message, addr)
 	default:
 		return nil, ErrUnsupportedType
@@ -70,6 +71,7 @@ func (sr *transport) sendCON(message *CoAPMessage) (resp *CoAPMessage, err error
 	for {
 		attempts++
 		MetricSentMessages.Inc()
+		fmt.Println("WRITE CON Message")
 		_, err = sr.conn.Write(data)
 		if err != nil {
 			MetricSentMessageErrors.Inc()
@@ -87,6 +89,10 @@ func (sr *transport) sendCON(message *CoAPMessage) (resp *CoAPMessage, err error
 			return nil, err
 		}
 
+		if isPingACK(resp) {
+			return resp, nil
+		}
+
 		if resp.Type == ACK && resp.Code == CoapCodeEmpty {
 			return sr.receiveARQBlock2(message, nil)
 		}
@@ -95,6 +101,10 @@ func (sr *transport) sendCON(message *CoAPMessage) (resp *CoAPMessage, err error
 	}
 
 	return
+}
+
+func isPingACK(resp *CoAPMessage) bool {
+	return resp.Type == RST && resp.Code == CoapCodeEmpty
 }
 
 func (sr *transport) sendACKTo(message *CoAPMessage, addr net.Addr) (err error) {
@@ -558,7 +568,8 @@ func preparationSendingMessage(tr *transport, message *CoAPMessage, addr net.Add
 	if err := securityClientSend(tr, message, addr); err != nil {
 		return nil, err
 	}
-	// fmt.Println(time.Now().Format("15:04:05.000000000"), "\t---> send\t", message.ToReadableString())
+
+	// fmt.Println(time.Now().Format("15:04:05.000000000"), "\t---> send\t", addr, message.ToReadableString())
 
 	buf, err := Serialize(message)
 	if err != nil {
@@ -577,7 +588,7 @@ func preparationReceivingBuffer(tr *transport, data []byte, senderAddr net.Addr)
 	MetricReceivedMessages.Inc()
 
 	message.Sender = senderAddr
-	// fmt.Println(time.Now().Format("15:04:05.000000000"), "\t<--- receive\t", message.ToReadableString())
+	// fmt.Println(time.Now().Format("15:04:05.000000000"), "\t<--- receive\t", senderAddr, message.ToReadableString())
 
 	if securityReceive(tr, message) {
 		return message, nil
@@ -587,7 +598,7 @@ func preparationReceivingBuffer(tr *transport, data []byte, senderAddr net.Addr)
 }
 
 func preparationReceivingMessage(tr *transport, message *CoAPMessage) (*CoAPMessage, error) {
-	// fmt.Println(time.Now().Format("15:04:05.000000000"), "\t<--- receive\t", message.ToReadableString())
+	// fmt.Println(time.Now().Format("15:04:05.000000000"), "\t<--- receive\t", message.Sender, message.ToReadableString())
 	MetricReceivedMessages.Inc()
 	if securityReceive(tr, message) {
 		return message, nil

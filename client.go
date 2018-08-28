@@ -171,3 +171,13 @@ func isBigPayload(message *CoAPMessage) bool {
 
 	return false
 }
+
+func Ping(addr string) (isPing bool, err error) {
+	msg := NewCoAPMessage(CON, CoapCodeEmpty)
+	resp, err := clientSendCON(msg, nil, addr)
+	if err != nil {
+		return false, err
+	}
+
+	return resp.Type == RST && resp.Code == CoapCodeEmpty && resp.MessageID == msg.MessageID, nil
+}

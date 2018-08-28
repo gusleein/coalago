@@ -1,9 +1,14 @@
 package coalago
 
 func requestOnReceive(server *Server, message *CoAPMessage) bool {
-	if message.Code <= 0 || message.Code > 4 {
+	if message.Code < 0 || message.Code > 4 {
 		return true
 	}
+
+	if isPing(message) {
+		return returnPing(server, message)
+	}
+
 	resource := server.getResourceForPathAndMethod(message.GetURIPath(), message.GetMethod())
 	if resource == nil {
 		if message.Type == CON {
@@ -28,6 +33,19 @@ func requestOnReceive(server *Server, message *CoAPMessage) bool {
 	}
 
 	return false
+}
+
+func isPing(message *CoAPMessage) bool {
+	return message.Type == CON && message.Code == CoapCodeEmpty
+}
+
+func returnPing(server *Server, message *CoAPMessage) bool {
+	resp := NewCoAPMessage(RST, CoapCodeEmpty)
+	resp.MessageID = message.MessageID
+	copy(resp.Token, message.Token)
+	_, err := server.sr.SendTo(resp, message.Sender)
+
+	return err != nil
 }
 
 func methodNotAllowed(server *Server, message *CoAPMessage) bool {
