@@ -3,7 +3,6 @@ package coalago
 import (
 	"bytes"
 	"errors"
-	"fmt"
 	"math"
 	"net"
 	"sync"
@@ -71,7 +70,6 @@ func (sr *transport) sendCON(message *CoAPMessage) (resp *CoAPMessage, err error
 	for {
 		attempts++
 		MetricSentMessages.Inc()
-		fmt.Println("WRITE CON Message")
 		_, err = sr.conn.Write(data)
 		if err != nil {
 			MetricSentMessageErrors.Inc()
