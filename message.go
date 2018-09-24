@@ -173,7 +173,9 @@ func Deserialize(data []byte) (*CoAPMessage, error) {
 					return msg, ErrUnknownCriticalOption
 				}
 			}
-
+			if int(optionLength) >= len(tmp) {
+				return nil, ErrOptionLenghtOutOfRangePackets
+			}
 			tmp = tmp[optionLength:]
 		} else {
 			msg.Options = append(msg.Options, NewOption(optCode, nil))
