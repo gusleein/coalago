@@ -114,11 +114,15 @@ type packet struct {
 	response *CoAPMessage
 }
 
+const (
+	MTU = 1500
+)
+
 func receiveMessage(tr *transport) (*CoAPMessage, error) {
 	tr.conn.SetReadDeadline()
 
 	for {
-		buff := make([]byte, 1500)
+		buff := make([]byte, MTU+1)
 		n, err := tr.conn.Read(buff)
 		if err != nil {
 			if neterr, ok := err.(net.Error); ok && neterr.Timeout() {
@@ -126,6 +130,9 @@ func receiveMessage(tr *transport) (*CoAPMessage, error) {
 				return nil, ErrMaxAttempts
 			}
 			return nil, err
+		}
+		if n > MTU {
+			continue
 		}
 
 		message, err := preparationReceivingBuffer(tr, buff[:n], tr.conn.RemoteAddr())
