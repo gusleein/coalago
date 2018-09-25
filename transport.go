@@ -498,13 +498,13 @@ func (sr *transport) ReceiveMessage(message *CoAPMessage, respHandler func(*CoAP
 }
 
 func (sr *transport) ReceiveOnce(respHandler func(*CoAPMessage, error)) {
-	readBuf := make([]byte, 1500)
+	readBuf := make([]byte, MTU+1)
 start:
 	n, senderAddr, err := sr.conn.Listen(readBuf)
 	if err != nil {
 		panic(err)
 	}
-	if n == 0 {
+	if n == 0 || n > MTU {
 		goto start
 	}
 
