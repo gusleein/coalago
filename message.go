@@ -151,7 +151,7 @@ func Deserialize(data []byte) (*CoAPMessage, error) {
 		}
 
 		optCode := OptionCode(lastOptionID)
-		if optionLength > 0 {
+		if int(optionLength) <= len(tmp) {
 			optionValue := tmp[:optionLength]
 
 			switch optCode {
