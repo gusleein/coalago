@@ -5,6 +5,8 @@ import (
 	"time"
 )
 
+var NumberConnections = 1024
+
 var globalPoolConnections = newConnpool()
 
 type dialer interface {
@@ -94,7 +96,7 @@ type connpool struct {
 
 func newConnpool() *connpool {
 	c := new(connpool)
-	c.balance = make(chan struct{}, 100)
+	c.balance = make(chan struct{}, NumberConnections)
 	return c
 }
 
