@@ -11,6 +11,8 @@ import (
 	"strconv"
 	"strings"
 	"time"
+
+	"log"
 )
 
 // A Message object represents a CoAP payload
@@ -58,6 +60,12 @@ func NewCoAPMessageId(messageType CoapType, messageCode CoapCode, messageID uint
 // Converts an array of bytes to a Mesasge object.
 // An error is returned if a parsing error occurs
 func Deserialize(data []byte) (*CoAPMessage, error) {
+	defer func() {
+		v := recover()
+		if v != nil {
+			log.Printf("Deserialize panic: %v \nPacket RAW: %x", v, data)
+		}
+	}()
 	msg := &CoAPMessage{}
 
 	dataLen := len(data)
