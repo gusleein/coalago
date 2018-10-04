@@ -582,6 +582,9 @@ func preparationReceivingBuffer(tr *transport, data []byte, senderAddr net.Addr)
 	if err != nil {
 		return nil, err
 	}
+	if message == nil {
+		return nil, ErrNilMessage
+	}
 
 	MetricReceivedMessages.Inc()
 
