@@ -60,12 +60,21 @@ func NewCoAPMessageId(messageType CoapType, messageCode CoapCode, messageID uint
 // Converts an array of bytes to a Mesasge object.
 // An error is returned if a parsing error occurs
 func Deserialize(data []byte) (*CoAPMessage, error) {
+	m, err := deserialize(data)
+	if m == nil && err == nil {
+		return nil, ErrNilMessage
+	}
+	return m, err
+}
+
+func deserialize(data []byte) (*CoAPMessage, error) {
 	defer func() {
 		v := recover()
 		if v != nil {
-			log.Printf("Deserialize panic: %v \nPacket RAW: %x", v, data)
+			log.Printf("Deserialize error: %v \nPacket RAW: %x", v, data)
 		}
 	}()
+
 	msg := &CoAPMessage{}
 
 	dataLen := len(data)
