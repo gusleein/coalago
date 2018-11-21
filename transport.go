@@ -352,19 +352,21 @@ func (sr *transport) sendARQBlock2ACK(input chan *CoAPMessage, message *CoAPMess
 						if resp.Code != CoapCodeContinue {
 							return nil
 						}
-						packets[block.BlockNumber].acked = true
-						if block.BlockNumber == shift {
-							shift++
-							for _, p := range packets[shift:] {
-								if p.acked {
-									shift++
-								} else {
-									break
+						if block.BlockNumber < len(packets) {
+							packets[block.BlockNumber].acked = true
+							if block.BlockNumber == shift {
+								shift++
+								for _, p := range packets[shift:] {
+									if p.acked {
+										shift++
+									} else {
+										break
+									}
 								}
-							}
 
-							if err := sr.sendPacketsToAddr(packets, state.windowsize, shift, addr); err != nil {
-								return err
+								if err := sr.sendPacketsToAddr(packets, state.windowsize, shift, addr); err != nil {
+									return err
+								}
 							}
 						}
 					}
