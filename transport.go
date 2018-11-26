@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"math"
 	"net"
+	"os"
 	"sync"
 	"time"
 
@@ -206,7 +207,7 @@ func (sr *transport) sendPacketsToAddr(packets []*packet, windowsize int, shift 
 				}
 				packets[i].attempts++
 				packets[i].lastSend = time.Now()
-				fmt.Println("DEBUGCOALA sendPacketsToAddr message:", packets[i].message.ToReadableString())
+				os.Stderr.WriteString("DEBUGCOALA sendPacketsToAddr message: " + packets[i].message.ToReadableString())
 
 				if err := sr.sendToSocketByAddress(packets[i].message, addr); err != nil {
 					return err
