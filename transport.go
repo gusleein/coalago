@@ -114,7 +114,11 @@ func (sr *transport) sendACKTo(message *CoAPMessage, addr net.Addr) (err error) 
 			id := addr.String() + message.GetTokenString()
 			sr.block2channels.Store(id, ch)
 			err = sr.sendARQBlock2ACK(ch, message, addr)
+			if err != nil {
+				return err
+			}
 			sr.block2channels.Delete(id)
+			return
 		}
 	}
 
