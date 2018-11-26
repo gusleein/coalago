@@ -11,8 +11,6 @@ import (
 	"strconv"
 	"strings"
 	"time"
-
-	"log"
 )
 
 // A Message object represents a CoAP payload
@@ -69,10 +67,7 @@ func Deserialize(data []byte) (*CoAPMessage, error) {
 
 func deserialize(data []byte) (*CoAPMessage, error) {
 	defer func() {
-		v := recover()
-		if v != nil {
-			log.Printf("Deserialize error: %v \nPacket RAW: %x", v, data)
-		}
+		recover()
 	}()
 
 	msg := &CoAPMessage{}
