@@ -3,10 +3,8 @@ package coalago
 import (
 	"bytes"
 	"errors"
-	"fmt"
 	"math"
 	"net"
-	"os"
 	"sync"
 	"time"
 
@@ -114,11 +112,8 @@ func (sr *transport) sendACKTo(message *CoAPMessage, addr net.Addr) (err error) 
 			id := addr.String() + message.GetTokenString()
 			sr.block2channels.Store(id, ch)
 			err = sr.sendARQBlock2ACK(ch, message, addr)
-			if err != nil {
-				return err
-			}
 			sr.block2channels.Delete(id)
-			return
+			return err
 		}
 	}
 
@@ -211,8 +206,6 @@ func (sr *transport) sendPacketsToAddr(packets []*packet, windowsize int, shift 
 				}
 				packets[i].attempts++
 				packets[i].lastSend = time.Now()
-				os.Stderr.WriteString("DEBUGCOALA sendPacketsToAddr message: " + packets[i].message.ToReadableString() + "\n")
-
 				if err := sr.sendToSocketByAddress(packets[i].message, addr); err != nil {
 					return err
 				}
@@ -583,7 +576,6 @@ func preparationSendingMessage(tr *transport, message *CoAPMessage, addr net.Add
 		return nil, err
 	}
 
-	fmt.Printf("SEND to %s: %s\n", addr.String(), message.ToReadableString())
 	return buf, nil
 }
 

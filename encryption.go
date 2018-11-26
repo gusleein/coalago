@@ -3,7 +3,6 @@ package coalago
 import (
 	"net"
 	"net/url"
-	"os"
 
 	"github.com/coalalib/coalago/session"
 )
@@ -11,7 +10,6 @@ import (
 func encrypt(message *CoAPMessage, address net.Addr, aead *session.AEAD) error {
 	if message.Payload != nil && message.Payload.Length() != 0 {
 		var associatedData []byte
-		os.Stderr.WriteString("DEBUGCOALA encrypt message: " + message.ToReadableString() + "\n")
 		message.Payload = NewBytesPayload(aead.Seal(message.Payload.Bytes(), message.MessageID, associatedData))
 	}
 
