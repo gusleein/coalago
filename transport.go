@@ -68,6 +68,9 @@ func (sr *transport) sendCON(message *CoAPMessage) (resp *CoAPMessage, err error
 	attempts := 0
 
 	for {
+		if attempts > 0 {
+			MetricRetransmitMessages.Inc()
+		}
 		attempts++
 		MetricSentMessages.Inc()
 		_, err = sr.conn.Write(data)
@@ -160,6 +163,9 @@ func (sr *transport) sendPackets(packets []*packet, windowsize int, shift int) e
 	for i := 0; i < stop; i++ {
 		if !packets[i].acked {
 			if time.Since(packets[i].lastSend) >= _3s {
+				if packets[i].attempts > 0 {
+					MetricRetransmitMessages.Inc()
+				}
 				if packets[i].attempts == 3 {
 					return ErrMaxAttempts
 				}
@@ -460,6 +466,9 @@ func (sr *transport) receiveARQBlock2(origMessage *CoAPMessage, inputMessage *Co
 			return nil, err
 		}
 
+		if attempts > 0 {
+			MetricRetransmitMessages.Inc()
+		}
 		block := inputMessage.GetBlock2()
 		if block == nil || inputMessage.Type != CON {
 			continue
