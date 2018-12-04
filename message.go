@@ -348,10 +348,18 @@ func (m *CoAPMessage) GetURIQueryString() string {
 
 	var query []string
 	for _, v := range options {
-		query = append(query, v.StringValue())
+		query = append(query, parseOneQuery(v.StringValue()))
 	}
 
 	return strings.Join(query, "&")
+}
+
+func parseOneQuery(q string) string {
+	index := strings.Index(q, "=")
+	if index > 0 {
+		return url.QueryEscape(q[:index]) + "=" + url.QueryEscape(q[index+1:])
+	}
+	return ""
 }
 
 func (m *CoAPMessage) GetURIQueryArray() []string {
