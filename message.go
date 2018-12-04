@@ -7,6 +7,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"net"
+	"net/url"
 	"sort"
 	"strconv"
 	"strings"
@@ -499,57 +500,8 @@ func (m *CoAPMessage) GetBlock2() *block {
 }
 
 func ParseQuery(query string) (values map[string][]string) {
-	values = make(map[string][]string)
-	for query != "" {
-		params := strings.SplitN(query, "&", 2)
-
-		switch len(params) {
-		case 0, 1:
-			query = ""
-		case 2:
-			query = params[1]
-		}
-
-		processParams(params[0], values)
-	}
-
+	values, _ = url.ParseQuery(query)
 	return values
-}
-
-func processParams(p string, values map[string][]string) {
-	kv := strings.SplitN(p, "=", 2)
-	if len(kv) != 2 {
-		return
-	}
-
-	key := kv[0]
-	value := unescapeString(kv[1])
-
-	if values[key] == nil {
-		values[key] = []string{}
-	}
-	values[key] = append(values[key], value)
-}
-
-func EscapeString(s string) string {
-	newString := ""
-	for _, char := range s {
-		c := escapeChar(string(char))
-		newString = newString + c
-	}
-
-	return newString
-}
-
-func escapeChar(s string) string {
-	if s == "&" {
-		return "%26"
-	}
-	return s
-}
-
-func unescapeString(s string) string {
-	return strings.Replace(s, "%26", "&", -1)
 }
 
 // Represents the payload/content of a CoAP Message
