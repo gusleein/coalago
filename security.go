@@ -3,7 +3,6 @@ package coalago
 import (
 	"bytes"
 	"errors"
-	"fmt"
 	"net"
 	"time"
 
@@ -76,16 +75,10 @@ func setSessionForAddress(privatekey []byte, securedSession *session.SecuredSess
 	MetricSessionsCount.Set(int64(globalSessions.ItemCount()))
 }
 
-type Error int8
-
-func (e Error) Error() string {
-	return fmt.Sprint(e)
-}
-
-const (
-	ErrorSessionNotFound Error = iota
-	ErrorSessionExpired
-	ErrorHandshake
+var (
+	ErrorSessionNotFound error = errors.New("session not found")
+	ErrorSessionExpired  error = errors.New("session expired")
+	ErrorHandshake       error = errors.New("error handshake")
 )
 
 func securityReceive(tr *transport, message *CoAPMessage) error {
