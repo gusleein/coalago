@@ -605,19 +605,20 @@ func preparationReceivingBuffer(tr *transport, data []byte, senderAddr net.Addr)
 	message.Sender = senderAddr
 	// fmt.Println(time.Now().Format("15:04:05.000000000"), "\t<--- receive\t", senderAddr, message.ToReadableString())
 
-	if securityReceive(tr, message) {
-		return message, nil
-	}
+	err = securityReceive(tr, message)
 
-	return nil, errors.New("Session error")
+	if err != nil {
+		return nil, err
+	}
+	return message, nil
 }
 
 func preparationReceivingMessage(tr *transport, message *CoAPMessage) (*CoAPMessage, error) {
 	// fmt.Println(time.Now().Format("15:04:05.000000000"), "\t<--- receive\t", message.Sender, message.ToReadableString())
 	MetricReceivedMessages.Inc()
-	if securityReceive(tr, message) {
-		return message, nil
+	err := securityReceive(tr, message)
+	if err != nil {
+		return nil, err
 	}
-
-	return nil, errors.New("Session error")
+	return message, nil
 }

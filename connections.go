@@ -138,7 +138,7 @@ func receiveMessage(tr *transport) (*CoAPMessage, error) {
 
 		message, err := preparationReceivingBuffer(tr, buff[:n], tr.conn.RemoteAddr())
 		if err != nil {
-			continue
+			return nil, err
 		}
 
 		return message, nil

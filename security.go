@@ -3,6 +3,7 @@ package coalago
 import (
 	"bytes"
 	"errors"
+	"fmt"
 	"net"
 	"time"
 
@@ -75,9 +76,21 @@ func setSessionForAddress(privatekey []byte, securedSession *session.SecuredSess
 	MetricSessionsCount.Set(int64(globalSessions.ItemCount()))
 }
 
-func securityReceive(tr *transport, message *CoAPMessage) bool {
+type Error int8
+
+func (e Error) Error() string {
+	return fmt.Sprint(e)
+}
+
+const (
+	ErrorSessionNotFound Error = iota
+	ErrorSessionExpired
+	ErrorHandshake
+)
+
+func securityReceive(tr *transport, message *CoAPMessage) error {
 	if !receiveHandshake(tr, tr.privateKey, message) {
-		return false
+		return ErrorHandshake
 	}
 	// Check if the message has coaps:// scheme and requires a new Session
 	if message.GetScheme() == COAPS_SCHEME {
@@ -98,7 +111,7 @@ func securityReceive(tr *transport, message *CoAPMessage) bool {
 			responseMessage.AddOption(OptionSessionNotFound, 1)
 			responseMessage.Token = message.Token
 			tr.SendTo(responseMessage, message.Sender)
-			return false
+			return ErrorSessionNotFound
 		}
 
 		// Decrypt message payload
@@ -108,7 +121,7 @@ func securityReceive(tr *transport, message *CoAPMessage) bool {
 			responseMessage.AddOption(OptionSessionExpired, 1)
 			responseMessage.Token = message.Token
 			tr.SendTo(responseMessage, message.Sender)
-			return false
+			return ErrorSessionExpired
 		}
 
 		message.PeerPublicKey = currentSession.PeerPublicKey
@@ -117,12 +130,18 @@ func securityReceive(tr *transport, message *CoAPMessage) bool {
 	/* Receive Errors */
 	sessionNotFound := message.GetOption(OptionSessionNotFound)
 	sessionExpired := message.GetOption(OptionSessionExpired)
-	if message.Code == CoapCodeUnauthorized && (sessionNotFound != nil || sessionExpired != nil) {
-		globalSessions.Delete(message.Sender.String())
-		return false
+	if message.Code == CoapCodeUnauthorized {
+		if sessionNotFound != nil {
+			globalSessions.Delete(message.Sender.String())
+			return ErrorSessionNotFound
+		}
+		if sessionExpired != nil {
+			globalSessions.Delete(message.Sender.String())
+			return ErrorSessionExpired
+		}
 	}
 
-	return true
+	return nil
 }
 
 func receiveHandshake(tr *transport, privatekey []byte, message *CoAPMessage) bool {
