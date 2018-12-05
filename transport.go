@@ -37,7 +37,11 @@ func (tr *transport) SetPrivateKey(pk []byte) {
 func (sr *transport) Send(message *CoAPMessage) (resp *CoAPMessage, err error) {
 	switch message.Type {
 	case CON:
-		return sr.sendCON(message)
+		resp, err := sr.sendCON(message)
+		if err == ErrorSessionExpired || err == ErrorSessionNotFound {
+			resp, err = sr.sendCON(message)
+		}
+		return resp, err
 	case RST, NON:
 		return nil, sr.sendToSocket(message)
 	default:
