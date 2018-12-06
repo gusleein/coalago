@@ -62,7 +62,7 @@ func getSessionForAddress(tr *transport, senderAddr, receiverAddr string) *sessi
 
 		setSessionForAddress(tr.privateKey, securedSession, senderAddr, receiverAddr)
 	}
-
+	globalSessions.SetDefault(senderAddr+receiverAddr, s)
 	return securedSession
 }
 
