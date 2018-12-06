@@ -13,7 +13,7 @@ import (
 
 var (
 	ErrUnsupportedType = errors.New("unsupported type of message")
-	globalSessions     = cache.New(SESSIONS_POOL_EXPIRATION, time.Second*10)
+	globalSessions     = cache.New(SESSIONS_POOL_EXPIRATION, time.Second*1)
 )
 
 type transport struct {

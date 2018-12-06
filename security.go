@@ -10,7 +10,7 @@ import (
 )
 
 var (
-	SESSIONS_POOL_EXPIRATION = time.Minute * 5
+	SESSIONS_POOL_EXPIRATION = time.Minute * 10
 )
 
 func securityClientSend(tr *transport, message *CoAPMessage, addr net.Addr) error {
