@@ -125,11 +125,13 @@ func securityReceive(tr *transport, message *CoAPMessage) error {
 	sessionExpired := message.GetOption(OptionSessionExpired)
 	if message.Code == CoapCodeUnauthorized {
 		if sessionNotFound != nil {
-			globalSessions.Delete(message.Sender.String())
+			id := tr.conn.LocalAddr().String() + message.Sender.String()
+			globalSessions.Delete(id)
 			return ErrorSessionNotFound
 		}
 		if sessionExpired != nil {
-			globalSessions.Delete(message.Sender.String())
+			id := tr.conn.LocalAddr().String() + message.Sender.String()
+			globalSessions.Delete(id)
 			return ErrorSessionExpired
 		}
 	}
