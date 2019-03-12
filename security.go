@@ -42,21 +42,32 @@ func securityClientSend(tr *transport, message *CoAPMessage, addr net.Addr) erro
 	return nil
 }
 
-func getSessionForAddress(tr *transport, senderAddr, receiverAddr string) (securedSession *session.SecuredSession) {
+func getSessionForAddress(tr *transport, senderAddr, receiverAddr string) *session.SecuredSession {
 	s, _ := globalSessions.Get(senderAddr + receiverAddr)
+	var (
+		err            error
+		securedSession *session.SecuredSession
+	)
 
 	if s == nil {
 		securedSession = nil
 	} else {
 		securedSession = s.(*session.SecuredSession)
 	}
+	if securedSession == nil || securedSession.Curve == nil {
+		securedSession, err = session.NewSecuredSession(tr.privateKey)
+		if err != nil {
+			return nil
+		}
 
-	setSessionForAddress(tr.privateKey, securedSession, senderAddr, receiverAddr)
+		setSessionForAddress(tr.privateKey, securedSession, senderAddr, receiverAddr)
+	}
+	globalSessions.SetDefault(senderAddr+receiverAddr, securedSession)
 	return securedSession
 }
 
 func setSessionForAddress(privatekey []byte, securedSession *session.SecuredSession, senderAddr, receiverAddr string) {
-	if securedSession == nil || securedSession.Curve == nil {
+	if securedSession == nil {
 		securedSession, _ = session.NewSecuredSession(privatekey)
 	}
 	globalSessions.SetDefault(senderAddr+receiverAddr, securedSession)
