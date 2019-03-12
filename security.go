@@ -17,8 +17,8 @@ func securityClientSend(tr *transport, message *CoAPMessage, addr net.Addr) erro
 	if message.GetScheme() != COAPS_SCHEME {
 		return nil
 	}
-	token := ""
-	currentSession := getSessionForAddress(token, tr, tr.conn.LocalAddr().String(), addr.String())
+
+	currentSession := getSessionForAddress(tr, tr.conn.LocalAddr().String(), addr.String())
 
 	if currentSession == nil {
 		err := errors.New("Cannot encrypt: no session, message: %v  from: %v")
@@ -42,8 +42,8 @@ func securityClientSend(tr *transport, message *CoAPMessage, addr net.Addr) erro
 	return nil
 }
 
-func getSessionForAddress(token string, tr *transport, senderAddr, receiverAddr string) *session.SecuredSession {
-	s, _ := globalSessions.Get(token + senderAddr + receiverAddr)
+func getSessionForAddress(tr *transport, senderAddr, receiverAddr string) *session.SecuredSession {
+	s, _ := globalSessions.Get(senderAddr + receiverAddr)
 	var (
 		err            error
 		securedSession *session.SecuredSession
@@ -60,23 +60,23 @@ func getSessionForAddress(token string, tr *transport, senderAddr, receiverAddr 
 			return nil
 		}
 
-		setSessionForAddress(token, tr.privateKey, securedSession, senderAddr, receiverAddr)
+		setSessionForAddress(tr.privateKey, securedSession, senderAddr, receiverAddr)
 	}
-	globalSessions.SetDefault(token+senderAddr+receiverAddr, securedSession)
+	globalSessions.SetDefault(senderAddr+receiverAddr, securedSession)
 	return securedSession
 }
 
-func setSessionForAddress(token string, privatekey []byte, securedSession *session.SecuredSession, senderAddr, receiverAddr string) {
+func setSessionForAddress(privatekey []byte, securedSession *session.SecuredSession, senderAddr, receiverAddr string) {
 	if securedSession == nil {
 		securedSession, _ = session.NewSecuredSession(privatekey)
 	}
-	globalSessions.SetDefault(token+senderAddr+receiverAddr, securedSession)
+	globalSessions.SetDefault(senderAddr+receiverAddr, securedSession)
 	MetricSessionsRate.Inc()
 	MetricSessionsCount.Set(int64(globalSessions.ItemCount()))
 }
 
-func deleteSessionForAddress(token, senderAddr, receiverAddr string) {
-	globalSessions.Delete(token + senderAddr + receiverAddr)
+func deleteSessionForAddress(senderAddr, receiverAddr string) {
+	globalSessions.Delete(senderAddr + receiverAddr)
 }
 
 var (
@@ -89,7 +89,6 @@ func securityReceive(tr *transport, message *CoAPMessage) error {
 	if !receiveHandshake(tr, tr.privateKey, message) {
 		return ErrorHandshake
 	}
-	token := ""
 
 	// Check if the message has coaps:// scheme and requires a new Session
 	if message.GetScheme() == COAPS_SCHEME {
@@ -97,7 +96,7 @@ func securityReceive(tr *transport, message *CoAPMessage) error {
 
 		addressSession = message.Sender.String()
 
-		currentSession := getSessionForAddress(token, tr, tr.conn.LocalAddr().String(), addressSession)
+		currentSession := getSessionForAddress(tr, tr.conn.LocalAddr().String(), addressSession)
 
 		if currentSession == nil || currentSession.AEAD == nil {
 			responseMessage := NewCoAPMessageId(ACK, CoapCodeUnauthorized, message.MessageID)
@@ -125,11 +124,11 @@ func securityReceive(tr *transport, message *CoAPMessage) error {
 	sessionExpired := message.GetOption(OptionSessionExpired)
 	if message.Code == CoapCodeUnauthorized {
 		if sessionNotFound != nil {
-			deleteSessionForAddress(token, tr.conn.LocalAddr().String(), message.Sender.String())
+			deleteSessionForAddress(tr.conn.LocalAddr().String(), message.Sender.String())
 			return ErrorSessionNotFound
 		}
 		if sessionExpired != nil {
-			deleteSessionForAddress(token, tr.conn.LocalAddr().String(), message.Sender.String())
+			deleteSessionForAddress(tr.conn.LocalAddr().String(), message.Sender.String())
 			return ErrorSessionExpired
 		}
 	}
@@ -151,8 +150,7 @@ func receiveHandshake(tr *transport, privatekey []byte, message *CoAPMessage) bo
 		return true
 	}
 
-	token := ""
-	peerSession := getSessionForAddress(token, tr, tr.conn.LocalAddr().String(), message.Sender.String())
+	peerSession := getSessionForAddress(tr, tr.conn.LocalAddr().String(), message.Sender.String())
 
 	if value == CoapHandshakeTypeClientHello && message.Payload != nil {
 		peerSession.PeerPublicKey = message.Payload.Bytes()
@@ -169,7 +167,7 @@ func receiveHandshake(tr *transport, privatekey []byte, message *CoAPMessage) bo
 	MetricSuccessfulHandhshakes.Inc()
 
 	peerSession.UpdatedAt = int(time.Now().Unix())
-	setSessionForAddress(token, privatekey, peerSession, tr.conn.LocalAddr().String(), message.Sender.String())
+	setSessionForAddress(privatekey, peerSession, tr.conn.LocalAddr().String(), message.Sender.String())
 
 	return false
 }
