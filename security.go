@@ -17,7 +17,7 @@ func securityClientSend(tr *transport, message *CoAPMessage, addr net.Addr) erro
 	if message.GetScheme() != COAPS_SCHEME {
 		return nil
 	}
-	token := message.GetTokenString()
+	token := ""
 	currentSession := getSessionForAddress(token, tr, tr.conn.LocalAddr().String(), addr.String())
 
 	if currentSession == nil {
@@ -89,7 +89,7 @@ func securityReceive(tr *transport, message *CoAPMessage) error {
 	if !receiveHandshake(tr, tr.privateKey, message) {
 		return ErrorHandshake
 	}
-	token := message.GetTokenString()
+	token := ""
 
 	// Check if the message has coaps:// scheme and requires a new Session
 	if message.GetScheme() == COAPS_SCHEME {
@@ -151,7 +151,7 @@ func receiveHandshake(tr *transport, privatekey []byte, message *CoAPMessage) bo
 		return true
 	}
 
-	token := message.GetTokenString()
+	token := ""
 	peerSession := getSessionForAddress(token, tr, tr.conn.LocalAddr().String(), message.Sender.String())
 
 	if value == CoapHandshakeTypeClientHello && message.Payload != nil {
