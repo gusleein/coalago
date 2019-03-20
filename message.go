@@ -31,8 +31,8 @@ type CoAPMessage struct {
 
 	IsProxies bool
 
-	PublicKey     []byte
-	PeerPublicKey []byte
+	BreakConnectionOnPK func(actualPK []byte) bool
+	PeerPublicKey       []byte
 
 	Context context.Context
 }

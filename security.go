@@ -1,7 +1,6 @@
 package coalago
 
 import (
-	"bytes"
 	"errors"
 	"net"
 	"time"
@@ -220,10 +219,12 @@ func sendHelloFromClient(tr *transport, origMessage *CoAPMessage, myPublicKey []
 		}
 	}
 
-	if len(origMessage.PublicKey) > 0 && !bytes.Equal(peerPublicKey, origMessage.PublicKey) {
-		err = errors.New(ERR_KEYS_NOT_MATCH)
+	if origMessage.BreakConnectionOnPK != nil {
+		if origMessage.BreakConnectionOnPK(peerPublicKey) {
+			return nil, errors.New(ERR_KEYS_NOT_MATCH)
+		}
 	}
-	origMessage.PublicKey = peerPublicKey
+
 	return peerPublicKey, err
 }
 

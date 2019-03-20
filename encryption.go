@@ -31,7 +31,6 @@ func decrypt(message *CoAPMessage, aead *session.AEAD) error {
 		message.Payload = NewBytesPayload(newPayload)
 	}
 
-	message.PublicKey = aead.PeerKey
 	return decryptionOptions(message, aead)
 }
 
