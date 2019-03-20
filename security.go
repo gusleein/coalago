@@ -220,7 +220,7 @@ func sendHelloFromClient(tr *transport, origMessage *CoAPMessage, myPublicKey []
 		}
 	}
 
-	if len(origMessage.PublicKey) > 1 && !bytes.Equal(peerPublicKey, origMessage.PublicKey) {
+	if len(origMessage.PublicKey) > 0 && !bytes.Equal(peerPublicKey, origMessage.PublicKey) {
 		return nil, errors.New(ERR_KEYS_NOT_MATCH)
 	}
 	origMessage.PublicKey = peerPublicKey
