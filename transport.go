@@ -7,11 +7,14 @@ import (
 	"net"
 	"sync"
 	"time"
+
+	"github.com/patrickmn/go-cache"
 )
 
 var (
 	ErrUnsupportedType = errors.New("unsupported type of message")
 	globalSessions     = newSessionStorage()
+	handlersStateCache = cache.New(time.Second*10, time.Second)
 )
 
 type transport struct {
@@ -532,6 +535,7 @@ start:
 	message.Sender = senderAddr
 
 	sr.messageHandlerSelector(message, respHandler)
+	handlersStateCache.Delete(message.Sender.String() + string(message.Token) + message.GetMessageIDString())
 }
 
 func (sr *transport) messageHandlerSelector(message *CoAPMessage, respHandler func(*CoAPMessage, error)) {
@@ -605,6 +609,12 @@ func preparationReceivingBuffer(tr *transport, data []byte, senderAddr net.Addr)
 	}
 
 	MetricReceivedMessages.Inc()
+
+	if _, ok := handlersStateCache.Get(senderAddr.String() + string(message.Token) + message.GetMessageIDString()); ok {
+		return nil, ErrRepeatedMessage
+	}
+
+	handlersStateCache.SetDefault(senderAddr.String()+string(message.Token)+message.GetMessageIDString(), struct{}{})
 
 	message.Sender = senderAddr
 	// fmt.Println(time.Now().Format("15:04:05.000000000"), "\t<--- receive\t", senderAddr, message.ToReadableString())

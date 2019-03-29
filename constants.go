@@ -256,6 +256,7 @@ var (
 	ErrUnsupportedContentFormat      = errors.New("Unsupported Content-Format")
 	ErrNoMatchingMethod              = errors.New("No matching method")
 	ErrNilMessage                    = errors.New("Message is nil")
+	ErrRepeatedMessage               = errors.New("Repeated message")
 	ErrNilConn                       = errors.New("Connection object is nil")
 	ErrNilAddr                       = errors.New("Address cannot be nil")
 	ErrOptionLenghtOutOfRangePackets = errors.New("Option lenght out of range packet")
