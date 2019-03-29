@@ -7,13 +7,11 @@ import (
 	"net"
 	"sync"
 	"time"
-
-	cache "github.com/patrickmn/go-cache"
 )
 
 var (
 	ErrUnsupportedType = errors.New("unsupported type of message")
-	globalSessions     = cache.New(SESSIONS_POOL_EXPIRATION, time.Second*1)
+	globalSessions     = newSessionStorage()
 )
 
 type transport struct {

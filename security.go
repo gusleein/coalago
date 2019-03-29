@@ -42,17 +42,11 @@ func securityClientSend(tr *transport, message *CoAPMessage, addr net.Addr) erro
 }
 
 func getSessionForAddress(tr *transport, senderAddr, receiverAddr string) *session.SecuredSession {
-	s, _ := globalSessions.Get(senderAddr + receiverAddr)
+	securedSession := globalSessions.Get(senderAddr, receiverAddr, "")
 	var (
-		err            error
-		securedSession *session.SecuredSession
+		err error
 	)
 
-	if s == nil {
-		securedSession = nil
-	} else {
-		securedSession = s.(*session.SecuredSession)
-	}
 	if securedSession == nil || securedSession.Curve == nil {
 		securedSession, err = session.NewSecuredSession(tr.privateKey)
 		if err != nil {
@@ -61,7 +55,8 @@ func getSessionForAddress(tr *transport, senderAddr, receiverAddr string) *sessi
 
 		setSessionForAddress(tr.privateKey, securedSession, senderAddr, receiverAddr)
 	}
-	globalSessions.SetDefault(senderAddr+receiverAddr, securedSession)
+
+	globalSessions.Set(senderAddr, receiverAddr, "", securedSession)
 	return securedSession
 }
 
@@ -69,13 +64,13 @@ func setSessionForAddress(privatekey []byte, securedSession *session.SecuredSess
 	if securedSession == nil {
 		securedSession, _ = session.NewSecuredSession(privatekey)
 	}
-	globalSessions.SetDefault(senderAddr+receiverAddr, securedSession)
+	globalSessions.Set(senderAddr, receiverAddr, "", securedSession)
 	MetricSessionsRate.Inc()
 	MetricSessionsCount.Set(int64(globalSessions.ItemCount()))
 }
 
 func deleteSessionForAddress(senderAddr, receiverAddr string) {
-	globalSessions.Delete(senderAddr + receiverAddr)
+	globalSessions.Delete(senderAddr, receiverAddr, "")
 }
 
 var (
