@@ -581,13 +581,15 @@ func (sr *transport) messageHandlerSelector(message *CoAPMessage, respHandler fu
 }
 
 func preparationSendingMessage(tr *transport, message *CoAPMessage, addr net.Addr) ([]byte, error) {
-	if err := securityClientSend(tr, message, addr); err != nil {
+	secMessage := message.Clone(true)
+
+	if err := securityClientSend(tr, secMessage, addr); err != nil {
 		return nil, err
 	}
 
 	// fmt.Println(time.Now().Format("15:04:05.000000000"), "\t---> send\t", addr, message.ToReadableString())
 
-	buf, err := Serialize(message)
+	buf, err := Serialize(secMessage)
 	if err != nil {
 		return nil, err
 	}
