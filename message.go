@@ -272,7 +272,6 @@ func (m *CoAPMessage) Clone(includePayload bool) *CoAPMessage {
 	cloneMessage := NewCoAPMessageId(m.Type, m.Code, m.MessageID)
 	cloneMessage.Token = m.Token
 	cloneMessage.Options = m.Options
-	cloneMessage.ProxyAddr = m.ProxyAddr
 	if includePayload {
 		cloneMessage.Payload = m.Payload
 	}
