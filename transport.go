@@ -84,7 +84,7 @@ func (sr *transport) sendCON(message *CoAPMessage) (resp *CoAPMessage, err error
 			return nil, err
 		}
 
-		resp, err = receiveMessage(sr, message)
+		resp, err = receiveMessage(sr)
 		if err == ErrMaxAttempts {
 			if attempts == 3 {
 				MetricExpiredMessages.Inc()
@@ -266,7 +266,7 @@ func (sr *transport) sendARQBlock1CON(message *CoAPMessage) (*CoAPMessage, error
 	}
 
 	for {
-		resp, err := receiveMessage(sr, message)
+		resp, err := receiveMessage(sr)
 		if err != nil {
 			if err == ErrMaxAttempts {
 				if err = sr.sendPackets(packets, state.windowsize, shift); err != nil {
@@ -461,7 +461,7 @@ func (sr *transport) receiveARQBlock2(origMessage *CoAPMessage, inputMessage *Co
 	}
 
 	for {
-		inputMessage, err = receiveMessage(sr, origMessage)
+		inputMessage, err = receiveMessage(sr)
 		if err == ErrMaxAttempts {
 			if attempts == 3 {
 				MetricExpiredMessages.Inc()
@@ -527,7 +527,7 @@ start:
 		goto start
 	}
 
-	message, err := preparationReceivingBuffer(sr, readBuf[:n], senderAddr, "")
+	message, err := preparationReceivingBuffer(sr, readBuf[:n], senderAddr)
 	if err != nil {
 		goto start
 	}
@@ -604,7 +604,7 @@ func preparationSendingMessage(tr *transport, message *CoAPMessage, addr net.Add
 	return buf, nil
 }
 
-func preparationReceivingBuffer(tr *transport, data []byte, senderAddr net.Addr, proxyAddr string) (*CoAPMessage, error) {
+func preparationReceivingBuffer(tr *transport, data []byte, senderAddr net.Addr) (*CoAPMessage, error) {
 	message, err := Deserialize(data)
 	if err != nil {
 		return nil, err
@@ -618,7 +618,7 @@ func preparationReceivingBuffer(tr *transport, data []byte, senderAddr net.Addr,
 	message.Sender = senderAddr
 	// fmt.Println(time.Now().Format("15:04:05.000000000"), "\t<--- receive\t", senderAddr, message.ToReadableString())
 
-	err = securityReceive(tr, message, proxyAddr)
+	err = securityReceive(tr, message)
 
 	if err != nil {
 		return nil, err
@@ -629,7 +629,7 @@ func preparationReceivingBuffer(tr *transport, data []byte, senderAddr net.Addr,
 func preparationReceivingMessage(tr *transport, message *CoAPMessage) (*CoAPMessage, error) {
 	// fmt.Println(time.Now().Format("15:04:05.000000000"), "\t<--- receive\t", message.Sender, message.ToReadableString())
 	MetricReceivedMessages.Inc()
-	err := securityReceive(tr, message, "")
+	err := securityReceive(tr, message)
 	if err != nil {
 		return nil, err
 	}
