@@ -534,8 +534,13 @@ start:
 
 	message.Sender = senderAddr
 
+	if _, ok := handlersStateCache.Get(senderAddr.String() + string(message.Token)); ok {
+		return
+	}
+
+	handlersStateCache.SetDefault(senderAddr.String()+string(message.Token), struct{}{})
 	sr.messageHandlerSelector(message, respHandler)
-	handlersStateCache.Delete(message.Sender.String() + string(message.Token) + message.GetMessageIDString())
+	handlersStateCache.Delete(message.Sender.String() + string(message.Token))
 }
 
 func (sr *transport) messageHandlerSelector(message *CoAPMessage, respHandler func(*CoAPMessage, error)) {
@@ -609,12 +614,6 @@ func preparationReceivingBuffer(tr *transport, data []byte, senderAddr net.Addr)
 	}
 
 	MetricReceivedMessages.Inc()
-
-	if _, ok := handlersStateCache.Get(senderAddr.String() + string(message.Token) + message.GetMessageIDString()); ok {
-		return nil, ErrRepeatedMessage
-	}
-
-	handlersStateCache.SetDefault(senderAddr.String()+string(message.Token)+message.GetMessageIDString(), struct{}{})
 
 	message.Sender = senderAddr
 	// fmt.Println(time.Now().Format("15:04:05.000000000"), "\t<--- receive\t", senderAddr, message.ToReadableString())

@@ -137,11 +137,6 @@ func receiveMessage(tr *transport) (*CoAPMessage, error) {
 		}
 
 		message, err := preparationReceivingBuffer(tr, buff[:n], tr.conn.RemoteAddr())
-		if err == ErrRepeatedMessage {
-			continue
-		}
-		defer handlersStateCache.Delete(message.Sender.String() + string(message.Token) + message.GetMessageIDString())
-
 		if err != nil {
 			return nil, err
 		}
