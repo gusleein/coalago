@@ -34,7 +34,8 @@ type CoAPMessage struct {
 	BreakConnectionOnPK func(actualPK []byte) bool
 	PeerPublicKey       []byte
 
-	Context context.Context
+	ProxyAddr string
+	Context   context.Context
 }
 
 func NewCoAPMessage(messageType CoapType, messageCode CoapCode) *CoAPMessage {
@@ -411,12 +412,9 @@ func (m *CoAPMessage) GetPayload() []byte {
 	return m.Payload.Bytes()
 }
 
-func (m *CoAPMessage) SetProxyURI(uri string) {
-	m.AddOption(OptionProxyURI, uri)
-}
-
-func (m *CoAPMessage) SetProxyScheme(uri string) {
-	m.AddOption(OptionProxyScheme, uri)
+func (m *CoAPMessage) SetProxy(scheme, addr string) {
+	m.ProxyAddr = addr
+	m.AddOption(OptionProxyURI, scheme+"://"+addr)
 }
 
 func (m *CoAPMessage) SetMediaType(mt MediaType) {
