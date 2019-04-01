@@ -269,6 +269,7 @@ func constructNextBlock(blockType OptionCode, s *stateSend) (*CoAPMessage, bool)
 	s.start = s.stop
 
 	blockMessage.CloneOptions(s.origMessage, OptionProxyURI)
+	blockMessage.ProxyAddr = s.origMessage.ProxyAddr
 
 	return blockMessage, !isMore
 }
@@ -281,6 +282,7 @@ func ackTo(initMessage *CoAPMessage, origMessage *CoAPMessage, code CoapCode) *C
 	result.Recipient = origMessage.Sender
 
 	if initMessage != nil {
+		result.ProxyAddr = initMessage.ProxyAddr
 		result.CloneOptions(initMessage, OptionProxyURI)
 	}
 
@@ -314,6 +316,7 @@ func newBlockingMessage(
 
 	msg.AddOption(optionBlock, b.ToInt())
 	msg.Recipient = recipient
+	msg.ProxyAddr = origMessage.ProxyAddr
 
 	return msg
 }
