@@ -2,6 +2,7 @@ package coalago
 
 import (
 	"errors"
+	"fmt"
 	"math/rand"
 	"net"
 	"time"
@@ -54,6 +55,14 @@ func setProxyIDIfNeed(message *CoAPMessage) {
 	}
 }
 
+func getProxyIDIfNeed(proxyAddr string) (uint32, bool) {
+	v, ok := proxyIDSessions.Load(proxyAddr)
+	if ok {
+		return v.(uint32), ok
+	}
+	return 0, ok
+}
+
 func getSessionForAddress(tr *transport, senderAddr, receiverAddr, proxyAddr string) *session.SecuredSession {
 	securedSession := globalSessions.Get(senderAddr, receiverAddr, proxyAddr)
 	var (
@@ -93,6 +102,13 @@ var (
 )
 
 func securityReceive(tr *transport, message *CoAPMessage, proxyAddr string) error {
+	if len(proxyAddr) > 0 {
+		proxyID, ok := getProxyIDIfNeed(proxyAddr)
+		if ok {
+			proxyAddr = fmt.Sprintf("%v%v", proxyAddr, proxyID)
+		}
+	}
+
 	if !receiveHandshake(tr, tr.privateKey, message, proxyAddr) {
 		return ErrorHandshake
 	}
