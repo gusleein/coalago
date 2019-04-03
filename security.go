@@ -2,6 +2,7 @@ package coalago
 
 import (
 	"errors"
+	"math/rand"
 	"net"
 	"time"
 
@@ -17,6 +18,7 @@ func securityClientSend(tr *transport, message *CoAPMessage, addr net.Addr) erro
 		return nil
 	}
 
+	setProxyIDIfNeed(message)
 	currentSession := getSessionForAddress(tr, tr.conn.LocalAddr().String(), addr.String(), message.ProxyAddr)
 
 	if currentSession == nil {
@@ -39,6 +41,17 @@ func securityClientSend(tr *transport, message *CoAPMessage, addr net.Addr) erro
 	}
 
 	return nil
+}
+
+func setProxyIDIfNeed(message *CoAPMessage) {
+	if len(message.ProxyAddr) > 0 {
+		v, ok := proxyIDSessions.Load(message.ProxyAddr)
+		if !ok {
+			v = rand.Uint32()
+			proxyIDSessions.Store(message.ProxyAddr, v)
+		}
+		message.AddOption(OptionProxySecurityID, v)
+	}
 }
 
 func getSessionForAddress(tr *transport, senderAddr, receiverAddr, proxyAddr string) *session.SecuredSession {

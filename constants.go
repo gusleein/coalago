@@ -230,8 +230,9 @@ const (
 	OptionSessionExpired OptionCode = 4003
 
 	OptionSelectiveRepeatWindowSize OptionCode = 3001
+	OptionProxySecurityID           OptionCode = 3004
 
-	OptionСoapsUri = 4005
+	OptionСoapsUri OptionCode = 4005
 )
 
 // Fragments/parts of a CoAP Message packet

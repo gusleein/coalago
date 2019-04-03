@@ -240,6 +240,8 @@ func optionCodeToString(option OptionCode) string {
 		return "OptionSelectiveRepeatWindowSize"
 	case OptionСoapsUri:
 		return "OptionСoapsUri"
+	case OptionProxySecurityID:
+		return "OptionSecurityID"
 	default:
 		return "Unknown"
 	}

@@ -180,7 +180,7 @@ func deserialize(data []byte) (*CoAPMessage, error) {
 				msg.Options = append(msg.Options, NewOption(optCode, intVal))
 
 			case OptionURIHost, OptionEtag, OptionLocationPath, OptionURIPath, OptionURIQuery,
-				OptionLocationQuery, OptionProxyURI, OptionСoapsUri:
+				OptionLocationQuery, OptionProxyURI, OptionСoapsUri, OptionProxySecurityID:
 				msg.Options = append(msg.Options, NewOption(optCode, string(optionValue)))
 			default:
 				if lastOptionID&0x01 == 1 {
