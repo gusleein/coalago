@@ -68,6 +68,40 @@ func (o *CoAPMessageOption) IntValue() int {
 	}
 }
 
+func (o *CoAPMessageOption) Uint32Value() uint32 {
+
+	if o.Value == nil {
+		return 0
+	}
+
+	switch o.Value.(type) {
+	case int:
+		return uint32(o.Value.(int))
+	case int8:
+		return uint32(o.Value.(int8))
+	case int16:
+		return uint32(o.Value.(int16))
+	case int32:
+		return uint32(o.Value.(int32))
+	case uint:
+		return uint32(o.Value.(uint))
+	case uint8:
+		return uint32(o.Value.(uint8))
+	case uint16:
+		return uint32(o.Value.(uint16))
+	case uint32:
+		return o.Value.(uint32)
+	case string:
+		intVal, err := strconv.Atoi(o.Value.(string))
+		if err != nil {
+			return 0
+		}
+		return uint32(intVal)
+	default:
+		return 0
+	}
+}
+
 // Instantiates a New Option
 func NewOption(optionNumber OptionCode, optionValue interface{}) *CoAPMessageOption {
 	return &CoAPMessageOption{
@@ -92,7 +126,7 @@ func (opt *CoAPMessageOption) IsValidOption() bool {
 	case OptionIfNoneMatch, OptionURIScheme, OptionURIHost,
 		OptionEtag, OptionIfMatch, OptionObserve, OptionURIPort, OptionLocationPath,
 		OptionURIPath, OptionContentFormat, OptionMaxAge, OptionURIQuery, OptionAccept,
-		OptionLocationQuery, OptionBlock2, OptionBlock1, OptionProxyURI, OptionProxyScheme, OptionSize1,
+		OptionLocationQuery, OptionBlock2, OptionBlock1, OptionProxyURI, OptionProxySecurityID, OptionProxyScheme, OptionSize1,
 		OptionHandshakeType, OptionSessionNotFound, OptionSessionExpired, OptionSelectiveRepeatWindowSize:
 		return true
 	default:
