@@ -518,33 +518,30 @@ func (sr *transport) ReceiveMessage(message *CoAPMessage, respHandler func(*CoAP
 }
 
 func (sr *transport) ReceiveOnce(respHandler func(*CoAPMessage, error)) {
-	for {
-		readBuf := make([]byte, MTU+1)
-		
-		n, senderAddr, err := sr.conn.Listen(readBuf)
-		if err != nil {
-			panic(err)
-		}
-		if n == 0 || n > MTU {
-			continue
-		}
+	readBuf := make([]byte, MTU+1)
+start:
+	n, senderAddr, err := sr.conn.Listen(readBuf)
+	if err != nil {
+		panic(err)
+	}
+	if n == 0 || n > MTU {
+		goto start
+	}
 
-		message, err := preparationReceivingBuffer(sr, readBuf[:n], senderAddr, "")
-		if err != nil {
-			continue
-		}
-		message.Sender = senderAddr
+	message, err := preparationReceivingBuffer(sr, readBuf[:n], senderAddr, "")
+	if err != nil {
+		goto start
+	}
 
-		if _, ok := handlersStateCache.Get(senderAddr.String() + string(message.Token)); ok {
-			return
-		}
+	message.Sender = senderAddr
 
-		handlersStateCache.SetDefault(senderAddr.String()+string(message.Token), struct{}{})
-		sr.messageHandlerSelector(message, respHandler)
-		handlersStateCache.Delete(message.Sender.String() + string(message.Token))
-
+	if _, ok := handlersStateCache.Get(senderAddr.String() + string(message.Token)); ok {
 		return
 	}
+
+	handlersStateCache.SetDefault(senderAddr.String()+string(message.Token), struct{}{})
+	sr.messageHandlerSelector(message, respHandler)
+	handlersStateCache.Delete(message.Sender.String() + string(message.Token))
 }
 
 func (sr *transport) messageHandlerSelector(message *CoAPMessage, respHandler func(*CoAPMessage, error)) {
