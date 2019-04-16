@@ -19,7 +19,7 @@ func securityClientSend(tr *transport, message *CoAPMessage, addr net.Addr) erro
 		return nil
 	}
 
-	setProxyIDIfNeed(message)
+	// setProxyIDIfNeed(message)
 	currentSession := getSessionForAddress(tr, tr.conn.LocalAddr().String(), addr.String(), message.ProxyAddr)
 
 	if currentSession == nil {
