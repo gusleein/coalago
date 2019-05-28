@@ -64,7 +64,7 @@ func getProxyIDIfNeed(proxyAddr string) (uint32, bool) {
 }
 
 func getSessionForAddress(tr *transport, senderAddr, receiverAddr, proxyAddr string) *session.SecuredSession {
-	securedSession := globalSessions.Get(senderAddr, receiverAddr, proxyAddr)
+	securedSession := globalSessions.Get("", receiverAddr, proxyAddr)
 	var (
 		err error
 	)
@@ -78,7 +78,7 @@ func getSessionForAddress(tr *transport, senderAddr, receiverAddr, proxyAddr str
 		setSessionForAddress(tr.privateKey, securedSession, senderAddr, receiverAddr, proxyAddr)
 	}
 
-	globalSessions.Set(senderAddr, receiverAddr, proxyAddr, securedSession)
+	globalSessions.Set("", receiverAddr, proxyAddr, securedSession)
 	return securedSession
 }
 
@@ -86,13 +86,13 @@ func setSessionForAddress(privatekey []byte, securedSession *session.SecuredSess
 	if securedSession == nil {
 		securedSession, _ = session.NewSecuredSession(privatekey)
 	}
-	globalSessions.Set(senderAddr, receiverAddr, proxyAddr, securedSession)
+	globalSessions.Set("", receiverAddr, proxyAddr, securedSession)
 	MetricSessionsRate.Inc()
 	MetricSessionsCount.Set(int64(globalSessions.ItemCount()))
 }
 
 func deleteSessionForAddress(senderAddr, receiverAddr, proxyAddr string) {
-	globalSessions.Delete(senderAddr, receiverAddr, proxyAddr)
+	globalSessions.Delete("", receiverAddr, proxyAddr)
 }
 
 var (
