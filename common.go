@@ -280,7 +280,7 @@ func ackTo(initMessage *CoAPMessage, origMessage *CoAPMessage, code CoapCode) *C
 	result := NewCoAPMessage(ACK, code)
 	result.MessageID = origMessage.MessageID
 	result.Token = origMessage.Token
-	result.CloneOptions(origMessage, OptionURIScheme, OptionSelectiveRepeatWindowSize, OptionBlock1, OptionBlock2)
+	result.CloneOptions(origMessage, OptionURIScheme, OptionSelectiveRepeatWindowSize, OptionBlock1, OptionBlock2, OptionProxySecurityID)
 	result.Recipient = origMessage.Sender
 
 	if initMessage != nil {

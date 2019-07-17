@@ -54,7 +54,7 @@ func methodNotAllowed(server *Server, message *CoAPMessage) bool {
 	if message.Token != nil && len(message.Token) > 0 {
 		responseMessage.Token = message.Token
 	}
-	responseMessage.CloneOptions(message, OptionBlock1, OptionBlock2)
+	responseMessage.CloneOptions(message, OptionBlock1, OptionBlock2, OptionProxySecurityID)
 	server.sr.SendTo(responseMessage, message.Sender)
 	return false
 }
@@ -83,7 +83,7 @@ func returnResultFromResource(server *Server, message *CoAPMessage, handlerResul
 	if message.GetScheme() == COAPS_SCHEME {
 		responseMessage.SetSchemeCOAPS()
 	}
-	responseMessage.CloneOptions(message, OptionBlock1, OptionBlock2, OptionSelectiveRepeatWindowSize)
+	responseMessage.CloneOptions(message, OptionBlock1, OptionBlock2, OptionSelectiveRepeatWindowSize, OptionProxySecurityID)
 
 	_, err := server.sr.SendTo(responseMessage, message.Sender)
 	return err != nil
@@ -108,7 +108,7 @@ func noResource(server *Server, message *CoAPMessage) bool {
 	if message.Token != nil && len(message.Token) > 0 {
 		responseMessage.Token = message.Token
 	}
-	responseMessage.CloneOptions(message, OptionBlock1, OptionBlock2)
+	responseMessage.CloneOptions(message, OptionBlock1, OptionBlock2, OptionProxySecurityID)
 	responseMessage.Recipient = message.Sender
 
 	_, err := server.sr.SendTo(responseMessage, message.Sender)
