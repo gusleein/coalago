@@ -171,7 +171,7 @@ func deserialize(data []byte) (*CoAPMessage, error) {
 			switch optCode {
 			case OptionURIScheme, OptionProxyScheme, OptionURIPort, OptionContentFormat, OptionMaxAge, OptionAccept, OptionSize1,
 				OptionSize2, OptionBlock1, OptionBlock2, OptionHandshakeType, OptionObserve,
-				OptionSessionNotFound, OptionSessionExpired, OptionSelectiveRepeatWindowSize:
+				OptionSessionNotFound, OptionSessionExpired, OptionSelectiveRepeatWindowSize, OptionProxySecurityID:
 
 				intVal, err := decodeInt(optionValue)
 				if err != nil {
@@ -180,7 +180,7 @@ func deserialize(data []byte) (*CoAPMessage, error) {
 				msg.Options = append(msg.Options, NewOption(optCode, intVal))
 
 			case OptionURIHost, OptionEtag, OptionLocationPath, OptionURIPath, OptionURIQuery,
-				OptionLocationQuery, OptionProxyURI, OptionСoapsUri, OptionProxySecurityID:
+				OptionLocationQuery, OptionProxyURI, OptionСoapsUri:
 				msg.Options = append(msg.Options, NewOption(optCode, string(optionValue)))
 			default:
 				if lastOptionID&0x01 == 1 {
