@@ -19,8 +19,18 @@ func securityClientSend(tr *transport, message *CoAPMessage, addr net.Addr) erro
 		return nil
 	}
 
-	// setProxyIDIfNeed(message)
-	currentSession := getSessionForAddress(tr, tr.conn.LocalAddr().String(), addr.String(), message.ProxyAddr)
+	setProxyIDIfNeed(message)
+
+	proxyAddr := message.ProxyAddr
+	if len(proxyAddr) > 0 {
+		proxyID, ok := getProxyIDIfNeed(proxyAddr)
+		if ok {
+			proxyAddr = fmt.Sprintf("%v%v", proxyAddr, proxyID)
+		}
+	}
+
+	currentSession := getSessionForAddress(tr, tr.conn.LocalAddr().String(), addr.String(), proxyAddr)
+	fmt.Println("\n--- DEBUG PROXYADDR ", message.ProxyAddr, currentSession.AEAD)
 
 	if currentSession == nil {
 		err := errors.New("Cannot encrypt: no session, message: %v  from: %v")
@@ -45,7 +55,7 @@ func securityClientSend(tr *transport, message *CoAPMessage, addr net.Addr) erro
 }
 
 func setProxyIDIfNeed(message *CoAPMessage) {
-	if len(message.ProxyAddr) > 0 {
+	if message.GetOption(OptionProxyURI) != nil {
 		v, ok := proxyIDSessions.Load(message.ProxyAddr)
 		if !ok {
 			v = rand.Uint32()
@@ -74,7 +84,6 @@ func getSessionForAddress(tr *transport, senderAddr, receiverAddr, proxyAddr str
 		if err != nil {
 			return nil
 		}
-
 		setSessionForAddress(tr.privateKey, securedSession, senderAddr, receiverAddr, proxyAddr)
 	}
 
@@ -257,7 +266,7 @@ func newClientHelloMessage(origMessage *CoAPMessage, myPublicKey []byte) *CoAPMe
 	message.AddOption(OptionHandshakeType, CoapHandshakeTypeClientHello)
 	message.Payload = NewBytesPayload(myPublicKey)
 	message.Token = generateToken(6)
-	message.CloneOptions(origMessage, OptionProxyURI)
+	message.CloneOptions(origMessage, OptionProxyURI, OptionProxySecurityID)
 	return message
 }
 
@@ -266,6 +275,7 @@ func newServerHelloMessage(origMessage *CoAPMessage, publicKey []byte) *CoAPMess
 	message.AddOption(OptionHandshakeType, CoapHandshakeTypePeerHello)
 	message.Payload = NewBytesPayload(publicKey)
 	message.Token = origMessage.Token
+	message.CloneOptions(origMessage, OptionProxySecurityID)
 	return message
 }
 

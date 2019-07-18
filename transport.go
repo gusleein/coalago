@@ -595,8 +595,6 @@ func preparationSendingMessage(tr *transport, message *CoAPMessage, addr net.Add
 		return nil, err
 	}
 
-	// fmt.Println(time.Now().Format("15:04:05.000000000"), "\t---> send\t", addr, message.ToReadableString())
-
 	buf, err := Serialize(secMessage)
 	if err != nil {
 		return nil, err
