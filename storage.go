@@ -19,10 +19,16 @@ func newSessionStorage() *sessionStorage {
 }
 
 func (s *sessionStorage) Set(sender string, receiver string, proxy string, sess *session.SecuredSession) {
+	if len(proxy) != 0 {
+		sender = ""
+	}
 	s.storage.SetDefault(sender+receiver+proxy, sess)
 }
 
 func (s *sessionStorage) Get(sender string, receiver string, proxy string) *session.SecuredSession {
+	if len(proxy) != 0 {
+		sender = ""
+	}
 	v, ok := s.storage.Get(sender + receiver + proxy)
 	if ok {
 		return v.(*session.SecuredSession)
@@ -31,6 +37,9 @@ func (s *sessionStorage) Get(sender string, receiver string, proxy string) *sess
 }
 
 func (s *sessionStorage) Delete(sender string, receiver string, proxy string) {
+	if len(proxy) != 0 {
+		sender = ""
+	}
 	s.storage.Delete(sender + receiver + proxy)
 }
 
