@@ -343,5 +343,6 @@ func newACKEmptyMessage(message *CoAPMessage) *CoAPMessage {
 	emptyAckMessage.Recipient = message.Recipient
 	emptyAckMessage.Payload = NewEmptyPayload()
 	emptyAckMessage.AddOption(OptionSelectiveRepeatWindowSize, DEFAULT_WINDOW_SIZE)
+	emptyAckMessage.CloneOptions(message, OptionProxySecurityID)
 	return emptyAckMessage
 }
