@@ -270,7 +270,7 @@ func constructNextBlock(blockType OptionCode, s *stateSend) (*CoAPMessage, bool)
 	s.nextNumBlock++
 	s.start = s.stop
 
-	blockMessage.CloneOptions(s.origMessage, OptionProxyURI)
+	blockMessage.CloneOptions(s.origMessage, OptionProxyURI, OptionProxySecurityID)
 	blockMessage.ProxyAddr = s.origMessage.ProxyAddr
 
 	return blockMessage, !isMore

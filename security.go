@@ -30,7 +30,6 @@ func securityClientSend(tr *transport, message *CoAPMessage, addr net.Addr) erro
 	}
 
 	currentSession := getSessionForAddress(tr, tr.conn.LocalAddr().String(), addr.String(), proxyAddr)
-	fmt.Println("\n--- DEBUG PROXYADDR ", message.ProxyAddr, currentSession.AEAD)
 
 	if currentSession == nil {
 		err := errors.New("Cannot encrypt: no session, message: %v  from: %v")
@@ -176,6 +175,8 @@ func receiveHandshake(tr *transport, privatekey []byte, message *CoAPMessage, pr
 	if option == nil {
 		return true
 	}
+
+	// fmt.Println("\n----- RECEIVE HANDSHAKE:", message.ToReadableString())
 
 	value := option.IntValue()
 	if value != CoapHandshakeTypeClientSignature && value != CoapHandshakeTypeClientHello {
