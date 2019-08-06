@@ -335,14 +335,14 @@ type stateSend struct {
 	payload      []byte
 }
 
-func newACKEmptyMessage(message *CoAPMessage) *CoAPMessage {
+func newACKEmptyMessage(message *CoAPMessage, windowSize int) *CoAPMessage {
 	emptyAckMessage := NewCoAPMessage(ACK, CoapCodeEmpty)
 	emptyAckMessage.Token = message.Token
 	emptyAckMessage.MessageID = message.MessageID
 	emptyAckMessage.Code = CoapCodeEmpty
 	emptyAckMessage.Recipient = message.Recipient
 	emptyAckMessage.Payload = NewEmptyPayload()
-	emptyAckMessage.AddOption(OptionSelectiveRepeatWindowSize, DEFAULT_WINDOW_SIZE)
+	emptyAckMessage.AddOption(OptionSelectiveRepeatWindowSize, windowSize)
 	emptyAckMessage.CloneOptions(message, OptionProxySecurityID)
 	return emptyAckMessage
 }

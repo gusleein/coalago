@@ -328,7 +328,7 @@ func (sr *transport) sendARQBlock2ACK(input chan *CoAPMessage, message *CoAPMess
 
 	packets := []*packet{}
 
-	emptyAckMessage := newACKEmptyMessage(message)
+	emptyAckMessage := newACKEmptyMessage(message, state.windowsize)
 	err := sr.sendToSocketByAddress(emptyAckMessage, addr)
 	if err != nil {
 		return err
