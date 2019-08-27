@@ -212,7 +212,7 @@ func Serialize(msg *CoAPMessage) ([]byte, error) {
 	binary.BigEndian.PutUint16(messageID, msg.MessageID)
 
 	buf := bytes.Buffer{}
-	buf.Write([]byte{(1 << 6) | (uint8(msg.Type) << 4) | 0x0f&msg.GetTokenLength()})
+	buf.Write([]byte{(1 << 6) | (uint8(msg.Type) << 4) | 0x0f&uint8(len(msg.Token))})
 	buf.Write([]byte{byte(msg.Code)})
 	buf.Write([]byte{messageID[0]})
 	buf.Write([]byte{messageID[1]})

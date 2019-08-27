@@ -2,6 +2,7 @@ package coalago_test
 
 import (
 	"encoding/binary"
+	"math/rand"
 
 	. "github.com/onsi/ginkgo/extensions/table"
 
@@ -48,7 +49,7 @@ var _ = Describe("Message", func() {
 					message.Type = expectedType
 					datagram, err = Serialize(message)
 					Expect(err).NotTo(HaveOccurred())
-					Expect(datagram[0] >> 4 & 3).To(Equal(uint8(expectedType)))
+					Expect(datagram[0] >> 4 & 3).Should(Equal(uint8(expectedType)))
 				},
 				Entry("CON", CON),
 				Entry("NON", NON),
@@ -57,5 +58,21 @@ var _ = Describe("Message", func() {
 			)
 		})
 
+		Context("With Token Length", func() {
+			DescribeTable("Check each any length",
+				func(tokenLength int, isOk bool) {
+					token := make([]byte, tokenLength)
+					rand.Read(token)
+					message.Token = token
+
+					datagram, err = Serialize(message)
+					Expect(err == nil).Should(Equal(isOk))
+				},
+				Entry("Token length is zero", 0, true),
+				Entry("Token length is valid", 5, true),
+				Entry("Token length is maximum", 8, true),
+				Entry("Token length is out of range", 9, false),
+			)
+		})
 	})
 })
