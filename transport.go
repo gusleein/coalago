@@ -105,6 +105,10 @@ func (sr *transport) sendCON(message *CoAPMessage) (resp *CoAPMessage, err error
 			return sr.receiveARQBlock2(message, nil)
 		}
 
+		if resp.GetBlock2() != nil {
+			return sr.receiveARQBlock2(message, resp)
+		}
+
 		break
 	}
 
@@ -286,6 +290,11 @@ func (sr *transport) sendARQBlock1CON(message *CoAPMessage) (*CoAPMessage, error
 			if resp.Type == ACK && resp.Code == CoapCodeEmpty {
 				return sr.receiveARQBlock2(message, nil)
 			}
+
+			if resp.GetBlock2() != nil {
+				return sr.receiveARQBlock2(message, resp)
+			}
+
 			block := resp.GetBlock1()
 			if block != nil {
 				if len(packets) >= block.BlockNumber {
