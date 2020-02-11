@@ -105,7 +105,7 @@ func (c *connpool) Dial(addr string) (dialer, error) {
 }
 
 func (c *connection) SetReadDeadline() {
-	c.conn.SetReadDeadline(time.Now().Add(time.Second * 3))
+	c.conn.SetReadDeadline(time.Now().Add(timeWait))
 }
 
 type packet struct {

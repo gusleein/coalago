@@ -1,6 +1,15 @@
 package coalago
 
-import "errors"
+import (
+	"errors"
+	"time"
+)
+
+var (
+	timeWait        = time.Millisecond * 300
+	maxSendAttempts = 6
+	sumTimeAttempts = (timeWait)*time.Duration(maxSendAttempts) + 100
+)
 
 const PayloadMarker = 0xff
 

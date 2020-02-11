@@ -14,7 +14,7 @@ import (
 var (
 	ErrUnsupportedType = errors.New("unsupported type of message")
 	globalSessions     = newSessionStorage()
-	handlersStateCache = cache.New(time.Second*10, time.Second)
+	handlersStateCache = cache.New(sumTimeAttempts, time.Second)
 	proxyIDSessions    sync.Map
 )
 
@@ -87,7 +87,7 @@ func (sr *transport) sendCON(message *CoAPMessage) (resp *CoAPMessage, err error
 
 		resp, err = receiveMessage(sr, message)
 		if err == ErrMaxAttempts {
-			if attempts == 3 {
+			if attempts == maxSendAttempts {
 				MetricExpiredMessages.Inc()
 				return nil, err
 			}
@@ -169,15 +169,14 @@ func (sr *transport) sendPackets(packets []*packet, windowsize int, shift int) e
 		stop = len(packets)
 	}
 
-	_3s := time.Second * 3
 	var acked int
 	for i := 0; i < stop; i++ {
 		if !packets[i].acked {
-			if time.Since(packets[i].lastSend) >= _3s {
+			if time.Since(packets[i].lastSend) >= timeWait {
 				if packets[i].attempts > 0 {
 					MetricRetransmitMessages.Inc()
 				}
-				if packets[i].attempts == 3 {
+				if packets[i].attempts == maxSendAttempts {
 					MetricExpiredMessages.Inc()
 					return ErrMaxAttempts
 				}
@@ -193,7 +192,7 @@ func (sr *transport) sendPackets(packets []*packet, windowsize int, shift int) e
 	}
 
 	if len(packets) == stop {
-		if time.Since(packets[len(packets)-1].lastSend) >= _3s {
+		if time.Since(packets[len(packets)-1].lastSend) >= timeWait {
 			MetricExpiredMessages.Inc()
 			return ErrMaxAttempts
 		}
@@ -213,12 +212,11 @@ func (sr *transport) sendPacketsToAddr(packets []*packet, windowsize int, shift 
 		return ErrMaxAttempts
 	}
 
-	_3s := time.Second * 3
 	var acked int
 	for i := 0; i < stop; i++ {
 		if !packets[i].acked {
-			if time.Since(packets[i].lastSend) >= _3s {
-				if packets[i].attempts == 3 {
+			if time.Since(packets[i].lastSend) >= timeWait {
+				if packets[i].attempts == maxSendAttempts {
 					MetricExpiredMessages.Inc()
 					return ErrMaxAttempts
 				}
@@ -395,7 +393,7 @@ func (sr *transport) sendARQBlock2ACK(input chan *CoAPMessage, message *CoAPMess
 					}
 				}
 			}
-		case <-time.After(time.Second * 10):
+		case <-time.After(sumTimeAttempts):
 			if err := sr.sendPacketsToAddr(packets, state.windowsize, shift, addr); err != nil {
 				return err
 			}
@@ -435,7 +433,7 @@ func (sr *transport) receiveARQBlock1(input chan *CoAPMessage) (*CoAPMessage, er
 				return nil, err
 			}
 
-		case <-time.After(time.Second * 18):
+		case <-time.After(sumTimeAttempts):
 			MetricExpiredMessages.Inc()
 			return nil, ErrMaxAttempts
 		}
@@ -473,7 +471,7 @@ func (sr *transport) receiveARQBlock2(origMessage *CoAPMessage, inputMessage *Co
 	for {
 		inputMessage, err = receiveMessage(sr, origMessage)
 		if err == ErrMaxAttempts {
-			if attempts == 3 {
+			if attempts == maxSendAttempts {
 				MetricExpiredMessages.Inc()
 				return nil, err
 			}
