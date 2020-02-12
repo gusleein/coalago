@@ -6,9 +6,9 @@ import (
 )
 
 var (
-	timeWait        = time.Second * 3
-	maxSendAttempts = 3
-	sumTimeAttempts = (timeWait)*time.Duration(maxSendAttempts) + 1
+	timeWait        = time.Millisecond * 500
+	maxSendAttempts = 6
+	sumTimeAttempts = (timeWait)*int64(maxSendAttempts) + 100
 )
 
 const PayloadMarker = 0xff
