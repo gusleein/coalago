@@ -6,7 +6,7 @@ import (
 )
 
 var (
-	timeWait        = time.Millisecond * 500
+	timeWait        = time.Second
 	maxSendAttempts = 6
 	sumTimeAttempts = timeWait*time.Duration(maxSendAttempts) + 100
 )
