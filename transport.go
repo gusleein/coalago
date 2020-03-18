@@ -102,11 +102,13 @@ func (sr *transport) sendCON(message *CoAPMessage) (resp *CoAPMessage, err error
 		}
 
 		if resp.Type == ACK && resp.Code == CoapCodeEmpty {
-			return sr.receiveARQBlock2(message, nil)
+			resp, err = sr.receiveARQBlock2(message, nil)
+			return resp, err
 		}
 
 		if resp.GetBlock2() != nil {
-			return sr.receiveARQBlock2(message, resp)
+			resp, err = sr.receiveARQBlock2(message, resp)
+			return resp, err
 		}
 
 		break
@@ -535,7 +537,7 @@ start:
 		goto start
 	}
 
-	message, err := preparationReceivingBuffer(sr, readBuf[:n], senderAddr, "")
+	message, err := preparationReceivingBuffer("receiveOnce", sr, readBuf[:n], senderAddr, "")
 	if err != nil {
 		goto start
 	}
@@ -598,7 +600,7 @@ func (sr *transport) messageHandlerSelector(message *CoAPMessage, respHandler fu
 func preparationSendingMessage(tr *transport, message *CoAPMessage, addr net.Addr) ([]byte, error) {
 	secMessage := message.Clone(true)
 
-	if err := securityClientSend(tr, secMessage, addr); err != nil {
+	if err := securityOutputLayer(tr, secMessage, addr); err != nil {
 		return nil, err
 	}
 
@@ -610,7 +612,7 @@ func preparationSendingMessage(tr *transport, message *CoAPMessage, addr net.Add
 	return buf, nil
 }
 
-func preparationReceivingBuffer(tr *transport, data []byte, senderAddr net.Addr, proxyAddr string) (*CoAPMessage, error) {
+func preparationReceivingBuffer(tag string, tr *transport, data []byte, senderAddr net.Addr, proxyAddr string) (*CoAPMessage, error) {
 	message, err := Deserialize(data)
 	if err != nil {
 		return nil, err
@@ -622,9 +624,9 @@ func preparationReceivingBuffer(tr *transport, data []byte, senderAddr net.Addr,
 	MetricReceivedMessages.Inc()
 
 	message.Sender = senderAddr
-	// fmt.Println(time.Now().Format("15:04:05.000000000"), "\t<--- receive\t", senderAddr, message.ToReadableString())
+	// fmt.Println(time.Now().Format("15:04:05.000000000"), "\t<--- ", tag, " receive\t", senderAddr, message.ToReadableString())
 
-	err = securityReceive(tr, message, proxyAddr)
+	_, err = securityInputLayer(tr, message, proxyAddr)
 
 	if err != nil {
 		return nil, err
@@ -635,7 +637,7 @@ func preparationReceivingBuffer(tr *transport, data []byte, senderAddr net.Addr,
 func preparationReceivingMessage(tr *transport, message *CoAPMessage) (*CoAPMessage, error) {
 	// fmt.Println(time.Now().Format("15:04:05.000000000"), "\t<--- receive\t", message.Sender, message.ToReadableString())
 	MetricReceivedMessages.Inc()
-	err := securityReceive(tr, message, "")
+	_, err := securityInputLayer(tr, message, "")
 	if err != nil {
 		return nil, err
 	}

@@ -460,6 +460,10 @@ func (m *CoAPMessage) ToReadableString() string {
 	options := ""
 	for _, option := range m.Options {
 		options += fmt.Sprintf("%v: '%v' ", optionCodeToString(option.Code), option.Value)
+		if option.Code == OptionBlock1 || option.Code == OptionBlock2 {
+			block := newBlockFromInt(option.IntValue())
+			options += fmt.Sprintf(" [%v | %v | %v]", block.BlockNumber, block.BlockSize, block.MoreBlocks)
+		}
 	}
 
 	return fmt.Sprintf(

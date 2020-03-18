@@ -1,6 +1,7 @@
 package coalago
 
 import (
+	"bytes"
 	"net"
 	"time"
 )
@@ -136,9 +137,13 @@ func receiveMessage(tr *transport, origMessage *CoAPMessage) (*CoAPMessage, erro
 			continue
 		}
 
-		message, err := preparationReceivingBuffer(tr, buff[:n], tr.conn.RemoteAddr(), origMessage.ProxyAddr)
+		message, err := preparationReceivingBuffer("receiveMessage", tr, buff[:n], tr.conn.RemoteAddr(), origMessage.ProxyAddr)
 		if err != nil {
 			return nil, err
+		}
+
+		if !bytes.Equal(message.Token, origMessage.Token) {
+			continue
 		}
 
 		return message, nil
