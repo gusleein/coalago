@@ -29,13 +29,15 @@ func securityOutputLayer(tr *transport, message *CoAPMessage, addr net.Addr) err
 		}
 	}
 
-	currentSession := getSessionForAddress(tr, tr.conn.LocalAddr().String(), addr.String(), proxyAddr)
+	if currentSession := getSessionForAddress(tr, tr.conn.LocalAddr().String(), addr.String(), proxyAddr); currentSession != nil && currentSession.AEAD != nil {
+		MetricSuccessfulHandhshakes.Inc()
 
-	MetricSuccessfulHandhshakes.Inc()
-
-	// Encrypt message payload
-	if err := encrypt(message, addr, currentSession.AEAD); err != nil {
-		return err
+		// Encrypt message payload
+		if err := encrypt(message, addr, currentSession.AEAD); err != nil {
+			return err
+		}
+	} else {
+		return errors.New("session not found")
 	}
 
 	return nil
