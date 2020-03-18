@@ -31,22 +31,10 @@ func securityOutputLayer(tr *transport, message *CoAPMessage, addr net.Addr) err
 
 	currentSession := getSessionForAddress(tr, tr.conn.LocalAddr().String(), addr.String(), proxyAddr)
 
-	if currentSession == nil {
-		err := errors.New("Cannot encrypt: no session, message: %v  from: %v")
-		return err
-	}
-
-	// Perform the Handshake (if necessary)
-	err := handshake(tr, message, currentSession, addr)
-	if err != nil {
-		return err
-	}
-
 	MetricSuccessfulHandhshakes.Inc()
 
 	// Encrypt message payload
-	err = encrypt(message, addr, currentSession.AEAD)
-	if err != nil {
+	if err := encrypt(message, addr, currentSession.AEAD); err != nil {
 		return err
 	}
 
@@ -207,17 +195,23 @@ const (
 	ERR_KEYS_NOT_MATCH = "Expected and current public keys do not match"
 )
 
-func handshake(tr *transport, message *CoAPMessage, session *session.SecuredSession, address net.Addr) error {
+func handshake(tr *transport, message *CoAPMessage, address net.Addr, proxyAddr string) (*session.SecuredSession, error) {
+	session := getSessionForAddress(tr, tr.conn.LocalAddr().String(), address.String(), proxyAddr)
+	if session == nil {
+		err := errors.New("Cannot encrypt: no session, message: %v  from: %v")
+		return nil, err
+	}
+
 	// We skip handshake if session already exists
 	if session.AEAD != nil {
-		return nil
+		return session, nil
 	}
 
 	// Sending my Public Key.
 	// Receiving Peer's Public Key as a Response!
 	peerPublicKey, err := sendHelloFromClient(tr, message, session.Curve.GetPublicKey(), address)
 	if err != nil {
-		return err
+		return nil, err
 	}
 
 	// assign new value
@@ -225,10 +219,15 @@ func handshake(tr *transport, message *CoAPMessage, session *session.SecuredSess
 
 	signature, err := session.GetSignature()
 	if err != nil {
-		return err
+		return nil, err
 	}
 
-	return session.Verify(signature)
+	err = session.Verify(signature)
+	if err != nil {
+		return nil, err
+	}
+
+	return session, nil
 }
 
 func sendHelloFromClient(tr *transport, origMessage *CoAPMessage, myPublicKey []byte, address net.Addr) ([]byte, error) {

@@ -3,6 +3,7 @@ package coalago
 import (
 	"bytes"
 	"errors"
+	"fmt"
 	"math"
 	"net"
 	"sync"
@@ -39,8 +40,37 @@ func (tr *transport) SetPrivateKey(pk []byte) {
 func (sr *transport) Send(message *CoAPMessage) (resp *CoAPMessage, err error) {
 	switch message.Type {
 	case CON:
+
+		if message.GetScheme() == COAPS_SCHEME {
+			proxyAddr := message.ProxyAddr
+			if len(proxyAddr) > 0 {
+				proxyID, ok := getProxyIDIfNeed(proxyAddr)
+				if ok {
+					proxyAddr = fmt.Sprintf("%v%v", proxyAddr, proxyID)
+				}
+			}
+			_, err := handshake(sr, message, sr.conn.RemoteAddr(), proxyAddr)
+			if err != nil {
+				return nil, err
+			}
+		}
+
 		resp, err := sr.sendCON(message)
 		if err == ErrorSessionExpired || err == ErrorSessionNotFound {
+			if message.GetScheme() == COAPS_SCHEME {
+				proxyAddr := message.ProxyAddr
+				if len(proxyAddr) > 0 {
+					proxyID, ok := getProxyIDIfNeed(proxyAddr)
+					if ok {
+						proxyAddr = fmt.Sprintf("%v%v", proxyAddr, proxyID)
+					}
+				}
+				_, err := handshake(sr, message, sr.conn.RemoteAddr(), proxyAddr)
+				if err != nil {
+					return nil, err
+				}
+			}
+
 			resp, err = sr.sendCON(message)
 		}
 		return resp, err
