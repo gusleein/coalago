@@ -30,8 +30,6 @@ func securityOutputLayer(tr *transport, message *CoAPMessage, addr net.Addr) err
 	}
 
 	if currentSession := getSessionForAddress(tr, tr.conn.LocalAddr().String(), addr.String(), proxyAddr); currentSession != nil && currentSession.AEAD != nil {
-		MetricSuccessfulHandhshakes.Inc()
-
 		// Encrypt message payload
 		if err := encrypt(message, addr, currentSession.AEAD); err != nil {
 			return err
@@ -228,6 +226,8 @@ func handshake(tr *transport, message *CoAPMessage, address net.Addr, proxyAddr 
 	if err != nil {
 		return nil, err
 	}
+
+	MetricSuccessfulHandhshakes.Inc()
 
 	return session, nil
 }
