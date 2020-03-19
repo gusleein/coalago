@@ -158,6 +158,9 @@ func receiveHandshake(tr *transport, privatekey []byte, message *CoAPMessage, pr
 	}
 
 	peerSession := getSessionForAddress(tr, tr.conn.LocalAddr().String(), message.Sender.String(), proxyAddr)
+	if peerSession == nil {
+		peerSession, _ = session.NewSecuredSession(tr.privateKey)
+	}
 	if value == CoapHandshakeTypeClientHello && message.Payload != nil {
 		peerSession.PeerPublicKey = message.Payload.Bytes()
 
@@ -168,12 +171,12 @@ func receiveHandshake(tr *transport, privatekey []byte, message *CoAPMessage, pr
 		if signature, err := peerSession.GetSignature(); err == nil {
 			peerSession.PeerVerify(signature)
 		}
+		MetricSuccessfulHandhshakes.Inc()
 
+		peerSession.UpdatedAt = int(time.Now().Unix())
+		setSessionForAddress(privatekey, peerSession, tr.conn.LocalAddr().String(), message.Sender.String(), proxyAddr)
+		return false, nil
 	}
-	MetricSuccessfulHandhshakes.Inc()
-
-	peerSession.UpdatedAt = int(time.Now().Unix())
-	setSessionForAddress(privatekey, peerSession, tr.conn.LocalAddr().String(), message.Sender.String(), proxyAddr)
 
 	return false, ErrorHandshake
 }
