@@ -37,7 +37,7 @@ func securityOutputLayer(tr *transport, message *CoAPMessage, addr net.Addr) err
 			return err
 		}
 	} else {
-		return errors.New("session not found")
+		return ErrorSessionNotFound
 	}
 
 	return nil
