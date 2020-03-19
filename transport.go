@@ -44,11 +44,11 @@ func (sr *transport) Send(message *CoAPMessage) (resp *CoAPMessage, err error) {
 		if message.GetScheme() == COAPS_SCHEME {
 			proxyAddr := message.ProxyAddr
 			if len(proxyAddr) > 0 {
-				proxyID, ok := getProxyIDIfNeed(proxyAddr)
-				if ok {
-					proxyAddr = fmt.Sprintf("%v%v", proxyAddr, proxyID)
-				}
+				proxyID := setProxyIDIfNeed(message)
+				proxyAddr = fmt.Sprintf("%v%v", proxyAddr, proxyID)
 			}
+
+			fmt.Println("DEBUG HANDSHAKE: ->", proxyAddr, "<-", message.ToReadableString())
 			_, err := handshake(sr, message, sr.conn.RemoteAddr(), proxyAddr)
 			if err != nil {
 				return nil, err
@@ -60,10 +60,8 @@ func (sr *transport) Send(message *CoAPMessage) (resp *CoAPMessage, err error) {
 			if message.GetScheme() == COAPS_SCHEME {
 				proxyAddr := message.ProxyAddr
 				if len(proxyAddr) > 0 {
-					proxyID, ok := getProxyIDIfNeed(proxyAddr)
-					if ok {
-						proxyAddr = fmt.Sprintf("%v%v", proxyAddr, proxyID)
-					}
+					proxyID := setProxyIDIfNeed(message)
+					proxyAddr = fmt.Sprintf("%v%v", proxyAddr, proxyID)
 				}
 				_, err := handshake(sr, message, sr.conn.RemoteAddr(), proxyAddr)
 				if err != nil {
