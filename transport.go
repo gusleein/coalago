@@ -48,7 +48,6 @@ func (sr *transport) Send(message *CoAPMessage) (resp *CoAPMessage, err error) {
 				proxyAddr = fmt.Sprintf("%v%v", proxyAddr, proxyID)
 			}
 
-			fmt.Println("DEBUG HANDSHAKE: ->", proxyAddr, "<-", message.ToReadableString())
 			_, err := handshake(sr, message, sr.conn.RemoteAddr(), proxyAddr)
 			if err != nil {
 				return nil, err
