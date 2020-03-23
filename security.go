@@ -63,6 +63,9 @@ func getProxyIDIfNeed(proxyAddr string) (uint32, bool) {
 
 func getSessionForAddress(tr *transport, senderAddr, receiverAddr, proxyAddr string) *session.SecuredSession {
 	securedSession := globalSessions.Get(senderAddr, receiverAddr, proxyAddr)
+	if securedSession != nil {
+		globalSessions.Set(senderAddr, receiverAddr, proxyAddr, securedSession)
+	}
 	return securedSession
 }
 
