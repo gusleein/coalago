@@ -127,7 +127,7 @@ func (opt *CoAPMessageOption) IsValidOption() bool {
 		OptionEtag, OptionIfMatch, OptionObserve, OptionURIPort, OptionLocationPath,
 		OptionURIPath, OptionContentFormat, OptionMaxAge, OptionURIQuery, OptionAccept,
 		OptionLocationQuery, OptionBlock2, OptionBlock1, OptionProxyURI, OptionProxySecurityID, OptionProxyScheme, OptionSize1,
-		OptionHandshakeType, OptionSessionNotFound, OptionSessionExpired, OptionSelectiveRepeatWindowSize:
+		OptionHandshakeType, OptionSessionNotFound, OptionSessionExpired, OptionSelectiveRepeatWindowSize, OptionWindowtOffset:
 		return true
 	default:
 		return false

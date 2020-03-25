@@ -230,6 +230,96 @@ func (sr *transport) sendPackets(packets []*packet, windowsize int, shift int) e
 	return nil
 }
 
+func (sr *transport) sendPacketsByWindowOffset(packets []*packet, windowsize, shift, blockNumber, offset int) error {
+	stop := shift + windowsize
+	if stop >= blockNumber {
+		stop = blockNumber
+	}
+
+	start := blockNumber - offset
+	if start < 0 {
+		start = 0
+	} else if start > blockNumber {
+		return nil
+	}
+
+	var acked int
+	for i := start; i < stop; i++ {
+		if !packets[i].acked {
+			if time.Since(packets[i].lastSend) >= timeWait {
+				if packets[i].attempts > 0 {
+					MetricRetransmitMessages.Inc()
+				}
+				if packets[i].attempts == maxSendAttempts {
+					MetricExpiredMessages.Inc()
+					return ErrMaxAttempts
+				}
+				packets[i].attempts++
+				packets[i].lastSend = time.Now()
+				if err := sr.sendToSocket(packets[i].message); err != nil {
+					return err
+				}
+			}
+		} else {
+			acked++
+		}
+	}
+
+	if len(packets) == stop {
+		if time.Since(packets[len(packets)-1].lastSend) >= timeWait {
+			MetricExpiredMessages.Inc()
+			return ErrMaxAttempts
+		}
+	}
+
+	return nil
+}
+
+func (sr *transport) sendPacketsByWindowOffsetToAddr(packets []*packet, windowsize, shift, blockNumber, offset int, addr net.Addr) error {
+	stop := shift + windowsize
+	if stop >= blockNumber {
+		stop = blockNumber
+	}
+
+	start := blockNumber - offset
+	if start < 0 {
+		start = 0
+	} else if start > blockNumber {
+		return nil
+	}
+
+	var acked int
+	for i := start; i < stop; i++ {
+		if !packets[i].acked {
+			if time.Since(packets[i].lastSend) >= timeWait {
+				if packets[i].attempts > 0 {
+					MetricRetransmitMessages.Inc()
+				}
+				if packets[i].attempts == maxSendAttempts {
+					MetricExpiredMessages.Inc()
+					return ErrMaxAttempts
+				}
+				packets[i].attempts++
+				packets[i].lastSend = time.Now()
+				if err := sr.sendToSocketByAddress(packets[i].message, addr); err != nil {
+					return err
+				}
+			}
+		} else {
+			acked++
+		}
+	}
+
+	if len(packets) == stop {
+		if time.Since(packets[len(packets)-1].lastSend) >= timeWait {
+			MetricExpiredMessages.Inc()
+			return ErrMaxAttempts
+		}
+	}
+
+	return nil
+}
+
 func (sr *transport) sendPacketsToAddr(packets []*packet, windowsize int, shift int, addr net.Addr) error {
 	stop := shift + windowsize
 	if stop >= len(packets) {
@@ -309,10 +399,6 @@ func (sr *transport) sendARQBlock1CON(message *CoAPMessage) (*CoAPMessage, error
 			return nil, err
 		}
 
-		if !bytes.Equal(resp.Token, message.Token) {
-			continue
-		}
-
 		if resp.Type == ACK {
 			if resp.Type == ACK && resp.Code == CoapCodeEmpty {
 				return sr.receiveARQBlock2(message, nil)
@@ -324,6 +410,10 @@ func (sr *transport) sendARQBlock1CON(message *CoAPMessage) (*CoAPMessage, error
 
 			block := resp.GetBlock1()
 			if block != nil {
+				wo := resp.GetOption(OptionWindowtOffset)
+				if wo != nil {
+					sr.sendPacketsByWindowOffset(packets, state.windowsize, shift, block.BlockNumber, int(wo.Value.(uint16)))
+				}
 				if len(packets) >= block.BlockNumber {
 					if resp.Code != CoapCodeContinue {
 						return resp, nil
@@ -403,6 +493,11 @@ func (sr *transport) sendARQBlock2ACK(input chan *CoAPMessage, message *CoAPMess
 							return nil
 						}
 						if block.BlockNumber < len(packets) {
+							wo := resp.GetOption(OptionWindowtOffset)
+							if wo != nil {
+								sr.sendPacketsByWindowOffset(packets, state.windowsize, shift, block.BlockNumber, int(wo.Value.(uint16)))
+							}
+
 							packets[block.BlockNumber].acked = true
 							if block.BlockNumber == shift {
 								shift++
@@ -456,7 +551,13 @@ func (sr *transport) receiveARQBlock1(input chan *CoAPMessage) (*CoAPMessage, er
 				return inputMessage, nil
 			}
 
-			ack := ackTo(nil, inputMessage, CoapCodeContinue)
+			var ack *CoAPMessage
+			w := inputMessage.GetOption(OptionSelectiveRepeatWindowSize)
+			if w != nil {
+				ack = ackToWithWindowOffset(nil, inputMessage, CoapCodeContinue, w.IntValue(), block.BlockNumber, buf)
+			} else {
+				ack = ackTo(nil, inputMessage, CoapCodeContinue)
+			}
 
 			if err := sr.sendToSocketByAddress(ack, inputMessage.Sender); err != nil {
 				return nil, err
@@ -488,11 +589,19 @@ func (sr *transport) receiveARQBlock2(origMessage *CoAPMessage, inputMessage *Co
 					b = append(b, buf[i]...)
 				}
 				inputMessage.Payload = NewBytesPayload(b)
+
 				ack := ackTo(origMessage, inputMessage, CoapCodeEmpty)
 				sr.sendToSocket(ack)
 				return inputMessage, nil
 			}
-			ack := ackTo(origMessage, inputMessage, CoapCodeContinue)
+
+			var ack *CoAPMessage
+			w := inputMessage.GetOption(OptionSelectiveRepeatWindowSize)
+			if w != nil {
+				ack = ackToWithWindowOffset(origMessage, inputMessage, CoapCodeContinue, w.IntValue(), block.BlockNumber, buf)
+			} else {
+				ack = ackTo(origMessage, inputMessage, CoapCodeContinue)
+			}
 			sr.sendToSocket(ack)
 		}
 	}
@@ -537,7 +646,14 @@ func (sr *transport) receiveARQBlock2(origMessage *CoAPMessage, inputMessage *Co
 			return inputMessage, nil
 		}
 
-		ack := ackTo(origMessage, inputMessage, CoapCodeContinue)
+		var ack *CoAPMessage
+		w := inputMessage.GetOption(OptionSelectiveRepeatWindowSize)
+		if w != nil {
+			ack = ackToWithWindowOffset(origMessage, inputMessage, CoapCodeContinue, w.IntValue(), block.BlockNumber, buf)
+		} else {
+			ack = ackTo(origMessage, inputMessage, CoapCodeContinue)
+		}
+
 		if err = sr.sendToSocket(ack); err != nil {
 			return nil, err
 		}
