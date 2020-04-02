@@ -102,6 +102,41 @@ func (o *CoAPMessageOption) Uint32Value() uint32 {
 	}
 }
 
+func (o *CoAPMessageOption) Uint16Value() uint16 {
+
+	if o.Value == nil {
+		return 0
+	}
+
+	switch o.Value.(type) {
+	case int:
+		return uint16(o.Value.(int))
+	case int8:
+		return uint16(o.Value.(int8))
+	case int16:
+		return uint16(o.Value.(int16))
+	case int32:
+		return uint16(o.Value.(int32))
+	case uint:
+		return uint16(o.Value.(uint))
+	case uint8:
+		return uint16(o.Value.(uint8))
+	case uint16:
+		return o.Value.(uint16)
+	case uint32:
+		return uint16(o.Value.(uint32))
+
+	case string:
+		intVal, err := strconv.Atoi(o.Value.(string))
+		if err != nil {
+			return 0
+		}
+		return uint16(intVal)
+	default:
+		return 0
+	}
+}
+
 // Instantiates a New Option
 func NewOption(optionNumber OptionCode, optionValue interface{}) *CoAPMessageOption {
 	return &CoAPMessageOption{
