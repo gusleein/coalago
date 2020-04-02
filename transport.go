@@ -495,7 +495,10 @@ func (sr *transport) sendARQBlock2ACK(input chan *CoAPMessage, message *CoAPMess
 						if block.BlockNumber < len(packets) {
 							wo := resp.GetOption(OptionWindowtOffset)
 							if wo != nil {
-								sr.sendPacketsByWindowOffset(packets, state.windowsize, shift, block.BlockNumber, int(wo.Value.(uint16)))
+								wov, ok := wo.Value.(uint16)
+								if ok {
+									sr.sendPacketsByWindowOffset(packets, state.windowsize, shift, block.BlockNumber, int(wov))
+								}
 							}
 
 							packets[block.BlockNumber].acked = true
