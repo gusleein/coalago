@@ -99,8 +99,12 @@ func (s *Server) ServeMessage(message *CoAPMessage) {
 }
 
 func (s *Server) addResource(res *CoAPResource) {
-	key := res.Path + fmt.Sprint(res.Method)
+	key := fmt.Sprint(res.Method) + res.Path
 	s.resources.Store(key, res)
+}
+
+func (s *Server) GetResources() *sync.Map {
+	return &s.resources
 }
 
 func (s *Server) AddGETResource(path string, handler CoAPResourceHandler) {
