@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"crypto/sha256"
 	"errors"
+	"sync"
 )
 
 type SecuredSession struct {
@@ -11,6 +12,7 @@ type SecuredSession struct {
 	AEAD          *AEAD
 	PeerPublicKey []byte
 	UpdatedAt     int
+	mx            sync.Mutex
 }
 
 func NewSecuredSession(privateKey []byte) (session *SecuredSession, err error) {
@@ -37,7 +39,7 @@ func NewStaticSecuredSession(privateKey [KEY_SIZE]byte) (session *SecuredSession
 	return
 }
 
-func (session *SecuredSession) GetSignature() ([]byte, error) {
+func (session *SecuredSession) getSignature() ([]byte, error) {
 	// Generating Shared Secret based on: MyPrivateKey + PeerPublicKey
 	sharedSecret, err := session.Curve.GenerateSharedSecret(session.PeerPublicKey)
 	if err != nil {
@@ -50,8 +52,18 @@ func (session *SecuredSession) GetSignature() ([]byte, error) {
 	return hasher.Sum(nil), nil
 }
 
+func (session *SecuredSession) GetSignature() ([]byte, error) {
+	session.mx.Lock()
+	b, err := session.getSignature()
+	session.mx.Unlock()
+	return b, err
+}
+
 func (session *SecuredSession) Verify(peerSignature []byte) error {
-	signature, err := session.GetSignature()
+	session.mx.Lock()
+	session.mx.Unlock()
+
+	signature, err := session.getSignature()
 	if err != nil {
 		return err
 	}
@@ -89,7 +101,10 @@ func (session *SecuredSession) Verify(peerSignature []byte) error {
 }
 
 func (session *SecuredSession) PeerVerify(peerSignature []byte) error {
-	signature, err := session.GetSignature()
+	session.mx.Lock()
+	defer session.mx.Unlock()
+
+	signature, err := session.getSignature()
 	if err != nil {
 		return err
 	}
