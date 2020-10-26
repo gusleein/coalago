@@ -96,5 +96,6 @@ func (s *localStateSessionStorageImpl) Delete(sender string, receiver string, pr
 }
 
 func (s *localStateSessionStorageImpl) ItemCount() int {
-	return int(s.count)
+	v := atomic.LoadInt32(&s.count)
+	return int(v)
 }
