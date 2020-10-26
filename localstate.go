@@ -3,9 +3,12 @@ package coalago
 import (
 	"fmt"
 	"sync"
+	"time"
+
+	"github.com/patrickmn/go-cache"
 )
 
-var StorageLocalStates = make(map[string]LocalStateFn, 0)
+var StorageLocalStates = cache.New(SESSIONS_POOL_EXPIRATION, time.Second)
 
 type LocalStateFn func(*CoAPMessage)
 
@@ -16,17 +19,19 @@ func MakeLocalStateFn(r Resourcer, tr *transport, respHandler func(*CoAPMessage,
 	return func(message *CoAPMessage) {
 		mx.Lock()
 		defer mx.Unlock()
-		// fmt.Println("State function", message.ToReadableString())
+
 		_, err := localStateSecurityInputLayer(storageSession, tr, message, "")
 		if err != nil {
 			return
 		}
+
 		respHandler = func(message *CoAPMessage, err error) {
 			if err != nil {
 				return
 			}
 			requestOnReceive(r.getResourceForPathAndMethod(message.GetURIPath(), message.GetMethod()), storageSession, tr, message)
 		}
+
 		tr.messageHandlerSelector(storageSession, message, respHandler)
 	}
 }

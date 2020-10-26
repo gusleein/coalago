@@ -60,14 +60,13 @@ func (s *Server) Listen(addr string) (err error) {
 			goto start
 		}
 
-		fn, ok := StorageLocalStates[senderAddr.String()]
+		fn, ok := StorageLocalStates.Get(senderAddr.String())
 		if !ok {
-			fmt.Println("path", message.GetURIPath(), "method", message.GetMethod())
 			fn = MakeLocalStateFn(s, s.sr, nil)
-			StorageLocalStates[senderAddr.String()] = fn
+			StorageLocalStates.SetDefault(senderAddr.String(), fn)
 		}
 
-		go fn(message)
+		go fn.(LocalStateFn)(message)
 	}
 }
 
