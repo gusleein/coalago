@@ -1,35 +1,34 @@
 package coalago
 
-func requestOnReceive(server *Server, message *CoAPMessage) bool {
+func requestOnReceive(resource *CoAPResource, storageSessions *sessionStorage, sr *transport, message *CoAPMessage) bool {
 	if message.Code < 0 || message.Code > 4 {
 		return true
 	}
 
 	if isPing(message) {
-		return returnPing(server, message)
+		return returnPing(storageSessions, sr, message)
 	}
 
-	resource := server.getResourceForPathAndMethod(message.GetURIPath(), message.GetMethod())
 	if resource == nil {
 		if message.Type == CON {
-			return noResource(server, message)
+			return noResource(storageSessions, sr, message)
 		}
 		return false
 	}
 
 	if resource.Method != message.GetMethod() {
-		return methodNotAllowed(server, message)
+		return methodNotAllowed(storageSessions, sr, message)
 	}
 
 	if handlerResult := resource.Handler(message); handlerResult != nil {
 		if message.Type == NON {
 			return false
 		}
-		return returnResultFromResource(server, message, handlerResult)
+		return returnResultFromResource(storageSessions, sr, message, handlerResult)
 	}
 
 	if message.Type == CON {
-		return noResultResourceHandler(server, message)
+		return noResultResourceHandler(sr, message)
 	}
 
 	return false
@@ -39,27 +38,27 @@ func isPing(message *CoAPMessage) bool {
 	return message.Type == CON && message.Code == CoapCodeEmpty
 }
 
-func returnPing(server *Server, message *CoAPMessage) bool {
+func returnPing(storageSessions *sessionStorage, sr *transport, message *CoAPMessage) bool {
 	resp := NewCoAPMessage(RST, CoapCodeEmpty)
 	resp.MessageID = message.MessageID
 	copy(resp.Token, message.Token)
-	_, err := server.sr.SendTo(resp, message.Sender)
+	_, err := sr.SendTo(storageSessions, resp, message.Sender)
 
 	return err != nil
 }
 
-func methodNotAllowed(server *Server, message *CoAPMessage) bool {
+func methodNotAllowed(storageSessions *sessionStorage, sr *transport, message *CoAPMessage) bool {
 	responseMessage := NewCoAPMessageId(ACK, CoapCodeMethodNotAllowed, message.MessageID)
 	responseMessage.Payload = NewStringPayload("Method is not allowed for requested resource")
 	if message.Token != nil && len(message.Token) > 0 {
 		responseMessage.Token = message.Token
 	}
 	responseMessage.CloneOptions(message, OptionBlock1, OptionBlock2, OptionProxySecurityID)
-	server.sr.SendTo(responseMessage, message.Sender)
+	sr.SendTo(storageSessions, responseMessage, message.Sender)
 	return false
 }
 
-func returnResultFromResource(server *Server, message *CoAPMessage, handlerResult *CoAPResourceHandlerResult) bool {
+func returnResultFromResource(storageSessions *sessionStorage, sr *transport, message *CoAPMessage, handlerResult *CoAPResourceHandlerResult) bool {
 	// @TODO: Validate Response code! handlerResult.Code
 
 	// Create ACK response with the same ID and given reponse Code
@@ -85,11 +84,11 @@ func returnResultFromResource(server *Server, message *CoAPMessage, handlerResul
 	}
 	responseMessage.CloneOptions(message, OptionBlock1, OptionBlock2, OptionSelectiveRepeatWindowSize, OptionProxySecurityID)
 
-	_, err := server.sr.SendTo(responseMessage, message.Sender)
+	_, err := sr.SendTo(storageSessions, responseMessage, message.Sender)
 	return err != nil
 }
 
-func noResultResourceHandler(server *Server, message *CoAPMessage) bool {
+func noResultResourceHandler(sr *transport, message *CoAPMessage) bool {
 	// responseMessage := NewCoAPMessageId(ACK, CoapCodeInternalServerError, message.MessageID)
 	// responseMessage.Payload = NewStringPayload("No Result was returned by Resource Handler")
 	// if message.Token != nil && len(message.Token) > 0 {
@@ -102,7 +101,7 @@ func noResultResourceHandler(server *Server, message *CoAPMessage) bool {
 	return false
 }
 
-func noResource(server *Server, message *CoAPMessage) bool {
+func noResource(storageSessions *sessionStorage, sr *transport, message *CoAPMessage) bool {
 	responseMessage := NewCoAPMessageId(ACK, CoapCodeNotFound, message.MessageID)
 	responseMessage.Payload = NewStringPayload("Requested resource " + message.GetURIPath() + " does not exist")
 	if message.Token != nil && len(message.Token) > 0 {
@@ -111,6 +110,6 @@ func noResource(server *Server, message *CoAPMessage) bool {
 	responseMessage.CloneOptions(message, OptionBlock1, OptionBlock2, OptionProxySecurityID)
 	responseMessage.Recipient = message.Sender
 
-	_, err := server.sr.SendTo(responseMessage, message.Sender)
+	_, err := sr.SendTo(storageSessions, responseMessage, message.Sender)
 	return err != nil
 }

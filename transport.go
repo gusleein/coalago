@@ -37,7 +37,7 @@ func (tr *transport) SetPrivateKey(pk []byte) {
 	tr.privateKey = pk
 }
 
-func (sr *transport) Send(message *CoAPMessage) (resp *CoAPMessage, err error) {
+func (sr *transport) Send(storageSessions *sessionStorage, message *CoAPMessage) (resp *CoAPMessage, err error) {
 	switch message.Type {
 	case CON:
 
@@ -48,13 +48,13 @@ func (sr *transport) Send(message *CoAPMessage) (resp *CoAPMessage, err error) {
 				proxyAddr = fmt.Sprintf("%v%v", proxyAddr, proxyID)
 			}
 
-			_, err := handshake(sr, message, sr.conn.RemoteAddr(), proxyAddr)
+			_, err := handshake(storageSessions, sr, message, sr.conn.RemoteAddr(), proxyAddr)
 			if err != nil {
 				return nil, err
 			}
 		}
 
-		resp, err := sr.sendCON(message)
+		resp, err := sr.sendCON(storageSessions, message)
 		if err == ErrorSessionExpired || err == ErrorSessionNotFound {
 			if message.GetScheme() == COAPS_SCHEME {
 				proxyAddr := message.ProxyAddr
@@ -62,38 +62,38 @@ func (sr *transport) Send(message *CoAPMessage) (resp *CoAPMessage, err error) {
 					proxyID := setProxyIDIfNeed(message)
 					proxyAddr = fmt.Sprintf("%v%v", proxyAddr, proxyID)
 				}
-				_, err := handshake(sr, message, sr.conn.RemoteAddr(), proxyAddr)
+				_, err := handshake(storageSessions, sr, message, sr.conn.RemoteAddr(), proxyAddr)
 				if err != nil {
 					return nil, err
 				}
 			}
 
-			resp, err = sr.sendCON(message)
+			resp, err = sr.sendCON(storageSessions, message)
 		}
 		return resp, err
 	case RST, NON:
-		return nil, sr.sendToSocket(message)
+		return nil, sr.sendToSocket(storageSessions, message)
 	default:
 		return nil, ErrUnsupportedType
 	}
 }
 
-func (sr *transport) SendTo(message *CoAPMessage, addr net.Addr) (resp *CoAPMessage, err error) {
+func (sr *transport) SendTo(storageSessions *sessionStorage, message *CoAPMessage, addr net.Addr) (resp *CoAPMessage, err error) {
 	switch message.Type {
 	case ACK, NON, RST:
-		return nil, sr.sendACKTo(message, addr)
+		return nil, sr.sendACKTo(storageSessions, message, addr)
 	default:
 		return nil, ErrUnsupportedType
 	}
 }
 
-func (sr *transport) sendCON(message *CoAPMessage) (resp *CoAPMessage, err error) {
+func (sr *transport) sendCON(storageSessions *sessionStorage, message *CoAPMessage) (resp *CoAPMessage, err error) {
 	if isBigPayload(message) {
-		resp, err = sr.sendARQBlock1CON(message)
+		resp, err = sr.sendARQBlock1CON(storageSessions, message)
 		return
 	}
 
-	data, err := preparationSendingMessage(sr, message, sr.conn.RemoteAddr())
+	data, err := preparationSendingMessage(storageSessions, sr, message, sr.conn.RemoteAddr())
 	if err != nil {
 		return nil, err
 	}
@@ -112,7 +112,7 @@ func (sr *transport) sendCON(message *CoAPMessage) (resp *CoAPMessage, err error
 			return nil, err
 		}
 
-		resp, err = receiveMessage(sr, message)
+		resp, err = receiveMessage(storageSessions, sr, message)
 		if err == ErrMaxAttempts {
 			if attempts == maxSendAttempts {
 				MetricExpiredMessages.Inc()
@@ -129,12 +129,12 @@ func (sr *transport) sendCON(message *CoAPMessage) (resp *CoAPMessage, err error
 		}
 
 		if resp.Type == ACK && resp.Code == CoapCodeEmpty {
-			resp, err = sr.receiveARQBlock2(message, nil)
+			resp, err = sr.receiveARQBlock2(storageSessions, message, nil)
 			return resp, err
 		}
 
 		if resp.GetBlock2() != nil {
-			resp, err = sr.receiveARQBlock2(message, resp)
+			resp, err = sr.receiveARQBlock2(storageSessions, message, resp)
 			return resp, err
 		}
 
@@ -148,23 +148,23 @@ func isPingACK(resp *CoAPMessage) bool {
 	return resp.Type == RST && resp.Code == CoapCodeEmpty
 }
 
-func (sr *transport) sendACKTo(message *CoAPMessage, addr net.Addr) (err error) {
+func (sr *transport) sendACKTo(storageSessions *sessionStorage, message *CoAPMessage, addr net.Addr) (err error) {
 	if message.Type == ACK {
 		if isBigPayload(message) {
 			ch := make(chan *CoAPMessage, 102400)
 			id := addr.String() + message.GetTokenString()
 			sr.block2channels.Store(id, ch)
-			err = sr.sendARQBlock2ACK(ch, message, addr)
+			err = sr.sendARQBlock2ACK(storageSessions, ch, message, addr)
 			sr.block2channels.Delete(id)
 			return err
 		}
 	}
 
-	return sr.sendToSocketByAddress(message, addr)
+	return sr.sendToSocketByAddress(storageSessions, message, addr)
 }
 
-func (sr *transport) sendToSocket(message *CoAPMessage) error {
-	buf, err := preparationSendingMessage(sr, message, sr.conn.RemoteAddr())
+func (sr *transport) sendToSocket(storageSessions *sessionStorage, message *CoAPMessage) error {
+	buf, err := preparationSendingMessage(storageSessions, sr, message, sr.conn.RemoteAddr())
 	if err != nil {
 		return err
 	}
@@ -177,9 +177,9 @@ func (sr *transport) sendToSocket(message *CoAPMessage) error {
 	return err
 }
 
-func (sr *transport) sendToSocketByAddress(message *CoAPMessage, addr net.Addr) error {
+func (sr *transport) sendToSocketByAddress(storageSessions *sessionStorage, message *CoAPMessage, addr net.Addr) error {
 
-	buf, err := preparationSendingMessage(sr, message, addr)
+	buf, err := preparationSendingMessage(storageSessions, sr, message, addr)
 	if err != nil {
 		return err
 	}
@@ -192,7 +192,7 @@ func (sr *transport) sendToSocketByAddress(message *CoAPMessage, addr net.Addr) 
 	return err
 }
 
-func (sr *transport) sendPackets(packets []*packet, windowsize int, shift int) error {
+func (sr *transport) sendPackets(storageSessions *sessionStorage, packets []*packet, windowsize int, shift int) error {
 	stop := shift + windowsize
 	if stop >= len(packets) {
 		stop = len(packets)
@@ -211,7 +211,7 @@ func (sr *transport) sendPackets(packets []*packet, windowsize int, shift int) e
 				}
 				packets[i].attempts++
 				packets[i].lastSend = time.Now()
-				if err := sr.sendToSocket(packets[i].message); err != nil {
+				if err := sr.sendToSocket(storageSessions, packets[i].message); err != nil {
 					return err
 				}
 			}
@@ -230,7 +230,7 @@ func (sr *transport) sendPackets(packets []*packet, windowsize int, shift int) e
 	return nil
 }
 
-func (sr *transport) sendPacketsByWindowOffset(packets []*packet, windowsize, shift, blockNumber, offset int) error {
+func (sr *transport) sendPacketsByWindowOffset(storageSessions *sessionStorage, packets []*packet, windowsize, shift, blockNumber, offset int) error {
 	stop := shift + windowsize
 	if stop >= blockNumber {
 		stop = blockNumber
@@ -256,7 +256,7 @@ func (sr *transport) sendPacketsByWindowOffset(packets []*packet, windowsize, sh
 				}
 				packets[i].attempts++
 				packets[i].lastSend = time.Now()
-				if err := sr.sendToSocket(packets[i].message); err != nil {
+				if err := sr.sendToSocket(storageSessions, packets[i].message); err != nil {
 					return err
 				}
 			}
@@ -275,7 +275,7 @@ func (sr *transport) sendPacketsByWindowOffset(packets []*packet, windowsize, sh
 	return nil
 }
 
-func (sr *transport) sendPacketsByWindowOffsetToAddr(packets []*packet, windowsize, shift, blockNumber, offset int, addr net.Addr) error {
+func (sr *transport) sendPacketsByWindowOffsetToAddr(storageSessions *sessionStorage, packets []*packet, windowsize, shift, blockNumber, offset int, addr net.Addr) error {
 	stop := shift + windowsize
 	if stop >= blockNumber {
 		stop = blockNumber
@@ -301,7 +301,7 @@ func (sr *transport) sendPacketsByWindowOffsetToAddr(packets []*packet, windowsi
 				}
 				packets[i].attempts++
 				packets[i].lastSend = time.Now()
-				if err := sr.sendToSocketByAddress(packets[i].message, addr); err != nil {
+				if err := sr.sendToSocketByAddress(storageSessions, packets[i].message, addr); err != nil {
 					return err
 				}
 			}
@@ -320,7 +320,7 @@ func (sr *transport) sendPacketsByWindowOffsetToAddr(packets []*packet, windowsi
 	return nil
 }
 
-func (sr *transport) sendPacketsToAddr(packets []*packet, windowsize int, shift int, addr net.Addr) error {
+func (sr *transport) sendPacketsToAddr(storageSessions *sessionStorage, packets []*packet, windowsize int, shift int, addr net.Addr) error {
 	stop := shift + windowsize
 	if stop >= len(packets) {
 		stop = len(packets)
@@ -341,7 +341,7 @@ func (sr *transport) sendPacketsToAddr(packets []*packet, windowsize int, shift 
 				}
 				packets[i].attempts++
 				packets[i].lastSend = time.Now()
-				if err := sr.sendToSocketByAddress(packets[i].message, addr); err != nil {
+				if err := sr.sendToSocketByAddress(storageSessions, packets[i].message, addr); err != nil {
 					return err
 				}
 			}
@@ -353,7 +353,7 @@ func (sr *transport) sendPacketsToAddr(packets []*packet, windowsize int, shift 
 	return nil
 }
 
-func (sr *transport) sendARQBlock1CON(message *CoAPMessage) (*CoAPMessage, error) {
+func (sr *transport) sendARQBlock1CON(storageSessions *sessionStorage, message *CoAPMessage) (*CoAPMessage, error) {
 	state := new(stateSend)
 	state.payload = message.Payload.Bytes()
 	state.lenght = len(state.payload)
@@ -382,16 +382,16 @@ func (sr *transport) sendARQBlock1CON(message *CoAPMessage) (*CoAPMessage, error
 
 	var shift = 0
 
-	err := sr.sendPackets(packets, state.windowsize, shift)
+	err := sr.sendPackets(storageSessions, packets, state.windowsize, shift)
 	if err != nil {
 		return nil, err
 	}
 
 	for {
-		resp, err := receiveMessage(sr, message)
+		resp, err := receiveMessage(storageSessions, sr, message)
 		if err != nil {
 			if err == ErrMaxAttempts {
-				if err = sr.sendPackets(packets, state.windowsize, shift); err != nil {
+				if err = sr.sendPackets(storageSessions, packets, state.windowsize, shift); err != nil {
 					return nil, err
 				}
 				continue
@@ -401,19 +401,19 @@ func (sr *transport) sendARQBlock1CON(message *CoAPMessage) (*CoAPMessage, error
 
 		if resp.Type == ACK {
 			if resp.Type == ACK && resp.Code == CoapCodeEmpty {
-				return sr.receiveARQBlock2(message, nil)
+				return sr.receiveARQBlock2(storageSessions, message, nil)
 			}
 
 			if resp.GetBlock2() != nil {
-				return sr.receiveARQBlock2(message, resp)
+				return sr.receiveARQBlock2(storageSessions, message, resp)
 			}
 
 			block := resp.GetBlock1()
 			if block != nil {
-				wo := resp.GetOption(OptionWindowtOffset)
-				if wo != nil {
-					sr.sendPacketsByWindowOffset(packets, state.windowsize, shift, block.BlockNumber, int(wo.Value.(uint16)))
-				}
+				// wo := resp.GetOption(OptionWindowtOffset)
+				// if wo != nil {
+				// 	sr.sendPacketsByWindowOffset(packets, state.windowsize, shift, block.BlockNumber, int(wo.Value.(uint32)))
+				// }
 				if len(packets) >= block.BlockNumber {
 					if resp.Code != CoapCodeContinue {
 						return resp, nil
@@ -429,7 +429,7 @@ func (sr *transport) sendARQBlock1CON(message *CoAPMessage) (*CoAPMessage, error
 							}
 						}
 
-						if err = sr.sendPackets(packets, state.windowsize, shift); err != nil {
+						if err = sr.sendPackets(storageSessions, packets, state.windowsize, shift); err != nil {
 							return nil, err
 						}
 					}
@@ -439,7 +439,7 @@ func (sr *transport) sendARQBlock1CON(message *CoAPMessage) (*CoAPMessage, error
 	}
 }
 
-func (sr *transport) sendARQBlock2ACK(input chan *CoAPMessage, message *CoAPMessage, addr net.Addr) error {
+func (sr *transport) sendARQBlock2ACK(storageSessions *sessionStorage, input chan *CoAPMessage, message *CoAPMessage, addr net.Addr) error {
 	state := new(stateSend)
 	state.payload = message.Payload.Bytes()
 	state.lenght = len(state.payload)
@@ -455,7 +455,7 @@ func (sr *transport) sendARQBlock2ACK(input chan *CoAPMessage, message *CoAPMess
 	packets := []*packet{}
 
 	emptyAckMessage := newACKEmptyMessage(message, state.windowsize)
-	err := sr.sendToSocketByAddress(emptyAckMessage, addr)
+	err := sr.sendToSocketByAddress(storageSessions, emptyAckMessage, addr)
 	if err != nil {
 		return err
 	}
@@ -475,7 +475,7 @@ func (sr *transport) sendARQBlock2ACK(input chan *CoAPMessage, message *CoAPMess
 
 	var shift = 0
 
-	if err := sr.sendPacketsToAddr(packets, state.windowsize, shift, addr); err != nil {
+	if err := sr.sendPacketsToAddr(storageSessions, packets, state.windowsize, shift, addr); err != nil {
 		return err
 	}
 
@@ -493,12 +493,12 @@ func (sr *transport) sendARQBlock2ACK(input chan *CoAPMessage, message *CoAPMess
 							return nil
 						}
 						if block.BlockNumber < len(packets) {
-							wo := resp.GetOption(OptionWindowtOffset)
-							if wo != nil {
-								wov := wo.Uint16Value()
-								sr.sendPacketsByWindowOffset(packets, state.windowsize, shift, block.BlockNumber, int(wov))
+							// wo := resp.GetOption(OptionWindowtOffset)
+							// if wo != nil {
+							// 	wov := wo.Uint16Value()
+							// 	sr.sendPacketsByWindowOffset(packets, state.windowsize, shift, block.BlockNumber, int(wov))
 
-							}
+							// }
 
 							packets[block.BlockNumber].acked = true
 							if block.BlockNumber == shift {
@@ -511,7 +511,7 @@ func (sr *transport) sendARQBlock2ACK(input chan *CoAPMessage, message *CoAPMess
 									}
 								}
 
-								if err := sr.sendPacketsToAddr(packets, state.windowsize, shift, addr); err != nil {
+								if err := sr.sendPacketsToAddr(storageSessions, packets, state.windowsize, shift, addr); err != nil {
 									return err
 								}
 							}
@@ -520,14 +520,14 @@ func (sr *transport) sendARQBlock2ACK(input chan *CoAPMessage, message *CoAPMess
 				}
 			}
 		case <-time.After(sumTimeAttempts):
-			if err := sr.sendPacketsToAddr(packets, state.windowsize, shift, addr); err != nil {
+			if err := sr.sendPacketsToAddr(storageSessions, packets, state.windowsize, shift, addr); err != nil {
 				return err
 			}
 		}
 	}
 }
 
-func (sr *transport) receiveARQBlock1(input chan *CoAPMessage) (*CoAPMessage, error) {
+func (sr *transport) receiveARQBlock1(storageSessions *sessionStorage, input chan *CoAPMessage) (*CoAPMessage, error) {
 	buf := make(map[int][]byte)
 	totalBlocks := -1
 
@@ -561,7 +561,7 @@ func (sr *transport) receiveARQBlock1(input chan *CoAPMessage) (*CoAPMessage, er
 				ack = ackTo(nil, inputMessage, CoapCodeContinue)
 			}
 
-			if err := sr.sendToSocketByAddress(ack, inputMessage.Sender); err != nil {
+			if err := sr.sendToSocketByAddress(storageSessions, ack, inputMessage.Sender); err != nil {
 				return nil, err
 			}
 
@@ -572,7 +572,7 @@ func (sr *transport) receiveARQBlock1(input chan *CoAPMessage) (*CoAPMessage, er
 	}
 }
 
-func (sr *transport) receiveARQBlock2(origMessage *CoAPMessage, inputMessage *CoAPMessage) (rsp *CoAPMessage, err error) {
+func (sr *transport) receiveARQBlock2(storageSessions *sessionStorage, origMessage *CoAPMessage, inputMessage *CoAPMessage) (rsp *CoAPMessage, err error) {
 	buf := make(map[int][]byte)
 	totalBlocks := -1
 
@@ -593,7 +593,7 @@ func (sr *transport) receiveARQBlock2(origMessage *CoAPMessage, inputMessage *Co
 				inputMessage.Payload = NewBytesPayload(b)
 
 				ack := ackTo(origMessage, inputMessage, CoapCodeEmpty)
-				sr.sendToSocket(ack)
+				sr.sendToSocket(storageSessions, ack)
 				return inputMessage, nil
 			}
 
@@ -604,12 +604,12 @@ func (sr *transport) receiveARQBlock2(origMessage *CoAPMessage, inputMessage *Co
 			} else {
 				ack = ackTo(origMessage, inputMessage, CoapCodeContinue)
 			}
-			sr.sendToSocket(ack)
+			sr.sendToSocket(storageSessions, ack)
 		}
 	}
 
 	for {
-		inputMessage, err = receiveMessage(sr, origMessage)
+		inputMessage, err = receiveMessage(storageSessions, sr, origMessage)
 		if err == ErrMaxAttempts {
 			if attempts == maxSendAttempts {
 				MetricExpiredMessages.Inc()
@@ -642,7 +642,7 @@ func (sr *transport) receiveARQBlock2(origMessage *CoAPMessage, inputMessage *Co
 			}
 			inputMessage.Payload = NewBytesPayload(b)
 			ack := ackTo(origMessage, inputMessage, CoapCodeEmpty)
-			if err = sr.sendToSocket(ack); err != nil {
+			if err = sr.sendToSocket(storageSessions, ack); err != nil {
 				return nil, err
 			}
 			return inputMessage, nil
@@ -656,49 +656,22 @@ func (sr *transport) receiveARQBlock2(origMessage *CoAPMessage, inputMessage *Co
 			ack = ackTo(origMessage, inputMessage, CoapCodeContinue)
 		}
 
-		if err = sr.sendToSocket(ack); err != nil {
+		if err = sr.sendToSocket(storageSessions, ack); err != nil {
 			return nil, err
 		}
 	}
 }
 
 func (sr *transport) ReceiveMessage(message *CoAPMessage, respHandler func(*CoAPMessage, error)) {
-	message, err := preparationReceivingMessage(sr, message)
+	message, err := preparationReceivingMessage(globalSessions, sr, message)
 	if err != nil {
 		return
 	}
 
-	sr.messageHandlerSelector(message, respHandler)
+	sr.messageHandlerSelector(globalSessions, message, respHandler)
 }
 
-func (sr *transport) ReceiveOnce(respHandler func(*CoAPMessage, error)) {
-	readBuf := make([]byte, MTU+1)
-start:
-	n, senderAddr, err := sr.conn.Listen(readBuf)
-	if err != nil {
-		panic(err)
-	}
-	if n == 0 || n > MTU {
-		goto start
-	}
-
-	message, err := preparationReceivingBuffer("receiveOnce", sr, readBuf[:n], senderAddr, "")
-	if err != nil {
-		goto start
-	}
-
-	message.Sender = senderAddr
-
-	if _, ok := handlersStateCache.Get(senderAddr.String() + string(message.Token)); ok {
-		return
-	}
-
-	handlersStateCache.SetDefault(senderAddr.String()+string(message.Token), struct{}{})
-	sr.messageHandlerSelector(message, respHandler)
-	handlersStateCache.Delete(message.Sender.String() + string(message.Token))
-}
-
-func (sr *transport) messageHandlerSelector(message *CoAPMessage, respHandler func(*CoAPMessage, error)) {
+func (sr *transport) messageHandlerSelector(storageSessions *sessionStorage, message *CoAPMessage, respHandler func(*CoAPMessage, error)) {
 	block1 := message.GetBlock1()
 	block2 := message.GetBlock2()
 
@@ -715,7 +688,7 @@ func (sr *transport) messageHandlerSelector(message *CoAPMessage, respHandler fu
 			if message.Type == CON {
 				ch = make(chan *CoAPMessage, 102400)
 				go func() {
-					resp, err := sr.receiveARQBlock1(ch)
+					resp, err := sr.receiveARQBlock1(storageSessions, ch)
 					sr.block1channels.Delete(id)
 					respHandler(resp, err)
 				}()
@@ -742,10 +715,10 @@ func (sr *transport) messageHandlerSelector(message *CoAPMessage, respHandler fu
 	go respHandler(message, nil)
 }
 
-func preparationSendingMessage(tr *transport, message *CoAPMessage, addr net.Addr) ([]byte, error) {
+func preparationSendingMessage(storageSessions *sessionStorage, tr *transport, message *CoAPMessage, addr net.Addr) ([]byte, error) {
 	secMessage := message.Clone(true)
 
-	if err := securityOutputLayer(tr, secMessage, addr); err != nil {
+	if err := securityOutputLayer(storageSessions, tr, secMessage, addr); err != nil {
 		return nil, err
 	}
 
@@ -757,7 +730,7 @@ func preparationSendingMessage(tr *transport, message *CoAPMessage, addr net.Add
 	return buf, nil
 }
 
-func preparationReceivingBuffer(tag string, tr *transport, data []byte, senderAddr net.Addr, proxyAddr string) (*CoAPMessage, error) {
+func preparationReceivingBufferForStorageLocalStates(tag string, data []byte, senderAddr net.Addr) (*CoAPMessage, error) {
 	message, err := Deserialize(data)
 	if err != nil {
 		return nil, err
@@ -769,9 +742,24 @@ func preparationReceivingBuffer(tag string, tr *transport, data []byte, senderAd
 	MetricReceivedMessages.Inc()
 
 	message.Sender = senderAddr
-	// fmt.Println(time.Now().Format("15:04:05.000000000"), "\t<--- ", tag, " receive\t", senderAddr, message.ToReadableString())
 
-	_, err = securityInputLayer(tr, message, proxyAddr)
+	return message, nil
+}
+
+func preparationReceivingBuffer(storageSessions *sessionStorage, tag string, tr *transport, data []byte, senderAddr net.Addr, proxyAddr string) (*CoAPMessage, error) {
+	message, err := Deserialize(data)
+	if err != nil {
+		return nil, err
+	}
+	if message == nil {
+		return nil, ErrNilMessage
+	}
+
+	MetricReceivedMessages.Inc()
+
+	message.Sender = senderAddr
+
+	_, err = securityInputLayer(storageSessions, tr, message, proxyAddr)
 
 	if err != nil {
 		return nil, err
@@ -779,10 +767,10 @@ func preparationReceivingBuffer(tag string, tr *transport, data []byte, senderAd
 	return message, nil
 }
 
-func preparationReceivingMessage(tr *transport, message *CoAPMessage) (*CoAPMessage, error) {
+func preparationReceivingMessage(storageSessions *sessionStorage, tr *transport, message *CoAPMessage) (*CoAPMessage, error) {
 	// fmt.Println(time.Now().Format("15:04:05.000000000"), "\t<--- receive\t", message.Sender, message.ToReadableString())
 	MetricReceivedMessages.Inc()
-	_, err := securityInputLayer(tr, message, "")
+	_, err := securityInputLayer(storageSessions, tr, message, "")
 	if err != nil {
 		return nil, err
 	}

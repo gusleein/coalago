@@ -240,7 +240,7 @@ const (
 
 	OptionSelectiveRepeatWindowSize OptionCode = 3001
 	OptionProxySecurityID           OptionCode = 3004
-	OptionWindowtOffset             OptionCode = 3012
+	// OptionWindowtOffset             OptionCode = 3012
 
 	OptionСoapsUri OptionCode = 4005
 )

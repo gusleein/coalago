@@ -121,7 +121,7 @@ const (
 	MTU = 1500
 )
 
-func receiveMessage(tr *transport, origMessage *CoAPMessage) (*CoAPMessage, error) {
+func receiveMessage(storageSessions *sessionStorage, tr *transport, origMessage *CoAPMessage) (*CoAPMessage, error) {
 	tr.conn.SetReadDeadline()
 
 	for {
@@ -137,7 +137,7 @@ func receiveMessage(tr *transport, origMessage *CoAPMessage) (*CoAPMessage, erro
 			continue
 		}
 
-		message, err := preparationReceivingBuffer("receiveMessage", tr, buff[:n], tr.conn.RemoteAddr(), origMessage.ProxyAddr)
+		message, err := preparationReceivingBuffer(storageSessions, "receiveMessage", tr, buff[:n], tr.conn.RemoteAddr(), origMessage.ProxyAddr)
 		if err != nil {
 			return nil, err
 		}

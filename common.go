@@ -238,8 +238,8 @@ func optionCodeToString(option OptionCode) string {
 		return "SessionExpired"
 	case OptionSelectiveRepeatWindowSize:
 		return "OptionSelectiveRepeatWindowSize"
-	case OptionWindowtOffset:
-		return "OptionWindowOffset"
+	// case OptionWindowtOffset:
+	// 	return "OptionWindowOffset"
 	case OptionСoapsUri:
 		return "OptionСoapsUri"
 	case OptionProxySecurityID:
@@ -294,10 +294,10 @@ func ackTo(initMessage *CoAPMessage, origMessage *CoAPMessage, code CoapCode) *C
 }
 
 func ackToWithWindowOffset(initMessage *CoAPMessage, origMessage *CoAPMessage, code CoapCode, windowSize int, blockNumber int, buf map[int][]byte) *CoAPMessage {
-	var offset = 0
-	for i := blockNumber; i > blockNumber-windowSize; i-- {
-		offset++
-	}
+	// var offset = 0
+	// for i := blockNumber; i > blockNumber-windowSize; i-- {
+	// 	offset++
+	// }
 
 	result := NewCoAPMessage(ACK, code)
 	result.MessageID = origMessage.MessageID
@@ -305,9 +305,9 @@ func ackToWithWindowOffset(initMessage *CoAPMessage, origMessage *CoAPMessage, c
 	result.CloneOptions(origMessage, OptionURIScheme, OptionSelectiveRepeatWindowSize, OptionBlock1, OptionBlock2, OptionProxySecurityID)
 	result.Recipient = origMessage.Sender
 
-	if offset > 0 {
-		result.AddOption(OptionWindowtOffset, uint16(offset))
-	}
+	// if offset > 0 {
+	// 	result.AddOption(OptionWindowtOffset, uint16(offset))
+	// }
 
 	if initMessage != nil {
 		result.ProxyAddr = initMessage.ProxyAddr

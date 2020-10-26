@@ -31,6 +31,10 @@ func NewServerWithPrivateKey(privatekey []byte) *Server {
 	return s
 }
 
+type Resourcer interface {
+	getResourceForPathAndMethod(path string, method CoapMethod) *CoAPResource
+}
+
 func (s *Server) Listen(addr string) (err error) {
 	conn, err := newListener(addr)
 	if err != nil {
@@ -39,13 +43,31 @@ func (s *Server) Listen(addr string) (err error) {
 
 	s.sr = newtransport(conn)
 	s.sr.privateKey = s.privatekey
+
 	for {
-		s.sr.ReceiveOnce(func(message *CoAPMessage, err error) {
-			if err != nil {
-				return
-			}
-			requestOnReceive(s, message)
-		})
+		readBuf := make([]byte, MTU+1)
+	start:
+		n, senderAddr, err := s.sr.conn.Listen(readBuf)
+		if err != nil {
+			panic(err)
+		}
+		if n == 0 || n > MTU {
+			goto start
+		}
+
+		message, err := preparationReceivingBufferForStorageLocalStates("receiveOnce", readBuf[:n], senderAddr)
+		if err != nil {
+			goto start
+		}
+
+		fn, ok := StorageLocalStates[senderAddr.String()]
+		if !ok {
+			fmt.Println("path", message.GetURIPath(), "method", message.GetMethod())
+			fn = MakeLocalStateFn(s, s.sr, nil)
+			StorageLocalStates[senderAddr.String()] = fn
+		}
+
+		go fn(message)
 	}
 }
 
@@ -62,7 +84,7 @@ func (s *Server) ServeMessage(message *CoAPMessage) {
 		if err != nil {
 			return
 		}
-		requestOnReceive(s, message)
+		requestOnReceive(s.getResourceForPathAndMethod(message.GetURIPath(), message.GetMethod()), globalSessions, s.sr, message)
 	})
 }
 
