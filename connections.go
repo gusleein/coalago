@@ -121,7 +121,7 @@ const (
 	MTU = 1500
 )
 
-func receiveMessage(storageSessions *sessionStorage, tr *transport, origMessage *CoAPMessage) (*CoAPMessage, error) {
+func receiveMessage(storageSessions sessionStorage, tr *transport, origMessage *CoAPMessage) (*CoAPMessage, error) {
 	tr.conn.SetReadDeadline()
 
 	for {

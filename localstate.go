@@ -14,7 +14,7 @@ type LocalStateFn func(*CoAPMessage)
 
 func MakeLocalStateFn(r Resourcer, tr *transport, respHandler func(*CoAPMessage, error)) LocalStateFn {
 	var mx sync.Mutex
-	storageSession := newSessionStorage()
+	storageSession := newLocalStateSessionStorageImpl()
 
 	return func(message *CoAPMessage) {
 		mx.Lock()
@@ -36,7 +36,7 @@ func MakeLocalStateFn(r Resourcer, tr *transport, respHandler func(*CoAPMessage,
 	}
 }
 
-func localStateSecurityInputLayer(storageSessions *sessionStorage, tr *transport, message *CoAPMessage, proxyAddr string) (isContinue bool, err error) {
+func localStateSecurityInputLayer(storageSessions sessionStorage, tr *transport, message *CoAPMessage, proxyAddr string) (isContinue bool, err error) {
 	if len(proxyAddr) > 0 {
 		proxyID, ok := getProxyIDIfNeed(proxyAddr)
 		if ok {

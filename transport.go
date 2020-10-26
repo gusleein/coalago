@@ -14,7 +14,7 @@ import (
 
 var (
 	ErrUnsupportedType = errors.New("unsupported type of message")
-	globalSessions     = newSessionStorage()
+	globalSessions     = newSessionStorageImpl()
 	handlersStateCache = cache.New(sumTimeAttempts, time.Second)
 	proxyIDSessions    sync.Map
 )
@@ -37,7 +37,7 @@ func (tr *transport) SetPrivateKey(pk []byte) {
 	tr.privateKey = pk
 }
 
-func (sr *transport) Send(storageSessions *sessionStorage, message *CoAPMessage) (resp *CoAPMessage, err error) {
+func (sr *transport) Send(storageSessions sessionStorage, message *CoAPMessage) (resp *CoAPMessage, err error) {
 	switch message.Type {
 	case CON:
 
@@ -78,7 +78,7 @@ func (sr *transport) Send(storageSessions *sessionStorage, message *CoAPMessage)
 	}
 }
 
-func (sr *transport) SendTo(storageSessions *sessionStorage, message *CoAPMessage, addr net.Addr) (resp *CoAPMessage, err error) {
+func (sr *transport) SendTo(storageSessions sessionStorage, message *CoAPMessage, addr net.Addr) (resp *CoAPMessage, err error) {
 	switch message.Type {
 	case ACK, NON, RST:
 		return nil, sr.sendACKTo(storageSessions, message, addr)
@@ -87,7 +87,7 @@ func (sr *transport) SendTo(storageSessions *sessionStorage, message *CoAPMessag
 	}
 }
 
-func (sr *transport) sendCON(storageSessions *sessionStorage, message *CoAPMessage) (resp *CoAPMessage, err error) {
+func (sr *transport) sendCON(storageSessions sessionStorage, message *CoAPMessage) (resp *CoAPMessage, err error) {
 	if isBigPayload(message) {
 		resp, err = sr.sendARQBlock1CON(storageSessions, message)
 		return
@@ -148,7 +148,7 @@ func isPingACK(resp *CoAPMessage) bool {
 	return resp.Type == RST && resp.Code == CoapCodeEmpty
 }
 
-func (sr *transport) sendACKTo(storageSessions *sessionStorage, message *CoAPMessage, addr net.Addr) (err error) {
+func (sr *transport) sendACKTo(storageSessions sessionStorage, message *CoAPMessage, addr net.Addr) (err error) {
 	if message.Type == ACK {
 		if isBigPayload(message) {
 			ch := make(chan *CoAPMessage, 102400)
@@ -163,7 +163,7 @@ func (sr *transport) sendACKTo(storageSessions *sessionStorage, message *CoAPMes
 	return sr.sendToSocketByAddress(storageSessions, message, addr)
 }
 
-func (sr *transport) sendToSocket(storageSessions *sessionStorage, message *CoAPMessage) error {
+func (sr *transport) sendToSocket(storageSessions sessionStorage, message *CoAPMessage) error {
 	buf, err := preparationSendingMessage(storageSessions, sr, message, sr.conn.RemoteAddr())
 	if err != nil {
 		return err
@@ -177,7 +177,7 @@ func (sr *transport) sendToSocket(storageSessions *sessionStorage, message *CoAP
 	return err
 }
 
-func (sr *transport) sendToSocketByAddress(storageSessions *sessionStorage, message *CoAPMessage, addr net.Addr) error {
+func (sr *transport) sendToSocketByAddress(storageSessions sessionStorage, message *CoAPMessage, addr net.Addr) error {
 
 	buf, err := preparationSendingMessage(storageSessions, sr, message, addr)
 	if err != nil {
@@ -192,7 +192,7 @@ func (sr *transport) sendToSocketByAddress(storageSessions *sessionStorage, mess
 	return err
 }
 
-func (sr *transport) sendPackets(storageSessions *sessionStorage, packets []*packet, windowsize int, shift int) error {
+func (sr *transport) sendPackets(storageSessions sessionStorage, packets []*packet, windowsize int, shift int) error {
 	stop := shift + windowsize
 	if stop >= len(packets) {
 		stop = len(packets)
@@ -230,7 +230,7 @@ func (sr *transport) sendPackets(storageSessions *sessionStorage, packets []*pac
 	return nil
 }
 
-func (sr *transport) sendPacketsByWindowOffset(storageSessions *sessionStorage, packets []*packet, windowsize, shift, blockNumber, offset int) error {
+func (sr *transport) sendPacketsByWindowOffset(storageSessions sessionStorage, packets []*packet, windowsize, shift, blockNumber, offset int) error {
 	stop := shift + windowsize
 	if stop >= blockNumber {
 		stop = blockNumber
@@ -275,7 +275,7 @@ func (sr *transport) sendPacketsByWindowOffset(storageSessions *sessionStorage, 
 	return nil
 }
 
-func (sr *transport) sendPacketsByWindowOffsetToAddr(storageSessions *sessionStorage, packets []*packet, windowsize, shift, blockNumber, offset int, addr net.Addr) error {
+func (sr *transport) sendPacketsByWindowOffsetToAddr(storageSessions sessionStorage, packets []*packet, windowsize, shift, blockNumber, offset int, addr net.Addr) error {
 	stop := shift + windowsize
 	if stop >= blockNumber {
 		stop = blockNumber
@@ -320,7 +320,7 @@ func (sr *transport) sendPacketsByWindowOffsetToAddr(storageSessions *sessionSto
 	return nil
 }
 
-func (sr *transport) sendPacketsToAddr(storageSessions *sessionStorage, packets []*packet, windowsize int, shift int, addr net.Addr) error {
+func (sr *transport) sendPacketsToAddr(storageSessions sessionStorage, packets []*packet, windowsize int, shift int, addr net.Addr) error {
 	stop := shift + windowsize
 	if stop >= len(packets) {
 		stop = len(packets)
@@ -353,7 +353,7 @@ func (sr *transport) sendPacketsToAddr(storageSessions *sessionStorage, packets 
 	return nil
 }
 
-func (sr *transport) sendARQBlock1CON(storageSessions *sessionStorage, message *CoAPMessage) (*CoAPMessage, error) {
+func (sr *transport) sendARQBlock1CON(storageSessions sessionStorage, message *CoAPMessage) (*CoAPMessage, error) {
 	state := new(stateSend)
 	state.payload = message.Payload.Bytes()
 	state.lenght = len(state.payload)
@@ -439,7 +439,7 @@ func (sr *transport) sendARQBlock1CON(storageSessions *sessionStorage, message *
 	}
 }
 
-func (sr *transport) sendARQBlock2ACK(storageSessions *sessionStorage, input chan *CoAPMessage, message *CoAPMessage, addr net.Addr) error {
+func (sr *transport) sendARQBlock2ACK(storageSessions sessionStorage, input chan *CoAPMessage, message *CoAPMessage, addr net.Addr) error {
 	state := new(stateSend)
 	state.payload = message.Payload.Bytes()
 	state.lenght = len(state.payload)
@@ -527,7 +527,7 @@ func (sr *transport) sendARQBlock2ACK(storageSessions *sessionStorage, input cha
 	}
 }
 
-func (sr *transport) receiveARQBlock1(storageSessions *sessionStorage, input chan *CoAPMessage) (*CoAPMessage, error) {
+func (sr *transport) receiveARQBlock1(storageSessions sessionStorage, input chan *CoAPMessage) (*CoAPMessage, error) {
 	buf := make(map[int][]byte)
 	totalBlocks := -1
 
@@ -572,7 +572,7 @@ func (sr *transport) receiveARQBlock1(storageSessions *sessionStorage, input cha
 	}
 }
 
-func (sr *transport) receiveARQBlock2(storageSessions *sessionStorage, origMessage *CoAPMessage, inputMessage *CoAPMessage) (rsp *CoAPMessage, err error) {
+func (sr *transport) receiveARQBlock2(storageSessions sessionStorage, origMessage *CoAPMessage, inputMessage *CoAPMessage) (rsp *CoAPMessage, err error) {
 	buf := make(map[int][]byte)
 	totalBlocks := -1
 
@@ -671,7 +671,7 @@ func (sr *transport) ReceiveMessage(message *CoAPMessage, respHandler func(*CoAP
 	sr.messageHandlerSelector(globalSessions, message, respHandler)
 }
 
-func (sr *transport) messageHandlerSelector(storageSessions *sessionStorage, message *CoAPMessage, respHandler func(*CoAPMessage, error)) {
+func (sr *transport) messageHandlerSelector(storageSessions sessionStorage, message *CoAPMessage, respHandler func(*CoAPMessage, error)) {
 	block1 := message.GetBlock1()
 	block2 := message.GetBlock2()
 
@@ -715,7 +715,7 @@ func (sr *transport) messageHandlerSelector(storageSessions *sessionStorage, mes
 	go respHandler(message, nil)
 }
 
-func preparationSendingMessage(storageSessions *sessionStorage, tr *transport, message *CoAPMessage, addr net.Addr) ([]byte, error) {
+func preparationSendingMessage(storageSessions sessionStorage, tr *transport, message *CoAPMessage, addr net.Addr) ([]byte, error) {
 	secMessage := message.Clone(true)
 
 	if err := securityOutputLayer(storageSessions, tr, secMessage, addr); err != nil {
@@ -746,7 +746,7 @@ func preparationReceivingBufferForStorageLocalStates(tag string, data []byte, se
 	return message, nil
 }
 
-func preparationReceivingBuffer(storageSessions *sessionStorage, tag string, tr *transport, data []byte, senderAddr net.Addr, proxyAddr string) (*CoAPMessage, error) {
+func preparationReceivingBuffer(storageSessions sessionStorage, tag string, tr *transport, data []byte, senderAddr net.Addr, proxyAddr string) (*CoAPMessage, error) {
 	message, err := Deserialize(data)
 	if err != nil {
 		return nil, err
@@ -767,7 +767,7 @@ func preparationReceivingBuffer(storageSessions *sessionStorage, tag string, tr 
 	return message, nil
 }
 
-func preparationReceivingMessage(storageSessions *sessionStorage, tr *transport, message *CoAPMessage) (*CoAPMessage, error) {
+func preparationReceivingMessage(storageSessions sessionStorage, tr *transport, message *CoAPMessage) (*CoAPMessage, error) {
 	// fmt.Println(time.Now().Format("15:04:05.000000000"), "\t<--- receive\t", message.Sender, message.ToReadableString())
 	MetricReceivedMessages.Inc()
 	_, err := securityInputLayer(storageSessions, tr, message, "")
