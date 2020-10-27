@@ -662,15 +662,6 @@ func (sr *transport) receiveARQBlock2(storageSessions sessionStorage, origMessag
 	}
 }
 
-func (sr *transport) ReceiveMessage(message *CoAPMessage, respHandler func(*CoAPMessage, error)) {
-	message, err := preparationReceivingMessage(globalSessions, sr, message)
-	if err != nil {
-		return
-	}
-
-	sr.messageHandlerSelector(globalSessions, message, respHandler)
-}
-
 func (sr *transport) messageHandlerSelector(storageSessions sessionStorage, message *CoAPMessage, respHandler func(*CoAPMessage, error)) {
 	block1 := message.GetBlock1()
 	block2 := message.GetBlock2()
@@ -761,16 +752,6 @@ func preparationReceivingBuffer(storageSessions sessionStorage, tag string, tr *
 
 	_, err = securityInputLayer(storageSessions, tr, message, proxyAddr)
 
-	if err != nil {
-		return nil, err
-	}
-	return message, nil
-}
-
-func preparationReceivingMessage(storageSessions sessionStorage, tr *transport, message *CoAPMessage) (*CoAPMessage, error) {
-	// fmt.Println(time.Now().Format("15:04:05.000000000"), "\t<--- receive\t", message.Sender, message.ToReadableString())
-	MetricReceivedMessages.Inc()
-	_, err := securityInputLayer(storageSessions, tr, message, "")
 	if err != nil {
 		return nil, err
 	}

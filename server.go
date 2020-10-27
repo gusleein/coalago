@@ -82,12 +82,16 @@ func (s *Server) Serve(conn *net.UDPConn) {
 }
 
 func (s *Server) ServeMessage(message *CoAPMessage) {
-	s.sr.ReceiveMessage(message, func(message *CoAPMessage, err error) {
-		if err != nil {
-			return
-		}
-		requestOnReceive(s.getResourceForPathAndMethod(message.GetURIPath(), message.GetMethod()), globalSessions, s.sr, message)
-	})
+	id := message.Sender.String() + message.GetTokenString()
+	fn, ok := StorageLocalStates.Get(id)
+	if !ok {
+		fn = MakeLocalStateFn(s, s.sr, nil, func() {
+			StorageLocalStates.Delete(id)
+		})
+		StorageLocalStates.SetDefault(id, fn)
+	}
+
+	go fn.(LocalStateFn)(message)
 }
 
 func (s *Server) addResource(res *CoAPResource) {
