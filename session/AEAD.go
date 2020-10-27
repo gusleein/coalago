@@ -17,29 +17,29 @@ type AEAD struct {
 	decrypter cipher.AEAD
 }
 
-func NewAEAD(peerKey, myKey, peerIV, myIV []byte) (*AEAD, error) {
+func NewAEAD(peerKey, myKey, peerIV, myIV []byte) (AEAD, error) {
 	if len(myKey) != 16 || len(peerKey) != 16 || len(myIV) != 4 || len(peerIV) != 4 {
-		return nil, errors.New("AES-GCM: expected 16-byte keys and 4-byte IVs")
+		return AEAD{}, errors.New("AES-GCM: expected 16-byte keys and 4-byte IVs")
 	}
 
 	encrypterCipher, err := aes12.NewCipher(myKey)
 	if err != nil {
-		return nil, err
+		return AEAD{}, err
 	}
 	encrypter, err := aes12.NewGCM(encrypterCipher)
 	if err != nil {
-		return nil, err
+		return AEAD{}, err
 	}
 	decrypterCipher, err := aes12.NewCipher(peerKey)
 	if err != nil {
-		return nil, err
+		return AEAD{}, err
 	}
 	decrypter, err := aes12.NewGCM(decrypterCipher)
 	if err != nil {
-		return nil, err
+		return AEAD{}, err
 	}
 
-	return &AEAD{
+	return AEAD{
 		PeerKey:   peerKey,
 		MyKey:     myKey,
 		PeerIV:    peerIV,

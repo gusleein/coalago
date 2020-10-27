@@ -8,7 +8,7 @@ import (
 
 type SecuredSession struct {
 	Curve         Curve25519
-	AEAD          *AEAD
+	AEAD          AEAD
 	PeerPublicKey []byte
 	UpdatedAt     int
 }

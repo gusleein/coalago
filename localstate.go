@@ -56,7 +56,7 @@ func localStateSecurityInputLayer(storageSessions sessionStorage, tr *transport,
 
 		currentSession, ok := getSessionForAddress(storageSessions, tr, tr.conn.LocalAddr().String(), addressSession, proxyAddr)
 
-		if !ok || currentSession.AEAD == nil {
+		if !ok {
 			responseMessage := NewCoAPMessageId(ACK, CoapCodeUnauthorized, message.MessageID)
 			responseMessage.AddOption(OptionSessionNotFound, 1)
 			responseMessage.Token = message.Token

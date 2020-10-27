@@ -105,7 +105,7 @@ func securityInputLayer(storageSessions sessionStorage, tr *transport, message *
 
 		currentSession, ok := getSessionForAddress(storageSessions, tr, tr.conn.LocalAddr().String(), addressSession, proxyAddr)
 
-		if !ok || currentSession.AEAD == nil {
+		if !ok {
 			responseMessage := NewCoAPMessageId(ACK, CoapCodeUnauthorized, message.MessageID)
 			responseMessage.AddOption(OptionSessionNotFound, 1)
 			responseMessage.Token = message.Token
@@ -169,7 +169,9 @@ func receiveHandshake(storageSessions sessionStorage, tr *transport, privatekey 
 			return false, ErrorHandshake
 		}
 		if signature, err := peerSession.GetSignature(); err == nil {
-			peerSession.PeerVerify(signature)
+			if err = peerSession.PeerVerify(signature); err != nil {
+				return false, ErrorHandshake
+			}
 		}
 		MetricSuccessfulHandhshakes.Inc()
 
@@ -193,11 +195,6 @@ func handshake(storageSessions sessionStorage, tr *transport, message *CoAPMessa
 		if err != nil {
 			return session.SecuredSession{}, err
 		}
-	}
-
-	// We skip handshake if session already exists
-	if ses.AEAD != nil {
-		return ses, nil
 	}
 
 	// Sending my Public Key.
