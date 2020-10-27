@@ -13,9 +13,7 @@ type SecuredSession struct {
 	UpdatedAt     int
 }
 
-func NewSecuredSession(privateKey []byte) (session *SecuredSession, err error) {
-	session = new(SecuredSession)
-
+func NewSecuredSession(privateKey []byte) (session SecuredSession, err error) {
 	if len(privateKey) == 0 {
 		session.Curve, err = NewCurve25519()
 	} else {
@@ -23,7 +21,7 @@ func NewSecuredSession(privateKey []byte) (session *SecuredSession, err error) {
 		session.Curve, err = NewStaticCurve25519(privateKeySHA256)
 	}
 	if err != nil {
-		return nil, err
+		return session, err
 	}
 	return
 }
