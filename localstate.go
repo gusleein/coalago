@@ -118,7 +118,6 @@ func localStateMessageHandlerSelector(
 			if ok {
 				respHandler(message, err)
 			}
-			return
 		}
 		return
 	}

@@ -60,12 +60,13 @@ func (s *Server) Listen(addr string) (err error) {
 			goto start
 		}
 
-		fn, ok := StorageLocalStates.Get(senderAddr.String())
+		id := senderAddr.String() + message.GetTokenString()
+		fn, ok := StorageLocalStates.Get(id)
 		if !ok {
 			fn = MakeLocalStateFn(s, s.sr, nil, func() {
-				StorageLocalStates.Delete(senderAddr.String())
+				StorageLocalStates.Delete(id)
 			})
-			StorageLocalStates.SetDefault(senderAddr.String(), fn)
+			StorageLocalStates.SetDefault(id, fn)
 		}
 
 		go fn.(LocalStateFn)(message)
