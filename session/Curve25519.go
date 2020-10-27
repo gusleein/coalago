@@ -15,11 +15,11 @@ type Curve25519 struct {
 	publicKey  [KEY_SIZE]byte
 }
 
-func NewCurve25519() (*Curve25519, error) {
-	curve := &Curve25519{}
+func NewCurve25519() (Curve25519, error) {
+	curve := Curve25519{}
 
 	if _, err := rand.Read(curve.privateKey[:]); err != nil {
-		return nil, errors.New("Curve25519: could not create private key")
+		return curve, errors.New("Curve25519: could not create private key")
 	}
 
 	// See https://cr.yp.to/ecdh.html
@@ -32,8 +32,8 @@ func NewCurve25519() (*Curve25519, error) {
 	return curve, nil
 }
 
-func NewStaticCurve25519(privateKey [KEY_SIZE]byte) (*Curve25519, error) {
-	curve := &Curve25519{}
+func NewStaticCurve25519(privateKey [KEY_SIZE]byte) Curve25519 {
+	curve := Curve25519{}
 
 	curve.privateKey = privateKey
 
@@ -44,7 +44,7 @@ func NewStaticCurve25519(privateKey [KEY_SIZE]byte) (*Curve25519, error) {
 
 	golangCurve25519.ScalarBaseMult(&curve.publicKey, &curve.privateKey)
 
-	return curve, nil
+	return curve
 }
 
 func (curve *Curve25519) GetPublicKey() []byte {

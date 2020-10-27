@@ -7,7 +7,7 @@ import (
 )
 
 type SecuredSession struct {
-	Curve         *Curve25519
+	Curve         Curve25519
 	AEAD          *AEAD
 	PeerPublicKey []byte
 	UpdatedAt     int
@@ -18,19 +18,10 @@ func NewSecuredSession(privateKey []byte) (session SecuredSession, err error) {
 		session.Curve, err = NewCurve25519()
 	} else {
 		privateKeySHA256 := sha256.Sum256(privateKey)
-		session.Curve, err = NewStaticCurve25519(privateKeySHA256)
+		session.Curve = NewStaticCurve25519(privateKeySHA256)
 	}
 	if err != nil {
 		return session, err
-	}
-	return
-}
-
-func NewStaticSecuredSession(privateKey [KEY_SIZE]byte) (session *SecuredSession, err error) {
-	session = new(SecuredSession)
-	session.Curve, err = NewStaticCurve25519(privateKey)
-	if err != nil {
-		return nil, err
 	}
 	return
 }
