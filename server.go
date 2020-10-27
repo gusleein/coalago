@@ -62,7 +62,9 @@ func (s *Server) Listen(addr string) (err error) {
 
 		fn, ok := StorageLocalStates.Get(senderAddr.String())
 		if !ok {
-			fn = MakeLocalStateFn(s, s.sr, nil)
+			fn = MakeLocalStateFn(s, s.sr, nil, func() {
+				StorageLocalStates.Delete(senderAddr.String())
+			})
 			StorageLocalStates.SetDefault(senderAddr.String(), fn)
 		}
 

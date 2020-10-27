@@ -12,16 +12,15 @@ var StorageLocalStates = cache.New(SESSIONS_POOL_EXPIRATION, time.Second)
 
 type LocalStateFn func(*CoAPMessage)
 
-func MakeLocalStateFn(r Resourcer, tr *transport, respHandler func(*CoAPMessage, error)) LocalStateFn {
+func MakeLocalStateFn(r Resourcer, tr *transport, respHandler func(*CoAPMessage, error), closeCallback func()) LocalStateFn {
 	var mx sync.Mutex
-	storageSession := newLocalStateSessionStorageImpl()
+	// storageSession := newLocalStateSessionStorageImpl()
 
 	return func(message *CoAPMessage) {
 		mx.Lock()
 		defer mx.Unlock()
 
-		_, err := localStateSecurityInputLayer(storageSession, tr, message, "")
-		if err != nil {
+		if _, err := localStateSecurityInputLayer(globalSessions, tr, message, ""); err != nil {
 			return
 		}
 
@@ -29,10 +28,11 @@ func MakeLocalStateFn(r Resourcer, tr *transport, respHandler func(*CoAPMessage,
 			if err != nil {
 				return
 			}
-			requestOnReceive(r.getResourceForPathAndMethod(message.GetURIPath(), message.GetMethod()), storageSession, tr, message)
+			requestOnReceive(r.getResourceForPathAndMethod(message.GetURIPath(), message.GetMethod()), globalSessions, tr, message)
+			closeCallback()
 		}
 
-		tr.messageHandlerSelector(storageSession, message, respHandler)
+		tr.messageHandlerSelector(globalSessions, message, respHandler)
 	}
 }
 
