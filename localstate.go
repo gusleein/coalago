@@ -16,6 +16,9 @@ func MakeLocalStateFn(r Resourcer, tr *transport, respHandler func(*CoAPMessage,
 	var mx sync.Mutex
 	// storageSession := newLocalStateSessionStorageImpl()
 
+	var bufBlock1 = make(map[int][]byte)
+	var totalBlocks1 = -1
+
 	return func(message *CoAPMessage) {
 		mx.Lock()
 		defer mx.Unlock()
@@ -32,7 +35,7 @@ func MakeLocalStateFn(r Resourcer, tr *transport, respHandler func(*CoAPMessage,
 			closeCallback()
 		}
 
-		tr.messageHandlerSelector(globalSessions, message, respHandler)
+		localStateMessageHandlerSelector(tr, totalBlocks1, bufBlock1, globalSessions, message, respHandler)
 	}
 }
 
@@ -92,4 +95,89 @@ func localStateSecurityInputLayer(storageSessions sessionStorage, tr *transport,
 	}
 
 	return true, nil
+}
+
+func localStateMessageHandlerSelector(
+	sr *transport,
+	totalBlocks int,
+	buffer map[int][]byte,
+	storageSessions sessionStorage,
+	message *CoAPMessage,
+	respHandler func(*CoAPMessage, error),
+) {
+	block1 := message.GetBlock1()
+	block2 := message.GetBlock2()
+
+	if block1 != nil {
+		if message.Type == CON {
+			var (
+				ok  bool
+				err error
+			)
+			ok, totalBlocks, buffer, message, err = localStateReceiveARQBlock1(sr, totalBlocks, buffer, storageSessions, message)
+			if ok {
+				respHandler(message, err)
+			}
+			return
+		}
+		return
+	}
+
+	if block2 != nil {
+		if message.Type == ACK {
+			id := message.Sender.String() + string(message.Token)
+
+			c, ok := sr.block2channels.Load(id)
+			if ok {
+				c.(chan *CoAPMessage) <- message
+			}
+		}
+		return
+	}
+	respHandler(message, nil)
+}
+
+func localStateReceiveARQBlock1(sr *transport, totalBlocks int, buf map[int][]byte, storageSessions sessionStorage, inputMessage *CoAPMessage) (bool, int, map[int][]byte, *CoAPMessage, error) {
+	// for {
+	// 	select {
+	// 	case inputMessage := <-input:
+
+	// 	case <-time.After(sumTimeAttempts):
+	// 		MetricExpiredMessages.Inc()
+	// 		return nil, ErrMaxAttempts
+	// 	}
+	// }
+
+	block := inputMessage.GetBlock1()
+	if block == nil || inputMessage.Type != CON {
+		return false, totalBlocks, buf, inputMessage, nil
+	}
+	if !block.MoreBlocks {
+		totalBlocks = block.BlockNumber + 1
+	}
+
+	buf[block.BlockNumber] = inputMessage.Payload.Bytes()
+	if totalBlocks == len(buf) {
+		b := []byte{}
+		for i := 0; i < totalBlocks; i++ {
+			b = append(b, buf[i]...)
+		}
+		inputMessage.Payload = NewBytesPayload(b)
+
+		return true, totalBlocks, buf, inputMessage, nil
+	}
+
+	var ack *CoAPMessage
+	w := inputMessage.GetOption(OptionSelectiveRepeatWindowSize)
+	if w != nil {
+		ack = ackToWithWindowOffset(nil, inputMessage, CoapCodeContinue, w.IntValue(), block.BlockNumber, buf)
+	} else {
+		ack = ackTo(nil, inputMessage, CoapCodeContinue)
+	}
+
+	if err := sr.sendToSocketByAddress(storageSessions, ack, inputMessage.Sender); err != nil {
+		return false, totalBlocks, buf, inputMessage, err
+	}
+
+	return false, totalBlocks, buf, inputMessage, nil
 }
