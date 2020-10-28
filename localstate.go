@@ -3,12 +3,13 @@ package coalago
 import (
 	"fmt"
 	"sync"
+	"sync/atomic"
 	"time"
 
 	"github.com/patrickmn/go-cache"
 )
 
-var StorageLocalStates = cache.New(SESSIONS_POOL_EXPIRATION, time.Second)
+var StorageLocalStates = cache.New(sumTimeAttempts, time.Second)
 
 type LocalStateFn func(*CoAPMessage)
 
@@ -18,6 +19,7 @@ func MakeLocalStateFn(r Resourcer, tr *transport, respHandler func(*CoAPMessage,
 
 	var bufBlock1 = make(map[int][]byte)
 	var totalBlocks1 = -1
+	var runnedHandler int32 = 0
 
 	return func(message *CoAPMessage) {
 		mx.Lock()
@@ -28,14 +30,20 @@ func MakeLocalStateFn(r Resourcer, tr *transport, respHandler func(*CoAPMessage,
 		}
 
 		respHandler = func(message *CoAPMessage, err error) {
+			if atomic.LoadInt32(&runnedHandler) == 1 {
+				return
+			}
+			atomic.StoreInt32(&runnedHandler, 1)
+
 			if err != nil {
 				return
 			}
+
 			requestOnReceive(r.getResourceForPathAndMethod(message.GetURIPath(), message.GetMethod()), globalSessions, tr, message)
 			closeCallback()
 		}
 
-		localStateMessageHandlerSelector(tr, totalBlocks1, bufBlock1, globalSessions, message, respHandler)
+		totalBlocks1, bufBlock1 = localStateMessageHandlerSelector(tr, totalBlocks1, bufBlock1, globalSessions, message, respHandler)
 	}
 }
 
@@ -104,6 +112,8 @@ func localStateMessageHandlerSelector(
 	storageSessions sessionStorage,
 	message *CoAPMessage,
 	respHandler func(*CoAPMessage, error),
+) (
+	int, map[int][]byte,
 ) {
 	block1 := message.GetBlock1()
 	block2 := message.GetBlock2()
@@ -116,10 +126,10 @@ func localStateMessageHandlerSelector(
 			)
 			ok, totalBlocks, buffer, message, err = localStateReceiveARQBlock1(sr, totalBlocks, buffer, storageSessions, message)
 			if ok {
-				respHandler(message, err)
+				go respHandler(message, err)
 			}
 		}
-		return
+		return totalBlocks, buffer
 	}
 
 	if block2 != nil {
@@ -131,22 +141,13 @@ func localStateMessageHandlerSelector(
 				c.(chan *CoAPMessage) <- message
 			}
 		}
-		return
+		return totalBlocks, buffer
 	}
-	respHandler(message, nil)
+	go respHandler(message, nil)
+	return totalBlocks, buffer
 }
 
 func localStateReceiveARQBlock1(sr *transport, totalBlocks int, buf map[int][]byte, storageSessions sessionStorage, inputMessage *CoAPMessage) (bool, int, map[int][]byte, *CoAPMessage, error) {
-	// for {
-	// 	select {
-	// 	case inputMessage := <-input:
-
-	// 	case <-time.After(sumTimeAttempts):
-	// 		MetricExpiredMessages.Inc()
-	// 		return nil, ErrMaxAttempts
-	// 	}
-	// }
-
 	block := inputMessage.GetBlock1()
 	if block == nil || inputMessage.Type != CON {
 		return false, totalBlocks, buf, inputMessage, nil

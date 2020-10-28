@@ -66,8 +66,8 @@ func (s *Server) Listen(addr string) (err error) {
 			fn = MakeLocalStateFn(s, s.sr, nil, func() {
 				StorageLocalStates.Delete(id)
 			})
-			StorageLocalStates.SetDefault(id, fn)
 		}
+		StorageLocalStates.SetDefault(id, fn)
 
 		go fn.(LocalStateFn)(message)
 	}

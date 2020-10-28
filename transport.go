@@ -662,50 +662,6 @@ func (sr *transport) receiveARQBlock2(storageSessions sessionStorage, origMessag
 	}
 }
 
-func (sr *transport) messageHandlerSelector(storageSessions sessionStorage, message *CoAPMessage, respHandler func(*CoAPMessage, error)) {
-	block1 := message.GetBlock1()
-	block2 := message.GetBlock2()
-
-	id := message.Sender.String() + string(message.Token)
-	var (
-		c  interface{}
-		ch chan *CoAPMessage
-		ok bool
-	)
-
-	if block1 != nil {
-		c, ok = sr.block1channels.Load(id)
-		if !ok {
-			if message.Type == CON {
-				ch = make(chan *CoAPMessage, 102400)
-				go func() {
-					resp, err := sr.receiveARQBlock1(storageSessions, ch)
-					sr.block1channels.Delete(id)
-					respHandler(resp, err)
-				}()
-				sr.block1channels.Store(id, ch)
-				ch <- message
-				return
-			}
-		} else {
-			c.(chan *CoAPMessage) <- message
-			return
-		}
-		return
-	}
-
-	if block2 != nil {
-		if message.Type == ACK {
-			c, ok = sr.block2channels.Load(id)
-			if ok {
-				c.(chan *CoAPMessage) <- message
-			}
-		}
-		return
-	}
-	go respHandler(message, nil)
-}
-
 func preparationSendingMessage(storageSessions sessionStorage, tr *transport, message *CoAPMessage, addr net.Addr) ([]byte, error) {
 	secMessage := message.Clone(true)
 

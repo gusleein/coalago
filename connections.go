@@ -122,9 +122,9 @@ const (
 )
 
 func receiveMessage(storageSessions sessionStorage, tr *transport, origMessage *CoAPMessage) (*CoAPMessage, error) {
-	tr.conn.SetReadDeadline()
-
 	for {
+		tr.conn.SetReadDeadline()
+
 		buff := make([]byte, MTU+1)
 		n, err := tr.conn.Read(buff)
 		if err != nil {
