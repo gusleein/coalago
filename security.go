@@ -173,6 +173,7 @@ func receiveHandshake(tr *transport, privatekey []byte, message *CoAPMessage, pr
 				return false, ErrorHandshake
 			}
 		}
+
 		MetricSuccessfulHandhshakes.Inc()
 
 		peerSession.UpdatedAt = int(time.Now().Unix())
@@ -195,30 +196,30 @@ func handshake(tr *transport, message *CoAPMessage, address net.Addr, proxyAddr 
 		if err != nil {
 			return session.SecuredSession{}, err
 		}
+
+		// Sending my Public Key.
+		// Receiving Peer's Public Key as a Response!
+		peerPublicKey, err := sendHelloFromClient(tr, message, ses.Curve.GetPublicKey(), address)
+		if err != nil {
+			return session.SecuredSession{}, err
+		}
+
+		// assign new value
+		ses.PeerPublicKey = peerPublicKey
+
+		signature, err := ses.GetSignature()
+		if err != nil {
+			return session.SecuredSession{}, err
+		}
+
+		err = ses.Verify(signature)
+		if err != nil {
+			return session.SecuredSession{}, err
+		}
+
+		globalSessions.Set(tr.conn.LocalAddr().String(), address.String(), proxyAddr, ses)
+		MetricSuccessfulHandhshakes.Inc()
 	}
-
-	// Sending my Public Key.
-	// Receiving Peer's Public Key as a Response!
-	peerPublicKey, err := sendHelloFromClient(tr, message, ses.Curve.GetPublicKey(), address)
-	if err != nil {
-		return session.SecuredSession{}, err
-	}
-
-	// assign new value
-	ses.PeerPublicKey = peerPublicKey
-
-	signature, err := ses.GetSignature()
-	if err != nil {
-		return session.SecuredSession{}, err
-	}
-
-	err = ses.Verify(signature)
-	if err != nil {
-		return session.SecuredSession{}, err
-	}
-
-	globalSessions.Set(tr.conn.LocalAddr().String(), address.String(), proxyAddr, ses)
-	MetricSuccessfulHandhshakes.Inc()
 
 	return ses, nil
 }

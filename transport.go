@@ -677,7 +677,7 @@ func preparationSendingMessage(tr *transport, message *CoAPMessage, addr net.Add
 	return buf, nil
 }
 
-func preparationReceivingBufferForStorageLocalStates(tag string, data []byte, senderAddr net.Addr) (*CoAPMessage, error) {
+func preparationReceivingBufferForStorageLocalStates(data []byte, senderAddr net.Addr) (*CoAPMessage, error) {
 	message, err := Deserialize(data)
 	if err != nil {
 		return nil, err
@@ -693,7 +693,7 @@ func preparationReceivingBufferForStorageLocalStates(tag string, data []byte, se
 	return message, nil
 }
 
-func preparationReceivingBuffer(tag string, tr *transport, data []byte, senderAddr net.Addr, proxyAddr string) (*CoAPMessage, error) {
+func preparationReceivingBuffer(tr *transport, data []byte, senderAddr net.Addr, proxyAddr string) (*CoAPMessage, error) {
 	message, err := Deserialize(data)
 	if err != nil {
 		return nil, err

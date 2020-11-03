@@ -137,7 +137,7 @@ func receiveMessage(tr *transport, origMessage *CoAPMessage) (*CoAPMessage, erro
 			continue
 		}
 
-		message, err := preparationReceivingBuffer("receiveMessage", tr, buff[:n], tr.conn.RemoteAddr(), origMessage.ProxyAddr)
+		message, err := preparationReceivingBuffer(tr, buff[:n], tr.conn.RemoteAddr(), origMessage.ProxyAddr)
 		if err != nil {
 			return nil, err
 		}

@@ -55,7 +55,7 @@ func (s *Server) Listen(addr string) (err error) {
 			goto start
 		}
 
-		message, err := preparationReceivingBufferForStorageLocalStates("receiveOnce", readBuf[:n], senderAddr)
+		message, err := preparationReceivingBufferForStorageLocalStates(readBuf[:n], senderAddr)
 		if err != nil {
 			goto start
 		}
