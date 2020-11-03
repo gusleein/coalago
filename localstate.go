@@ -15,8 +15,6 @@ type LocalStateFn func(*CoAPMessage)
 
 func MakeLocalStateFn(r Resourcer, tr *transport, respHandler func(*CoAPMessage, error), closeCallback func()) LocalStateFn {
 	var mx sync.Mutex
-	// storageSession := newLocalStateSessionStorageImpl()
-
 	var bufBlock1 = make(map[int][]byte)
 	var totalBlocks1 = -1
 	var runnedHandler int32 = 0
@@ -25,7 +23,7 @@ func MakeLocalStateFn(r Resourcer, tr *transport, respHandler func(*CoAPMessage,
 		mx.Lock()
 		defer mx.Unlock()
 
-		if _, err := localStateSecurityInputLayer(globalSessions, tr, message, ""); err != nil {
+		if _, err := localStateSecurityInputLayer(tr, message, ""); err != nil {
 			return
 		}
 
@@ -39,15 +37,15 @@ func MakeLocalStateFn(r Resourcer, tr *transport, respHandler func(*CoAPMessage,
 				return
 			}
 
-			requestOnReceive(r.getResourceForPathAndMethod(message.GetURIPath(), message.GetMethod()), globalSessions, tr, message)
+			requestOnReceive(r.getResourceForPathAndMethod(message.GetURIPath(), message.GetMethod()), tr, message)
 			closeCallback()
 		}
 
-		totalBlocks1, bufBlock1 = localStateMessageHandlerSelector(tr, totalBlocks1, bufBlock1, globalSessions, message, respHandler)
+		totalBlocks1, bufBlock1 = localStateMessageHandlerSelector(tr, totalBlocks1, bufBlock1, message, respHandler)
 	}
 }
 
-func localStateSecurityInputLayer(storageSessions sessionStorage, tr *transport, message *CoAPMessage, proxyAddr string) (isContinue bool, err error) {
+func localStateSecurityInputLayer(tr *transport, message *CoAPMessage, proxyAddr string) (isContinue bool, err error) {
 	if len(proxyAddr) > 0 {
 		proxyID, ok := getProxyIDIfNeed(proxyAddr)
 		if ok {
@@ -55,7 +53,7 @@ func localStateSecurityInputLayer(storageSessions sessionStorage, tr *transport,
 		}
 	}
 
-	if ok, err := receiveHandshake(storageSessions, tr, tr.privateKey, message, proxyAddr); !ok {
+	if ok, err := receiveHandshake(tr, tr.privateKey, message, proxyAddr); !ok {
 		return false, err
 	}
 
@@ -65,13 +63,13 @@ func localStateSecurityInputLayer(storageSessions sessionStorage, tr *transport,
 
 		addressSession = message.Sender.String()
 
-		currentSession, ok := getSessionForAddress(storageSessions, tr, tr.conn.LocalAddr().String(), addressSession, proxyAddr)
+		currentSession, ok := getSessionForAddress(tr, tr.conn.LocalAddr().String(), addressSession, proxyAddr)
 
 		if !ok {
 			responseMessage := NewCoAPMessageId(ACK, CoapCodeUnauthorized, message.MessageID)
 			responseMessage.AddOption(OptionSessionNotFound, 1)
 			responseMessage.Token = message.Token
-			tr.SendTo(storageSessions, responseMessage, message.Sender)
+			tr.SendTo(responseMessage, message.Sender)
 			return false, ErrorSessionNotFound
 		}
 
@@ -81,7 +79,7 @@ func localStateSecurityInputLayer(storageSessions sessionStorage, tr *transport,
 			responseMessage := NewCoAPMessageId(ACK, CoapCodeUnauthorized, message.MessageID)
 			responseMessage.AddOption(OptionSessionExpired, 1)
 			responseMessage.Token = message.Token
-			tr.SendTo(storageSessions, responseMessage, message.Sender)
+			tr.SendTo(responseMessage, message.Sender)
 			return false, ErrorSessionExpired
 		}
 
@@ -93,11 +91,11 @@ func localStateSecurityInputLayer(storageSessions sessionStorage, tr *transport,
 	sessionExpired := message.GetOption(OptionSessionExpired)
 	if message.Code == CoapCodeUnauthorized {
 		if sessionNotFound != nil {
-			deleteSessionForAddress(storageSessions, tr.conn.LocalAddr().String(), message.Sender.String(), proxyAddr)
+			deleteSessionForAddress(tr.conn.LocalAddr().String(), message.Sender.String(), proxyAddr)
 			return false, ErrorSessionNotFound
 		}
 		if sessionExpired != nil {
-			deleteSessionForAddress(storageSessions, tr.conn.LocalAddr().String(), message.Sender.String(), proxyAddr)
+			deleteSessionForAddress(tr.conn.LocalAddr().String(), message.Sender.String(), proxyAddr)
 			return false, ErrorSessionExpired
 		}
 	}
@@ -109,7 +107,7 @@ func localStateMessageHandlerSelector(
 	sr *transport,
 	totalBlocks int,
 	buffer map[int][]byte,
-	storageSessions sessionStorage,
+
 	message *CoAPMessage,
 	respHandler func(*CoAPMessage, error),
 ) (
@@ -124,7 +122,7 @@ func localStateMessageHandlerSelector(
 				ok  bool
 				err error
 			)
-			ok, totalBlocks, buffer, message, err = localStateReceiveARQBlock1(sr, totalBlocks, buffer, storageSessions, message)
+			ok, totalBlocks, buffer, message, err = localStateReceiveARQBlock1(sr, totalBlocks, buffer, message)
 			if ok {
 				go respHandler(message, err)
 			}
@@ -147,7 +145,7 @@ func localStateMessageHandlerSelector(
 	return totalBlocks, buffer
 }
 
-func localStateReceiveARQBlock1(sr *transport, totalBlocks int, buf map[int][]byte, storageSessions sessionStorage, inputMessage *CoAPMessage) (bool, int, map[int][]byte, *CoAPMessage, error) {
+func localStateReceiveARQBlock1(sr *transport, totalBlocks int, buf map[int][]byte, inputMessage *CoAPMessage) (bool, int, map[int][]byte, *CoAPMessage, error) {
 	block := inputMessage.GetBlock1()
 	if block == nil || inputMessage.Type != CON {
 		return false, totalBlocks, buf, inputMessage, nil
@@ -175,7 +173,7 @@ func localStateReceiveARQBlock1(sr *transport, totalBlocks int, buf map[int][]by
 		ack = ackTo(nil, inputMessage, CoapCodeContinue)
 	}
 
-	if err := sr.sendToSocketByAddress(storageSessions, ack, inputMessage.Sender); err != nil {
+	if err := sr.sendToSocketByAddress(ack, inputMessage.Sender); err != nil {
 		return false, totalBlocks, buf, inputMessage, err
 	}
 

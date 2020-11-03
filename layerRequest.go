@@ -1,30 +1,30 @@
 package coalago
 
-func requestOnReceive(resource *CoAPResource, storageSessions sessionStorage, sr *transport, message *CoAPMessage) bool {
+func requestOnReceive(resource *CoAPResource, sr *transport, message *CoAPMessage) bool {
 	if message.Code < 0 || message.Code > 4 {
 		return true
 	}
 
 	if isPing(message) {
-		return returnPing(storageSessions, sr, message)
+		return returnPing(sr, message)
 	}
 
 	if resource == nil {
 		if message.Type == CON {
-			return noResource(storageSessions, sr, message)
+			return noResource(sr, message)
 		}
 		return false
 	}
 
 	if resource.Method != message.GetMethod() {
-		return methodNotAllowed(storageSessions, sr, message)
+		return methodNotAllowed(sr, message)
 	}
 
 	if handlerResult := resource.Handler(message); handlerResult != nil {
 		if message.Type == NON {
 			return false
 		}
-		return returnResultFromResource(storageSessions, sr, message, handlerResult)
+		return returnResultFromResource(sr, message, handlerResult)
 	}
 
 	if message.Type == CON {
@@ -38,27 +38,27 @@ func isPing(message *CoAPMessage) bool {
 	return message.Type == CON && message.Code == CoapCodeEmpty
 }
 
-func returnPing(storageSessions sessionStorage, sr *transport, message *CoAPMessage) bool {
+func returnPing(sr *transport, message *CoAPMessage) bool {
 	resp := NewCoAPMessage(RST, CoapCodeEmpty)
 	resp.MessageID = message.MessageID
 	copy(resp.Token, message.Token)
-	_, err := sr.SendTo(storageSessions, resp, message.Sender)
+	_, err := sr.SendTo(resp, message.Sender)
 
 	return err != nil
 }
 
-func methodNotAllowed(storageSessions sessionStorage, sr *transport, message *CoAPMessage) bool {
+func methodNotAllowed(sr *transport, message *CoAPMessage) bool {
 	responseMessage := NewCoAPMessageId(ACK, CoapCodeMethodNotAllowed, message.MessageID)
 	responseMessage.Payload = NewStringPayload("Method is not allowed for requested resource")
 	if message.Token != nil && len(message.Token) > 0 {
 		responseMessage.Token = message.Token
 	}
 	responseMessage.CloneOptions(message, OptionBlock1, OptionBlock2, OptionProxySecurityID)
-	sr.SendTo(storageSessions, responseMessage, message.Sender)
+	sr.SendTo(responseMessage, message.Sender)
 	return false
 }
 
-func returnResultFromResource(storageSessions sessionStorage, sr *transport, message *CoAPMessage, handlerResult *CoAPResourceHandlerResult) bool {
+func returnResultFromResource(sr *transport, message *CoAPMessage, handlerResult *CoAPResourceHandlerResult) bool {
 	// @TODO: Validate Response code! handlerResult.Code
 
 	// Create ACK response with the same ID and given reponse Code
@@ -84,7 +84,7 @@ func returnResultFromResource(storageSessions sessionStorage, sr *transport, mes
 	}
 	responseMessage.CloneOptions(message, OptionBlock1, OptionBlock2, OptionSelectiveRepeatWindowSize, OptionProxySecurityID)
 
-	_, err := sr.SendTo(storageSessions, responseMessage, message.Sender)
+	_, err := sr.SendTo(responseMessage, message.Sender)
 	return err != nil
 }
 
@@ -101,7 +101,7 @@ func noResultResourceHandler(sr *transport, message *CoAPMessage) bool {
 	return false
 }
 
-func noResource(storageSessions sessionStorage, sr *transport, message *CoAPMessage) bool {
+func noResource(sr *transport, message *CoAPMessage) bool {
 	responseMessage := NewCoAPMessageId(ACK, CoapCodeNotFound, message.MessageID)
 	responseMessage.Payload = NewStringPayload("Requested resource " + message.GetURIPath() + " does not exist")
 	if message.Token != nil && len(message.Token) > 0 {
@@ -110,6 +110,6 @@ func noResource(storageSessions sessionStorage, sr *transport, message *CoAPMess
 	responseMessage.CloneOptions(message, OptionBlock1, OptionBlock2, OptionProxySecurityID)
 	responseMessage.Recipient = message.Sender
 
-	_, err := sr.SendTo(storageSessions, responseMessage, message.Sender)
+	_, err := sr.SendTo(responseMessage, message.Sender)
 	return err != nil
 }

@@ -56,7 +56,7 @@ func (c *Client) Send(message *CoAPMessage, addr string, options ...*CoAPMessage
 	sr := newtransport(conn)
 	sr.privateKey = c.privateKey
 
-	resp, err := sr.Send(globalSessions, message)
+	resp, err := sr.Send(message)
 	if err != nil {
 		return nil, err
 	}
@@ -114,7 +114,7 @@ func clientSendCON(message *CoAPMessage, privateKey []byte, addr string) (resp *
 	sr := newtransport(conn)
 	sr.privateKey = privateKey
 
-	return sr.Send(globalSessions, message)
+	return sr.Send(message)
 }
 
 func constructMessage(code CoapCode, url string) (*CoAPMessage, error) {
