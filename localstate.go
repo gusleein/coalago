@@ -27,6 +27,8 @@ func MakeLocalStateFn(r Resourcer, tr *transport, respHandler func(*CoAPMessage,
 			return
 		}
 
+		MetricReceivedMessages.Inc()
+
 		respHandler = func(message *CoAPMessage, err error) {
 			if atomic.LoadInt32(&runnedHandler) == 1 {
 				return
