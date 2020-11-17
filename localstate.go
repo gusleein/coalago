@@ -23,7 +23,7 @@ func MakeLocalStateFn(r Resourcer, tr *transport, respHandler func(*CoAPMessage,
 		mx.Lock()
 		defer mx.Unlock()
 
-		if _, err := localStateSecurityInputLayer(tr, message, ""); err != nil {
+		if next, err := localStateSecurityInputLayer(tr, message, ""); err != nil || !next {
 			return
 		}
 

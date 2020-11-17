@@ -154,7 +154,7 @@ func receiveHandshake(tr *transport, privatekey []byte, message *CoAPMessage, pr
 
 	value := option.IntValue()
 	if value != CoapHandshakeTypeClientSignature && value != CoapHandshakeTypeClientHello {
-		return true, nil
+		return false, nil
 	}
 
 	peerSession, ok := getSessionForAddress(tr, tr.conn.LocalAddr().String(), message.Sender.String(), proxyAddr)
