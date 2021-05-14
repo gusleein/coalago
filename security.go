@@ -118,6 +118,7 @@ func securityInputLayer(tr *transport, message *CoAPMessage, proxyAddr string) (
 		// Decrypt message payload
 		err := decrypt(message, currentSession.AEAD)
 		if err != nil {
+			deleteSessionForAddress(tr.conn.LocalAddr().String(), addressSession, proxyAddr)
 			responseMessage := NewCoAPMessageId(ACK, CoapCodeUnauthorized, message.MessageID)
 			responseMessage.AddOption(OptionSessionExpired, 1)
 			responseMessage.Token = message.Token
