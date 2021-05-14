@@ -31,7 +31,7 @@ func securityOutputLayer(tr *transport, message *CoAPMessage, addr net.Addr) err
 
 	currentSession, ok := getSessionForAddress(tr, tr.conn.LocalAddr().String(), addr.String(), proxyAddr)
 	if !ok {
-		return ErrorSessionNotFound
+		return ErrorClientSessionNotFound
 	}
 
 	if err := encrypt(message, addr, currentSession.AEAD); err != nil {
@@ -80,9 +80,11 @@ func deleteSessionForAddress(senderAddr, receiverAddr, proxyAddr string) {
 }
 
 var (
-	ErrorSessionNotFound error = errors.New("session not found")
-	ErrorSessionExpired  error = errors.New("session expired")
-	ErrorHandshake       error = errors.New("error handshake")
+	ErrorSessionNotFound       error = errors.New("session not found")
+	ErrorClientSessionNotFound error = errors.New("client session not found")
+	ErrorSessionExpired        error = errors.New("session expired")
+	ErrorClientSessionExpired  error = errors.New("client session expired")
+	ErrorHandshake             error = errors.New("error handshake")
 )
 
 func securityInputLayer(tr *transport, message *CoAPMessage, proxyAddr string) (isContinue bool, err error) {
@@ -110,7 +112,7 @@ func securityInputLayer(tr *transport, message *CoAPMessage, proxyAddr string) (
 			responseMessage.AddOption(OptionSessionNotFound, 1)
 			responseMessage.Token = message.Token
 			tr.SendTo(responseMessage, message.Sender)
-			return false, ErrorSessionNotFound
+			return false, ErrorClientSessionNotFound
 		}
 
 		// Decrypt message payload
@@ -120,7 +122,7 @@ func securityInputLayer(tr *transport, message *CoAPMessage, proxyAddr string) (
 			responseMessage.AddOption(OptionSessionExpired, 1)
 			responseMessage.Token = message.Token
 			tr.SendTo(responseMessage, message.Sender)
-			return false, ErrorSessionExpired
+			return false, ErrorClientSessionExpired
 		}
 
 		message.PeerPublicKey = currentSession.PeerPublicKey

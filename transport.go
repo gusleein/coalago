@@ -55,7 +55,8 @@ func (sr *transport) Send(message *CoAPMessage) (resp *CoAPMessage, err error) {
 		}
 
 		resp, err := sr.sendCON(message)
-		if err == ErrorSessionExpired || err == ErrorSessionNotFound {
+		if err == ErrorSessionExpired || err == ErrorSessionNotFound ||
+			err == ErrorClientSessionExpired || err == ErrorClientSessionNotFound {
 			if message.GetScheme() == COAPS_SCHEME {
 				proxyAddr := message.ProxyAddr
 				if len(proxyAddr) > 0 {

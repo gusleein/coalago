@@ -61,9 +61,7 @@ func localStateSecurityInputLayer(tr *transport, message *CoAPMessage, proxyAddr
 
 	// Check if the message has coaps:// scheme and requires a new Session
 	if message.GetScheme() == COAPS_SCHEME {
-		var addressSession string
-
-		addressSession = message.Sender.String()
+		addressSession := message.Sender.String()
 
 		currentSession, ok := getSessionForAddress(tr, tr.conn.LocalAddr().String(), addressSession, proxyAddr)
 
@@ -72,7 +70,7 @@ func localStateSecurityInputLayer(tr *transport, message *CoAPMessage, proxyAddr
 			responseMessage.AddOption(OptionSessionNotFound, 1)
 			responseMessage.Token = message.Token
 			tr.SendTo(responseMessage, message.Sender)
-			return false, ErrorSessionNotFound
+			return false, ErrorClientSessionNotFound
 		}
 
 		// Decrypt message payload
@@ -82,7 +80,7 @@ func localStateSecurityInputLayer(tr *transport, message *CoAPMessage, proxyAddr
 			responseMessage.AddOption(OptionSessionExpired, 1)
 			responseMessage.Token = message.Token
 			tr.SendTo(responseMessage, message.Sender)
-			return false, ErrorSessionExpired
+			return false, ErrorClientSessionExpired
 		}
 
 		message.PeerPublicKey = currentSession.PeerPublicKey
