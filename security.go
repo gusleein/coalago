@@ -19,11 +19,11 @@ func securityOutputLayer(tr *transport, message *CoAPMessage, addr net.Addr) err
 		return nil
 	}
 
-	setProxyIDIfNeed(message)
+	setProxyIDIfNeed(message, tr.conn.LocalAddr().String())
 
 	proxyAddr := message.ProxyAddr
 	if len(proxyAddr) > 0 {
-		proxyID, ok := getProxyIDIfNeed(proxyAddr)
+		proxyID, ok := getProxyIDIfNeed(proxyAddr, tr.conn.LocalAddr().String())
 		if ok {
 			proxyAddr = fmt.Sprintf("%v%v", proxyAddr, proxyID)
 		}
@@ -40,12 +40,12 @@ func securityOutputLayer(tr *transport, message *CoAPMessage, addr net.Addr) err
 	return nil
 }
 
-func setProxyIDIfNeed(message *CoAPMessage) uint32 {
+func setProxyIDIfNeed(message *CoAPMessage, senderAddr string) uint32 {
 	if message.GetOption(OptionProxyURI) != nil {
-		v, ok := proxyIDSessions.Load(message.ProxyAddr)
+		v, ok := proxyIDSessions.Load(message.ProxyAddr + senderAddr)
 		if !ok {
 			v = rand.Uint32()
-			proxyIDSessions.Store(message.ProxyAddr, v)
+			proxyIDSessions.Store(message.ProxyAddr+senderAddr, v)
 		}
 		message.AddOption(OptionProxySecurityID, v)
 		return v.(uint32)
@@ -53,8 +53,8 @@ func setProxyIDIfNeed(message *CoAPMessage) uint32 {
 	return 0
 }
 
-func getProxyIDIfNeed(proxyAddr string) (uint32, bool) {
-	v, ok := proxyIDSessions.Load(proxyAddr)
+func getProxyIDIfNeed(proxyAddr string, senderAddr string) (uint32, bool) {
+	v, ok := proxyIDSessions.Load(proxyAddr + senderAddr)
 	if ok {
 		return v.(uint32), ok
 	}
@@ -89,7 +89,7 @@ var (
 
 func securityInputLayer(tr *transport, message *CoAPMessage, proxyAddr string) (isContinue bool, err error) {
 	if len(proxyAddr) > 0 {
-		proxyID, ok := getProxyIDIfNeed(proxyAddr)
+		proxyID, ok := getProxyIDIfNeed(proxyAddr, tr.conn.LocalAddr().String())
 		if ok {
 			proxyAddr = fmt.Sprintf("%v%v", proxyAddr, proxyID)
 		}
@@ -162,13 +162,14 @@ func receiveHandshake(tr *transport, privatekey []byte, message *CoAPMessage, pr
 
 	peerSession, ok := getSessionForAddress(tr, tr.conn.LocalAddr().String(), message.Sender.String(), proxyAddr)
 	if !ok {
-		peerSession, err = session.NewSecuredSession(tr.privateKey)
+		if peerSession, err = session.NewSecuredSession(tr.privateKey); err != nil {
+			return false, ErrorHandshake
+		}
 	}
 	if value == CoapHandshakeTypeClientHello && message.Payload != nil {
 		peerSession.PeerPublicKey = message.Payload.Bytes()
 
-		err := incomingHandshake(tr, peerSession.Curve.GetPublicKey(), message)
-		if err != nil {
+		if err := incomingHandshake(tr, peerSession.Curve.GetPublicKey(), message); err != nil {
 			return false, ErrorHandshake
 		}
 		if signature, err := peerSession.GetSignature(); err == nil {
@@ -193,36 +194,38 @@ const (
 
 func handshake(tr *transport, message *CoAPMessage, address net.Addr, proxyAddr string) (session.SecuredSession, error) {
 	ses, ok := getSessionForAddress(tr, tr.conn.LocalAddr().String(), address.String(), proxyAddr)
-	var err error
-	if !ok {
-		ses, err = session.NewSecuredSession(tr.privateKey)
-		if err != nil {
-			return session.SecuredSession{}, err
-		}
+	if ok {
+		return ses, nil
 
-		// Sending my Public Key.
-		// Receiving Peer's Public Key as a Response!
-		peerPublicKey, err := sendHelloFromClient(tr, message, ses.Curve.GetPublicKey(), address)
-		if err != nil {
-			return session.SecuredSession{}, err
-		}
-
-		// assign new value
-		ses.PeerPublicKey = peerPublicKey
-
-		signature, err := ses.GetSignature()
-		if err != nil {
-			return session.SecuredSession{}, err
-		}
-
-		err = ses.Verify(signature)
-		if err != nil {
-			return session.SecuredSession{}, err
-		}
-
-		globalSessions.Set(tr.conn.LocalAddr().String(), address.String(), proxyAddr, ses)
-		MetricSuccessfulHandhshakes.Inc()
 	}
+
+	ses, err := session.NewSecuredSession(tr.privateKey)
+	if err != nil {
+		return session.SecuredSession{}, err
+	}
+
+	// Sending my Public Key.
+	// Receiving Peer's Public Key as a Response!
+	peerPublicKey, err := sendHelloFromClient(tr, message, ses.Curve.GetPublicKey(), address)
+	if err != nil {
+		return session.SecuredSession{}, err
+	}
+
+	// assign new value
+	ses.PeerPublicKey = peerPublicKey
+
+	signature, err := ses.GetSignature()
+	if err != nil {
+		return session.SecuredSession{}, err
+	}
+
+	err = ses.Verify(signature)
+	if err != nil {
+		return session.SecuredSession{}, err
+	}
+
+	globalSessions.Set(tr.conn.LocalAddr().String(), address.String(), proxyAddr, ses)
+	MetricSuccessfulHandhshakes.Inc()
 
 	return ses, nil
 }

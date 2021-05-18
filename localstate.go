@@ -49,7 +49,7 @@ func MakeLocalStateFn(r Resourcer, tr *transport, respHandler func(*CoAPMessage,
 
 func localStateSecurityInputLayer(tr *transport, message *CoAPMessage, proxyAddr string) (isContinue bool, err error) {
 	if len(proxyAddr) > 0 {
-		proxyID, ok := getProxyIDIfNeed(proxyAddr)
+		proxyID, ok := getProxyIDIfNeed(proxyAddr, tr.conn.LocalAddr().String())
 		if ok {
 			proxyAddr = fmt.Sprintf("%v%v", proxyAddr, proxyID)
 		}
