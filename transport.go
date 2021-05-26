@@ -16,7 +16,7 @@ var (
 	ErrUnsupportedType = errors.New("unsupported type of message")
 	globalSessions     = newSessionStorageImpl()
 	handlersStateCache = cache.New(sumTimeAttempts, time.Second)
-	proxyIDSessions    sync.Map
+	proxyIDSessions    = newProxySessionStorage()
 )
 
 type transport struct {

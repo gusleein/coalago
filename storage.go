@@ -1,8 +1,6 @@
 package coalago
 
 import (
-	"sync"
-	"sync/atomic"
 	"time"
 
 	"github.com/coalalib/coalago/session"
@@ -56,46 +54,30 @@ func (s *sessionStorageImpl) ItemCount() int {
 	return s.storage.ItemCount()
 }
 
-// For local state
-
-type localStateSessionStorageImpl struct {
-	count   int32
-	storage sync.Map
+type proxySessionStorage struct {
+	storage *cache.Cache
 }
 
-func newLocalStateSessionStorageImpl() *localStateSessionStorageImpl {
-	s := new(localStateSessionStorageImpl)
+func newProxySessionStorage() *proxySessionStorage {
+	s := new(proxySessionStorage)
+	s.storage = cache.New(time.Minute, time.Second*1)
+
 	return s
 }
 
-func (s *localStateSessionStorageImpl) Set(sender string, receiver string, proxy string, sess session.SecuredSession) {
-	if len(proxy) != 0 {
-		sender = ""
-	}
-	atomic.AddInt32(&s.count, 1)
-	s.storage.Store(sender+receiver+proxy, sess)
+func (s *proxySessionStorage) Set(key string, value interface{}) {
+	s.storage.SetDefault(key, value)
 }
 
-func (s *localStateSessionStorageImpl) Get(sender string, receiver string, proxy string) (session.SecuredSession, bool) {
-	if len(proxy) != 0 {
-		sender = ""
-	}
-	v, ok := s.storage.Load(sender + receiver + proxy)
+func (s *proxySessionStorage) Get(key string) (interface{}, bool) {
+
+	v, ok := s.storage.Get(key)
 	if ok {
-		return v.(session.SecuredSession), true
+		return v, true
 	}
-	return session.SecuredSession{}, false
+	return "", false
 }
 
-func (s *localStateSessionStorageImpl) Delete(sender string, receiver string, proxy string) {
-	if len(proxy) != 0 {
-		sender = ""
-	}
-	atomic.AddInt32(&s.count, -1)
-	s.storage.Delete(sender + receiver + proxy)
-}
-
-func (s *localStateSessionStorageImpl) ItemCount() int {
-	v := atomic.LoadInt32(&s.count)
-	return int(v)
+func (s *proxySessionStorage) Delete(key string) {
+	s.storage.Delete(key)
 }

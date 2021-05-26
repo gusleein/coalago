@@ -42,10 +42,10 @@ func securityOutputLayer(tr *transport, message *CoAPMessage, addr net.Addr) err
 
 func setProxyIDIfNeed(message *CoAPMessage, senderAddr string) uint32 {
 	if message.GetOption(OptionProxyURI) != nil {
-		v, ok := proxyIDSessions.Load(message.ProxyAddr + senderAddr)
+		v, ok := proxyIDSessions.Get(message.ProxyAddr + senderAddr)
 		if !ok {
 			v = rand.Uint32()
-			proxyIDSessions.Store(message.ProxyAddr+senderAddr, v)
+			proxyIDSessions.Set(message.ProxyAddr+senderAddr, v)
 		}
 		message.AddOption(OptionProxySecurityID, v)
 		return v.(uint32)
@@ -54,7 +54,7 @@ func setProxyIDIfNeed(message *CoAPMessage, senderAddr string) uint32 {
 }
 
 func getProxyIDIfNeed(proxyAddr string, senderAddr string) (uint32, bool) {
-	v, ok := proxyIDSessions.Load(proxyAddr + senderAddr)
+	v, ok := proxyIDSessions.Get(proxyAddr + senderAddr)
 	if ok {
 		return v.(uint32), ok
 	}
