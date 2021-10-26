@@ -51,7 +51,11 @@ func (s *Server) Listen(addr string) (err error) {
 		if err != nil {
 			panic(err)
 		}
-		if n == 0 || n > MTU {
+		if n == 0 {
+			goto start
+		}
+		if n > MTU {
+			MetricMaxMTU.Inc()
 			goto start
 		}
 
