@@ -4,6 +4,7 @@ import "sync/atomic"
 
 var (
 	MetricReceivedMessages,
+	MetricBreakedMessages,
 	MetricSentMessages,
 	MetricRetransmitMessages,
 	MetricExpiredMessages,

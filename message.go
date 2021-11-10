@@ -64,14 +64,13 @@ func Deserialize(data []byte) (*CoAPMessage, error) {
 	if m == nil && err == nil {
 		return nil, ErrNilMessage
 	}
+	if err != nil {
+		MetricBreakedMessages.Inc()
+	}
 	return m, err
 }
 
 func deserialize(data []byte) (*CoAPMessage, error) {
-	defer func() {
-		recover()
-	}()
-
 	msg := &CoAPMessage{}
 
 	dataLen := len(data)
