@@ -74,7 +74,7 @@ func deserialize(data []byte) (*CoAPMessage, error) {
 	msg := &CoAPMessage{}
 
 	dataLen := len(data)
-	if dataLen < 4 {
+	if dataLen < 12 {
 		return msg, ErrPacketLengthLessThan4
 	}
 
