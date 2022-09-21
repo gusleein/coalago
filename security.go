@@ -11,7 +11,7 @@ import (
 )
 
 var (
-	SESSIONS_POOL_EXPIRATION = time.Second * 30
+	SESSIONS_POOL_EXPIRATION = time.Second * 60 * 2
 )
 
 func securityOutputLayer(tr *transport, message *CoAPMessage, addr net.Addr) error {
