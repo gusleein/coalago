@@ -10,10 +10,6 @@ import (
 	"github.com/coalalib/coalago/session"
 )
 
-var (
-	SESSIONS_POOL_EXPIRATION = time.Second * 60 * 2
-)
-
 func securityOutputLayer(tr *transport, message *CoAPMessage, addr net.Addr) error {
 	if message.GetScheme() != COAPS_SCHEME {
 		return nil
@@ -78,14 +74,6 @@ func setSessionForAddress(privatekey []byte, securedSession session.SecuredSessi
 func deleteSessionForAddress(senderAddr, receiverAddr, proxyAddr string) {
 	globalSessions.Delete(senderAddr, receiverAddr, proxyAddr)
 }
-
-var (
-	ErrorSessionNotFound       error = errors.New("session not found")
-	ErrorClientSessionNotFound error = errors.New("client session not found")
-	ErrorSessionExpired        error = errors.New("session expired")
-	ErrorClientSessionExpired  error = errors.New("client session expired")
-	ErrorHandshake             error = errors.New("error handshake")
-)
 
 func securityInputLayer(tr *transport, message *CoAPMessage, proxyAddr string) (isContinue bool, err error) {
 	if len(proxyAddr) > 0 {
@@ -187,10 +175,6 @@ func receiveHandshake(tr *transport, privatekey []byte, message *CoAPMessage, pr
 
 	return false, ErrorHandshake
 }
-
-const (
-	ERR_KEYS_NOT_MATCH = "Expected and current public keys do not match"
-)
 
 func handshake(tr *transport, message *CoAPMessage, address net.Addr, proxyAddr string) (session.SecuredSession, error) {
 	ses, ok := getSessionForAddress(tr, tr.conn.LocalAddr().String(), address.String(), proxyAddr)

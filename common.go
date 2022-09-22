@@ -9,10 +9,6 @@ import (
 	"time"
 )
 
-const (
-	DEFAULT_WINDOW_SIZE = 70
-)
-
 // GenerateMessageId generate a uint16 Message ID
 var currentMessageID int32
 

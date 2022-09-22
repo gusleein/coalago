@@ -1,15 +1,8 @@
 package coalago
 
 import (
-	"errors"
 	"net"
 	"net/url"
-)
-
-var (
-	ErrUndefinedScheme = errors.New("undefined scheme")
-	ErrMaxAttempts     = errors.New("max attempts")
-	MAX_PAYLOAD_SIZE   = 1024
 )
 
 type Response struct {
