@@ -117,10 +117,6 @@ type packet struct {
 	response *CoAPMessage
 }
 
-const (
-	MTU = 1500
-)
-
 func receiveMessage(tr *transport, origMessage *CoAPMessage) (*CoAPMessage, error) {
 	for {
 		tr.conn.SetReadDeadline()

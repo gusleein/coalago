@@ -271,4 +271,19 @@ var (
 	ErrNilConn                       = errors.New("Connection object is nil")
 	ErrNilAddr                       = errors.New("Address cannot be nil")
 	ErrOptionLenghtOutOfRangePackets = errors.New("Option lenght out of range packet")
+	ErrUndefinedScheme               = errors.New("undefined scheme")
+	ErrMaxAttempts                   = errors.New("max attempts")
+	ErrorSessionNotFound             = errors.New("session not found")
+	ErrorClientSessionNotFound       = errors.New("client session not found")
+	ErrorSessionExpired              = errors.New("session expired")
+	ErrorClientSessionExpired        = errors.New("client session expired")
+	ErrorHandshake                   = errors.New("error handshake")
+	ERR_KEYS_NOT_MATCH               = "Expected and current public keys do not match"
+)
+
+const (
+	SESSIONS_POOL_EXPIRATION = time.Second * 30
+	MAX_PAYLOAD_SIZE         = 1024
+	DEFAULT_WINDOW_SIZE      = 70
+	MTU                      = 1500
 )
