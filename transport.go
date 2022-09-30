@@ -332,9 +332,9 @@ func (sr *transport) sendPacketsToAddr(packets []*packet, windowsize int, shift 
 	}
 
 	var acked int
-	for i := shift; i < stop; i++ {
+	for i := 0; i < stop; i++ {
 		if !packets[i].acked {
-			if time.Since(packets[i].lastSend) >= time.Millisecond*300 {
+			if time.Since(packets[i].lastSend) >= timeWait {
 				if packets[i].attempts == maxSendAttempts {
 					MetricExpiredMessages.Inc()
 					return ErrMaxAttempts
@@ -519,7 +519,7 @@ func (sr *transport) sendARQBlock2ACK(input chan *CoAPMessage, message *CoAPMess
 					}
 				}
 			}
-		case <-time.After(timeWait / 5):
+		case <-time.After(sumTimeAttempts):
 			if err := sr.sendPacketsToAddr(packets, state.windowsize, shift, addr); err != nil {
 				return err
 			}
