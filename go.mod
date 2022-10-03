@@ -1,6 +1,6 @@
 module github.com/coalalib/coalago
 
-go 1.18
+go 1.14
 
 require (
 	github.com/lucas-clemente/aes12 v0.0.0-20171027163421-cd47fb39b79f
