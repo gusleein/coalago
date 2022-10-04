@@ -320,28 +320,26 @@ func (sr *transport) sendPacketsByWindowOffsetToAddr(packets []*packet, windowsi
 	return nil
 }
 
-func (sr *transport) sendPacketsToAddr(packets []*packet, windowsize int, shift int, addr net.Addr) error {
-	stop := shift + windowsize
+func (sr *transport) sendPacketsToAddr(packets []*packet, windowsize int, shift int, relative_shift int, addr net.Addr) error {
+	stop := relative_shift + windowsize
 	if stop >= len(packets) {
 		stop = len(packets)
 	}
-	//println(fmt.Sprintf("%d : %d", shift, stop))
 	// need a more elegant solution
 	if shift == len(packets) {
 		return ErrMaxAttempts
 	}
 
 	var acked int
-	for i := 0; i < stop; i++ {
+	for i := shift; i < stop; i++ {
 		if !packets[i].acked {
-			if time.Since(packets[i].lastSend) >= time.Millisecond*250 {
+			if time.Since(packets[i].lastSend) >= time.Millisecond*500 {
 				if packets[i].attempts == maxSendAttempts {
 					MetricExpiredMessages.Inc()
 					return ErrMaxAttempts
 				}
 				packets[i].attempts++
 				packets[i].lastSend = time.Now()
-				//println(fmt.Sprintf("send : %d", i))
 				if err := sr.sendToSocketByAddress(packets[i].message, addr); err != nil {
 					return err
 				}
@@ -475,8 +473,9 @@ func (sr *transport) sendARQBlock2ACK(input chan *CoAPMessage, message *CoAPMess
 	}
 
 	var shift = 0
+	var relative_shift = 0
 
-	if err := sr.sendPacketsToAddr(packets, state.windowsize, shift, addr); err != nil {
+	if err := sr.sendPacketsToAddr(packets, state.windowsize, shift, relative_shift, addr); err != nil {
 		return err
 	}
 
@@ -503,18 +502,18 @@ func (sr *transport) sendARQBlock2ACK(input chan *CoAPMessage, message *CoAPMess
 							// }
 
 							packets[block.BlockNumber].acked = true
-							/*if block.BlockNumber == shift {
-							shift++
-							for _, p := range packets[shift:] {
-								if p.acked {
-									shift++
-								} else {
-									break
+							relative_shift++
+							if block.BlockNumber == shift {
+								shift++
+								for _, p := range packets[shift:] {
+									if p.acked {
+										shift++
+									} else {
+										break
+									}
 								}
 							}
-							*/
-							shift++
-							if err := sr.sendPacketsToAddr(packets, state.windowsize, shift, addr); err != nil {
+							if err := sr.sendPacketsToAddr(packets, state.windowsize, shift, relative_shift, addr); err != nil {
 								return err
 							}
 						}
@@ -522,9 +521,9 @@ func (sr *transport) sendARQBlock2ACK(input chan *CoAPMessage, message *CoAPMess
 				}
 			}
 
-		case <-time.After(time.Millisecond * 200):
+		case <-time.After(time.Millisecond * 500):
 			println("attempt")
-			if err := sr.sendPacketsToAddr(packets, state.windowsize, shift, addr); err != nil {
+			if err := sr.sendPacketsToAddr(packets, state.windowsize, shift, relative_shift, addr); err != nil {
 				return err
 			}
 		}
@@ -578,6 +577,7 @@ func (sr *transport) receiveARQBlock1(input chan *CoAPMessage) (*CoAPMessage, er
 
 func (sr *transport) receiveARQBlock2(origMessage *CoAPMessage, inputMessage *CoAPMessage) (rsp *CoAPMessage, err error) {
 	buf := make(map[int][]byte)
+	sr.conn.SetUDPRecvBuf(MTU * DEFAULT_WINDOW_SIZE)
 	totalBlocks := -1
 	start := time.Now()
 	var attempts int
