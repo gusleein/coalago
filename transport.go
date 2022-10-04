@@ -214,7 +214,6 @@ func (sr *transport) sendPackets(packets []*packet, windowsize int, shift int) e
 				if err := sr.sendToSocket(packets[i].message); err != nil {
 					return err
 				}
-				time.Sleep(time.Nanosecond * 300)
 			}
 		} else {
 			acked++
@@ -326,14 +325,14 @@ func (sr *transport) sendPacketsToAddr(packets []*packet, windowsize int, shift 
 	if stop >= len(packets) {
 		stop = len(packets)
 	}
-	println(fmt.Sprintf("%d : %d", shift, stop))
+	//println(fmt.Sprintf("%d : %d", shift, stop))
 	// need a more elegant solution
 	if shift == len(packets) {
 		return ErrMaxAttempts
 	}
 
 	var acked int
-	for i := shift; i < stop; i++ {
+	for i := 0; i < stop; i++ {
 		if !packets[i].acked {
 			if time.Since(packets[i].lastSend) >= time.Millisecond*250 {
 				if packets[i].attempts == maxSendAttempts {
@@ -342,6 +341,7 @@ func (sr *transport) sendPacketsToAddr(packets []*packet, windowsize int, shift 
 				}
 				packets[i].attempts++
 				packets[i].lastSend = time.Now()
+				//println(fmt.Sprintf("send : %d", i))
 				if err := sr.sendToSocketByAddress(packets[i].message, addr); err != nil {
 					return err
 				}
@@ -493,6 +493,7 @@ func (sr *transport) sendARQBlock2ACK(input chan *CoAPMessage, message *CoAPMess
 						if resp.Code != CoapCodeContinue {
 							return nil
 						}
+						//println(block.BlockNumber)
 						if block.BlockNumber < len(packets) {
 							// wo := resp.GetOption(OptionWindowtOffset)
 							// if wo != nil {
@@ -502,25 +503,26 @@ func (sr *transport) sendARQBlock2ACK(input chan *CoAPMessage, message *CoAPMess
 							// }
 
 							packets[block.BlockNumber].acked = true
-							if block.BlockNumber == shift {
-								shift++
-								for _, p := range packets[shift:] {
-									if p.acked {
-										shift++
-									} else {
-										break
-									}
+							/*if block.BlockNumber == shift {
+							shift++
+							for _, p := range packets[shift:] {
+								if p.acked {
+									shift++
+								} else {
+									break
 								}
-
-								if err := sr.sendPacketsToAddr(packets, state.windowsize, shift, addr); err != nil {
-									return err
-								}
+							}
+							*/
+							shift++
+							if err := sr.sendPacketsToAddr(packets, state.windowsize, shift, addr); err != nil {
+								return err
 							}
 						}
 					}
 				}
 			}
-		case <-time.After(time.Millisecond * 20):
+
+		case <-time.After(time.Millisecond * 200):
 			println("attempt")
 			if err := sr.sendPacketsToAddr(packets, state.windowsize, shift, addr); err != nil {
 				return err
@@ -582,6 +584,7 @@ func (sr *transport) receiveARQBlock2(origMessage *CoAPMessage, inputMessage *Co
 
 	if inputMessage != nil {
 		block := inputMessage.GetBlock2()
+
 		if block != nil && inputMessage.Type == CON {
 			if !block.MoreBlocks {
 				totalBlocks = block.BlockNumber + 1
@@ -612,6 +615,7 @@ func (sr *transport) receiveARQBlock2(origMessage *CoAPMessage, inputMessage *Co
 
 	for {
 		inputMessage, err = receiveMessage(sr, origMessage)
+
 		if err == ErrMaxAttempts {
 			if attempts == maxSendAttempts {
 				MetricExpiredMessages.Inc()
@@ -628,6 +632,7 @@ func (sr *transport) receiveARQBlock2(origMessage *CoAPMessage, inputMessage *Co
 			MetricRetransmitMessages.Inc()
 		}
 		block := inputMessage.GetBlock2()
+		//println(block.BlockNumber)
 		if block == nil || inputMessage.Type != CON {
 			continue
 		}
@@ -647,7 +652,8 @@ func (sr *transport) receiveARQBlock2(origMessage *CoAPMessage, inputMessage *Co
 			if err = sr.sendToSocket(ack); err != nil {
 				return nil, err
 			}
-			println(fmt.Sprintf("speed = %d Mbits", 1000.0*(int64(len(b))/time.Since(start).Milliseconds())/128))
+			println(fmt.Sprintf("speed = %d Kbits", 1000.0*(int64(len(b))/time.Since(start).Milliseconds())/128))
+			println(MetricRetransmitMessages.Val())
 			return inputMessage, nil
 		}
 
