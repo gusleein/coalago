@@ -579,7 +579,7 @@ func (sr *transport) receiveARQBlock1(input chan *CoAPMessage) (*CoAPMessage, er
 
 func (sr *transport) receiveARQBlock2(origMessage *CoAPMessage, inputMessage *CoAPMessage) (rsp *CoAPMessage, err error) {
 	buf := make(map[int][]byte)
-	//println(sr.conn.SetUDPRecvBuf(MTU * DEFAULT_WINDOW_SIZE))
+
 	totalBlocks := -1
 	start := time.Now()
 	var attempts int
@@ -632,7 +632,6 @@ func (sr *transport) receiveARQBlock2(origMessage *CoAPMessage, inputMessage *Co
 			MetricRetransmitMessages.Inc()
 		}
 		block := inputMessage.GetBlock2()
-		//println(block.BlockNumber)
 		if block == nil || inputMessage.Type != CON {
 			continue
 		}
