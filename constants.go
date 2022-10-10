@@ -15,6 +15,8 @@ const (
 	SESSIONS_POOL_EXPIRATION = time.Second * 60 * 2
 	MAX_PAYLOAD_SIZE         = 1024
 	DEFAULT_WINDOW_SIZE      = 900
+	MIN_WiNDOW_SIZE          = 200
+	MAX_WINDOW_SIZE          = 1500
 	MTU                      = 1500
 )
 
