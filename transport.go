@@ -342,6 +342,7 @@ func (sr *transport) sendPacketsToAddr(packets []*packet, windowsize *int, shift
 				}
 
 				packets[i].attempts++
+
 				if packets[i].attempts > 1 && *windowsize > MIN_WiNDOW_SIZE {
 					MetricRetransmitMessages.Inc()
 					*windowsize--
@@ -621,7 +622,6 @@ func (sr *transport) receiveARQBlock2(origMessage *CoAPMessage, inputMessage *Co
 			sr.sendToSocket(ack)
 		}
 	}
-
 	for {
 		inputMessage, err = receiveMessage(sr, origMessage)
 		if err == ErrMaxAttempts {
