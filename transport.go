@@ -4,12 +4,12 @@ import (
 	"bytes"
 	"errors"
 	"fmt"
+	log "github.com/ndmsystems/logger"
+	"github.com/patrickmn/go-cache"
 	"math"
 	"net"
 	"sync"
 	"time"
-
-	"github.com/patrickmn/go-cache"
 )
 
 var (
@@ -192,21 +192,22 @@ func (sr *transport) sendToSocketByAddress(message *CoAPMessage, addr net.Addr) 
 	return err
 }
 
-func (sr *transport) sendPackets(packets []*packet, windowsize *int, shift int, relative_shift int) error {
+func (sr *transport) sendPackets(packets []*packet, windowsize *int, shift int, relative_shift int, localMetricsRetransmitMessages *int) error {
 	stop := relative_shift + *windowsize
 	if stop >= len(packets) {
 		stop = len(packets)
 	}
-
 	var acked int
 	for i := shift; i < stop; i++ {
 		if !packets[i].acked {
 			if time.Since(packets[i].lastSend) >= timeWait {
-				if packets[i].attempts > 0 {
+				if packets[i].attempts > 0 && *windowsize > MIN_WiNDOW_SIZE {
 					MetricRetransmitMessages.Inc()
+					*localMetricsRetransmitMessages++
 					*windowsize--
 					stop--
 				}
+
 				if packets[i].attempts == maxSendAttempts {
 					MetricExpiredMessages.Inc()
 					return ErrMaxAttempts
@@ -221,7 +222,6 @@ func (sr *transport) sendPackets(packets []*packet, windowsize *int, shift int, 
 			acked++
 		}
 	}
-
 	if len(packets) == stop {
 		if time.Since(packets[len(packets)-1].lastSend) >= timeWait {
 			MetricExpiredMessages.Inc()
@@ -322,7 +322,7 @@ func (sr *transport) sendPacketsByWindowOffsetToAddr(packets []*packet, windowsi
 	return nil
 }
 
-func (sr *transport) sendPacketsToAddr(packets []*packet, windowsize *int, shift int, relative_shift int, addr net.Addr) error {
+func (sr *transport) sendPacketsToAddr(packets []*packet, windowsize *int, shift int, relative_shift int, localMetricsRetransmitMessages *int, addr net.Addr) error {
 	stop := relative_shift + *windowsize
 	if stop >= len(packets) {
 		stop = len(packets)
@@ -345,6 +345,7 @@ func (sr *transport) sendPacketsToAddr(packets []*packet, windowsize *int, shift
 
 				if packets[i].attempts > 1 && *windowsize > MIN_WiNDOW_SIZE {
 					MetricRetransmitMessages.Inc()
+					*localMetricsRetransmitMessages++
 					*windowsize--
 					stop--
 				}
@@ -390,8 +391,11 @@ func (sr *transport) sendARQBlock1CON(message *CoAPMessage) (*CoAPMessage, error
 
 	var shift = 0
 	var relative_shift = 0
+	var localMetricsRetransmitMessages = 0
+	var downloadStartTime = time.Now()
 
-	err := sr.sendPackets(packets, &state.windowsize, shift, relative_shift)
+	err := sr.sendPackets(packets, &state.windowsize, shift, relative_shift, &localMetricsRetransmitMessages)
+
 	if err != nil {
 		return nil, err
 	}
@@ -400,7 +404,7 @@ func (sr *transport) sendARQBlock1CON(message *CoAPMessage) (*CoAPMessage, error
 		resp, err := receiveMessage(sr, message)
 		if err != nil {
 			if err == ErrMaxAttempts {
-				if err = sr.sendPackets(packets, &state.windowsize, shift, relative_shift); err != nil {
+				if err = sr.sendPackets(packets, &state.windowsize, shift, relative_shift, &localMetricsRetransmitMessages); err != nil {
 					return nil, err
 				}
 				continue
@@ -425,6 +429,9 @@ func (sr *transport) sendARQBlock1CON(message *CoAPMessage) (*CoAPMessage, error
 				// }
 				if len(packets) >= block.BlockNumber {
 					if resp.Code != CoapCodeContinue {
+						log.Info(fmt.Sprintf("Download Speed : %d MBit/s, Retransmits : %d, Data size : %d bytes, PacketsCount : %d",
+							(int64(state.lenght) * time.Second.Milliseconds() / time.Since(downloadStartTime).Milliseconds() / MBIT),
+							localMetricsRetransmitMessages, state.lenght, len(packets)))
 						return resp, nil
 					}
 					packets[block.BlockNumber].acked = true
@@ -438,13 +445,12 @@ func (sr *transport) sendARQBlock1CON(message *CoAPMessage) (*CoAPMessage, error
 								break
 							}
 						}
-						if shift == relative_shift && state.windowsize < MAX_WINDOW_SIZE {
-							state.windowsize++
-						}
-						if err = sr.sendPackets(packets, &state.windowsize, shift, relative_shift); err != nil {
-							return nil, err
-						}
 					}
+
+					if err = sr.sendPackets(packets, &state.windowsize, shift, relative_shift, &localMetricsRetransmitMessages); err != nil {
+						return nil, err
+					}
+
 				}
 			}
 		}
@@ -487,8 +493,10 @@ func (sr *transport) sendARQBlock2ACK(input chan *CoAPMessage, message *CoAPMess
 
 	var shift = 0
 	var relative_shift = 0
+	var localMetricsRetransmitMessages = 0
+	downloadStartTime := time.Now()
 
-	if err := sr.sendPacketsToAddr(packets, &state.windowsize, shift, relative_shift, addr); err != nil {
+	if err := sr.sendPacketsToAddr(packets, &state.windowsize, shift, relative_shift, &localMetricsRetransmitMessages, addr); err != nil {
 		return err
 	}
 	for {
@@ -502,6 +510,9 @@ func (sr *transport) sendARQBlock2ACK(input chan *CoAPMessage, message *CoAPMess
 				if block != nil {
 					if len(packets) >= block.BlockNumber {
 						if resp.Code != CoapCodeContinue {
+							log.Info(fmt.Sprintf("Download Speed : %d MBit/s, Retransmits : %d, Data size : %d bytes, PacketsCount : %d, WindowSize : %d",
+								int64(state.lenght)*time.Second.Milliseconds()/time.Since(downloadStartTime).Milliseconds()/MBIT,
+								localMetricsRetransmitMessages, state.lenght, len(packets), state.windowsize))
 							return nil
 						}
 						if block.BlockNumber < len(packets) {
@@ -524,10 +535,7 @@ func (sr *transport) sendARQBlock2ACK(input chan *CoAPMessage, message *CoAPMess
 									}
 								}
 							}
-							if shift == relative_shift && state.windowsize < MAX_WINDOW_SIZE {
-								state.windowsize++
-							}
-							if err := sr.sendPacketsToAddr(packets, &state.windowsize, shift, relative_shift, addr); err != nil {
+							if err := sr.sendPacketsToAddr(packets, &state.windowsize, shift, relative_shift, &localMetricsRetransmitMessages, addr); err != nil {
 								return err
 							}
 						}
@@ -536,7 +544,7 @@ func (sr *transport) sendARQBlock2ACK(input chan *CoAPMessage, message *CoAPMess
 			}
 
 		case <-time.After(timeWait):
-			if err := sr.sendPacketsToAddr(packets, &state.windowsize, shift, relative_shift, addr); err != nil {
+			if err := sr.sendPacketsToAddr(packets, &state.windowsize, shift, relative_shift, &localMetricsRetransmitMessages, addr); err != nil {
 				return err
 			}
 		}
