@@ -2,11 +2,11 @@ package coalago
 
 import (
 	"fmt"
+	log "github.com/ndmsystems/logger"
+	"github.com/patrickmn/go-cache"
 	"sync"
 	"sync/atomic"
 	"time"
-
-	"github.com/patrickmn/go-cache"
 )
 
 var StorageLocalStates = cache.New(sumTimeAttempts, time.Second)
@@ -18,6 +18,7 @@ func MakeLocalStateFn(r Resourcer, tr *transport, respHandler func(*CoAPMessage,
 	var bufBlock1 = make(map[int][]byte)
 	var totalBlocks1 = -1
 	var runnedHandler int32 = 0
+	var downloadingStartTime = time.Now()
 
 	return func(message *CoAPMessage) {
 		mx.Lock()
@@ -41,6 +42,11 @@ func MakeLocalStateFn(r Resourcer, tr *transport, respHandler func(*CoAPMessage,
 
 			requestOnReceive(r.getResourceForPathAndMethod(message.GetURIPath(), message.GetMethod()), tr, message)
 			closeCallback()
+			if len(bufBlock1) > 0 {
+				log.Info(fmt.Sprintf("Download speed : %d MBits, Data size : %d",
+					int64(len(bufBlock1)*MAX_PAYLOAD_SIZE)*time.Second.Milliseconds()/time.Since(downloadingStartTime).Milliseconds()/MBIT),
+					len(bufBlock1)*MAX_PAYLOAD_SIZE)
+			}
 		}
 
 		totalBlocks1, bufBlock1 = localStateMessageHandlerSelector(tr, totalBlocks1, bufBlock1, message, respHandler)
@@ -162,7 +168,6 @@ func localStateReceiveARQBlock1(sr *transport, totalBlocks int, buf map[int][]by
 			b = append(b, buf[i]...)
 		}
 		inputMessage.Payload = NewBytesPayload(b)
-
 		return true, totalBlocks, buf, inputMessage, nil
 	}
 
