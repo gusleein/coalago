@@ -2,7 +2,7 @@ package coalago
 
 import (
 	"fmt"
-	log "github.com/ndmsystems/logger"
+	log "github.com/ndmsystems/golog"
 	"github.com/patrickmn/go-cache"
 	"sync"
 	"sync/atomic"
@@ -18,7 +18,7 @@ func MakeLocalStateFn(r Resourcer, tr *transport, respHandler func(*CoAPMessage,
 	var bufBlock1 = make(map[int][]byte)
 	var totalBlocks1 = -1
 	var runnedHandler int32 = 0
-	var downloadingStartTime = time.Now()
+	var downloadStartTime = time.Now()
 
 	return func(message *CoAPMessage) {
 		mx.Lock()
@@ -43,9 +43,9 @@ func MakeLocalStateFn(r Resourcer, tr *transport, respHandler func(*CoAPMessage,
 			requestOnReceive(r.getResourceForPathAndMethod(message.GetURIPath(), message.GetMethod()), tr, message)
 			closeCallback()
 			if len(bufBlock1) > 0 {
-				log.Info(fmt.Sprintf("Upload speed : %d MBits, Data size : %d",
-					int64(len(bufBlock1)*MAX_PAYLOAD_SIZE)*time.Second.Milliseconds()/time.Since(downloadingStartTime).Milliseconds()/MBIT,
-					len(bufBlock1)*MAX_PAYLOAD_SIZE))
+				log.Info(fmt.Sprintf("U/D: %s, %s",
+					ByteCountBinary(int64(len(bufBlock1)*MAX_PAYLOAD_SIZE)),
+					ByteCountBinaryBits(int64(len(bufBlock1)*MAX_PAYLOAD_SIZE)*time.Second.Milliseconds()/time.Since(downloadStartTime).Milliseconds())))
 			}
 		}
 
