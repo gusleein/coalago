@@ -4,7 +4,7 @@ import (
 	"bytes"
 	"errors"
 	"fmt"
-	log "github.com/ndmsystems/logger"
+	log "github.com/ndmsystems/golog"
 	"github.com/patrickmn/go-cache"
 	"math"
 	"net"
@@ -429,9 +429,12 @@ func (sr *transport) sendARQBlock1CON(message *CoAPMessage) (*CoAPMessage, error
 				// }
 				if len(packets) >= block.BlockNumber {
 					if resp.Code != CoapCodeContinue {
-						log.Info(fmt.Sprintf("Download Speed : %d MBit/s, Retransmits : %d, Data size : %d bytes, PacketsCount : %d",
-							(int64(state.lenght) * time.Second.Milliseconds() / time.Since(downloadStartTime).Milliseconds() / MBIT),
-							localMetricsRetransmitMessages, state.lenght, len(packets)))
+						log.Info(fmt.Sprintf("U/D: %s, %s, Packets: %d Lost: %d, WindowSize: %d",
+							ByteCountBinary(int64(state.lenght)),
+							ByteCountBinaryBits(int64(state.lenght)*time.Second.Milliseconds()/time.Since(downloadStartTime).Milliseconds()),
+							len(packets),
+							localMetricsRetransmitMessages,
+							state.windowsize))
 						return resp, nil
 					}
 					packets[block.BlockNumber].acked = true
@@ -510,9 +513,12 @@ func (sr *transport) sendARQBlock2ACK(input chan *CoAPMessage, message *CoAPMess
 				if block != nil {
 					if len(packets) >= block.BlockNumber {
 						if resp.Code != CoapCodeContinue {
-							log.Info(fmt.Sprintf("Download Speed : %d MBit/s, Retransmits : %d, Data size : %d bytes, PacketsCount : %d",
-								int64(state.lenght)*time.Second.Milliseconds()/time.Since(downloadStartTime).Milliseconds()/MBIT,
-								localMetricsRetransmitMessages, state.lenght, len(packets)))
+							log.Info(fmt.Sprintf("U/D: %s, %s, Packets: %d Lost: %d, WindowSize: %d",
+								ByteCountBinary(int64(state.lenght)),
+								ByteCountBinaryBits(int64(state.lenght)*time.Second.Milliseconds()/time.Since(downloadStartTime).Milliseconds()),
+								len(packets),
+								localMetricsRetransmitMessages,
+								state.windowsize))
 							return nil
 						}
 						if block.BlockNumber < len(packets) {
@@ -535,6 +541,7 @@ func (sr *transport) sendARQBlock2ACK(input chan *CoAPMessage, message *CoAPMess
 									}
 								}
 							}
+
 							if err := sr.sendPacketsToAddr(packets, &state.windowsize, shift, relative_shift, &localMetricsRetransmitMessages, addr); err != nil {
 								return err
 							}
