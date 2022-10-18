@@ -3,8 +3,8 @@ github.com/benbjohnson/clock v1.1.0/go.mod h1:J11/hYXuz8f4ySSvYwY0FKfm+ezbsZBKZx
 github.com/davecgh/go-spew v1.1.0/go.mod h1:J7Y8YcW2NihsgmVo/mv3lAwl/skON4iLHjSsI+c5H38=
 github.com/davecgh/go-spew v1.1.1 h1:vj9j/u1bqnvCEfJOwUhtlOARqs3+rkHYY13jYWTU97c=
 github.com/davecgh/go-spew v1.1.1/go.mod h1:J7Y8YcW2NihsgmVo/mv3lAwl/skON4iLHjSsI+c5H38=
-github.com/dustin/go-humanize v1.0.0 h1:VSnTsYCnlFHaM2/igO1h6X3HA71jcobQuxemgkq4zYo=
-github.com/dustin/go-humanize v1.0.0/go.mod h1:HtrtbFcZ19U5GC7JDqmcUSB87Iq5E25KnS6fMYU6eOk=
+github.com/felixge/pidctrl v0.0.0-20160307080219-7b13bcae7243 h1:QMnlBy37k7MuFqwzUQsbsALRyoKQidWlOv5zNUmqj3w=
+github.com/felixge/pidctrl v0.0.0-20160307080219-7b13bcae7243/go.mod h1:YjeiQT/MWPDtPKgk/UAVJ9ZvZLSczA9gobU202W8gPY=
 github.com/fsnotify/fsnotify v1.4.7/go.mod h1:jwhsz4b93w/PPRr/qN1Yymfu8t87LnFCMoQvtojpjFo=
 github.com/fsnotify/fsnotify v1.4.9 h1:hsms1Qyu0jgnwNXIxa+/V/PDsU6CfLf6CNO8H7IWoS4=
 github.com/fsnotify/fsnotify v1.4.9/go.mod h1:znqG4EE+3YCdAaPaxE2ZRY/06pZUdp0tY4IgpuI1SZQ=
@@ -30,8 +30,6 @@ github.com/lucas-clemente/aes12 v0.0.0-20171027163421-cd47fb39b79f h1:sSeNEkJrs+
 github.com/lucas-clemente/aes12 v0.0.0-20171027163421-cd47fb39b79f/go.mod h1:JpH9J1c9oX6otFSgdUHwUBUizmKlrMjxWnIAjff4m04=
 github.com/ndmsystems/golog v0.0.0-20221012082214-cd4daa77d67a h1:dq0NZSIg28gg1/r96Ov55lA23o9zpt6HNCz3Sk1YYe4=
 github.com/ndmsystems/golog v0.0.0-20221012082214-cd4daa77d67a/go.mod h1:HlLH6gGnsou2/PCpzCUpnTVTcpMeoiyv2fEmHLDvWTM=
-github.com/ndmsystems/logger v0.0.0-20221007121017-7f0a890a52db h1:oSG8211XGh87w4VVF2S37lCT6EE7JNNjDKXElfn8YFE=
-github.com/ndmsystems/logger v0.0.0-20221007121017-7f0a890a52db/go.mod h1:Zpv3r0x3PCydNzRIyltKMSHDsheccderc9Mzn/+gbfk=
 github.com/nxadm/tail v1.4.4 h1:DQuhQpB1tVlglWS2hLQ5OV6B5r8aGxSrPc5Qo6uTN78=
 github.com/nxadm/tail v1.4.4/go.mod h1:kenIhsEOeOJmVchQTgglprH7qJGnHDVpk1VPCcaMI8A=
 github.com/onsi/ginkgo v1.6.0/go.mod h1:lLunBs/Ym6LB5Z9jYTR76FiuTmxDTDusOGeTQH+WWjE=

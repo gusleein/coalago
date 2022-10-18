@@ -4,12 +4,28 @@ import (
 	"bytes"
 	"errors"
 	"fmt"
+	"github.com/felixge/pidctrl"
+	"github.com/go-echarts/go-echarts/v2/opts"
 	log "github.com/ndmsystems/golog"
 	"github.com/patrickmn/go-cache"
 	"math"
 	"net"
+	"os"
 	"sync"
 	"time"
+)
+
+var (
+	P float64
+	I float64
+	D float64
+)
+
+var (
+	ReturnStatus        = false
+	BytesPerSec   int64 = 0
+	BytesTotal          = 0
+	RezWindowSize       = 0
 )
 
 var (
@@ -201,15 +217,16 @@ func (sr *transport) sendPackets(packets []*packet, windowsize *int, shift int, 
 	for i := shift; i < stop; i++ {
 		if !packets[i].acked {
 			if time.Since(packets[i].lastSend) >= timeWait {
-				if packets[i].attempts > 0 && *windowsize > MIN_WiNDOW_SIZE {
+				if packets[i].attempts > 0 && *windowsize >= MIN_WiNDOW_SIZE {
 					MetricRetransmitMessages.Inc()
 					*localMetricsRetransmitMessages++
-					*windowsize--
-					stop--
+					//*windowsize--
+					//stop--
 				}
 
 				if packets[i].attempts == maxSendAttempts {
 					MetricExpiredMessages.Inc()
+					println(fmt.Sprintf("MAX SEND ATTEMTS 6, packet : %d", i))
 					return ErrMaxAttempts
 				}
 				packets[i].attempts++
@@ -217,17 +234,20 @@ func (sr *transport) sendPackets(packets []*packet, windowsize *int, shift int, 
 				if err := sr.sendToSocket(packets[i].message); err != nil {
 					return err
 				}
+
+				file.Write([]byte(fmt.Sprintf("%d:%d\n", i, packets[i].attempts)))
+				//println(fmt.Sprintf("%d : %d", i, packets[i].attempts))
 			}
 		} else {
 			acked++
 		}
 	}
-	if len(packets) == stop {
+	/*if len(packets) == stop {
 		if time.Since(packets[len(packets)-1].lastSend) >= timeWait {
 			MetricExpiredMessages.Inc()
 			return ErrMaxAttempts
 		}
-	}
+	}*/
 
 	return nil
 }
@@ -362,14 +382,23 @@ func (sr *transport) sendPacketsToAddr(packets []*packet, windowsize *int, shift
 	return nil
 }
 
+func applyStat(status bool, bytesPerSec int64, bytesTotal int, rezWindowSize int) {
+	ReturnStatus = status
+	BytesPerSec = bytesPerSec
+	BytesTotal = bytesTotal
+	RezWindowSize = rezWindowSize
+}
+
 func (sr *transport) sendARQBlock1CON(message *CoAPMessage) (*CoAPMessage, error) {
+	os.Remove("map.txt")
+	file, _ = os.OpenFile("map.txt", os.O_APPEND|os.O_WRONLY|os.O_CREATE, 0600)
 	state := new(stateSend)
 	state.payload = message.Payload.Bytes()
 	state.lenght = len(state.payload)
 	state.origMessage = message
 	state.blockSize = MAX_PAYLOAD_SIZE
 	numblocks := math.Ceil(float64(state.lenght) / float64(MAX_PAYLOAD_SIZE))
-	if numblocks < DEFAULT_WINDOW_SIZE {
+	if numblocks < float64(DEFAULT_WINDOW_SIZE) {
 		state.windowsize = int(numblocks)
 	} else {
 		state.windowsize = DEFAULT_WINDOW_SIZE
@@ -394,21 +423,42 @@ func (sr *transport) sendARQBlock1CON(message *CoAPMessage) (*CoAPMessage, error
 	var localMetricsRetransmitMessages = 0
 	var downloadStartTime = time.Now()
 
-	err := sr.sendPackets(packets, &state.windowsize, shift, relative_shift, &localMetricsRetransmitMessages)
+	pid := pidctrl.NewPIDController(P, I, D)
+	println(fmt.Sprintf("P: %f, I: %f, D: %f", P, I, D))
+	//pid.SetOutputLimits(MIN_WiNDOW_SIZE, MAX_WINDOW_SIZE)
+	pid.Set(3)
+	pidTimer := time.Now()
+	pidCounter := 0
+	retransmitDelta := 0
+	//graph := charts.NewLine()
+	retransmitSer := make([]opts.LineData, 0)
+	WindowSizeSer := make([]opts.LineData, 0)
+	//relative_shiftSer := make([]opts.LineData, 0)
+	timeLine := make([]int64, 0)
 
+	err := sr.sendPackets(packets, &state.windowsize, shift, relative_shift, &localMetricsRetransmitMessages)
+	//return nil, nil
 	if err != nil {
 		return nil, err
 	}
 
 	for {
 		resp, err := receiveMessage(sr, message)
+
 		if err != nil {
 			if err == ErrMaxAttempts {
 				if err = sr.sendPackets(packets, &state.windowsize, shift, relative_shift, &localMetricsRetransmitMessages); err != nil {
+					applyStat(false, 0, relative_shift*MAX_PAYLOAD_SIZE, state.windowsize)
 					return nil, err
 				}
 				continue
 			}
+			/*graph.SetXAxis(timeLine)
+			graph.AddSeries("TotalPacketsGet", relative_shiftSer)
+			graph.AddSeries("Retransmits", retransmitSer)
+			graph.AddSeries("WindowSize", WindowSizeSer)
+			f, _ := os.Create(fmt.Sprintf("s.html"))
+			_ = graph.Render(f)*/
 			return nil, err
 		}
 
@@ -428,6 +478,7 @@ func (sr *transport) sendARQBlock1CON(message *CoAPMessage) (*CoAPMessage, error
 				// 	sr.sendPacketsByWindowOffset(packets, state.windowsize, shift, block.BlockNumber, int(wo.Value.(uint32)))
 				// }
 				if len(packets) >= block.BlockNumber {
+					pidCounter++
 					if resp.Code != CoapCodeContinue {
 						log.Info(fmt.Sprintf("U/D: %s, %s, Packets: %d Lost: %d, WindowSize: %d",
 							ByteCountBinary(int64(state.lenght)),
@@ -435,6 +486,7 @@ func (sr *transport) sendARQBlock1CON(message *CoAPMessage) (*CoAPMessage, error
 							len(packets),
 							localMetricsRetransmitMessages,
 							state.windowsize))
+						applyStat(true, int64(state.lenght)*time.Second.Milliseconds()/time.Since(downloadStartTime).Milliseconds(), state.lenght, state.windowsize)
 						return resp, nil
 					}
 					packets[block.BlockNumber].acked = true
@@ -450,7 +502,28 @@ func (sr *transport) sendARQBlock1CON(message *CoAPMessage) (*CoAPMessage, error
 						}
 					}
 
+					if pidCounter%50 == 0 {
+						dt := int(pid.UpdateDuration(float64(localMetricsRetransmitMessages-retransmitDelta), time.Since(pidTimer)))
+						println(fmt.Sprintf("old_ws: %d, cur_ws: %d, dt: %d, retransmits: %d",
+							state.windowsize, state.windowsize+dt, dt, localMetricsRetransmitMessages))
+						state.windowsize += dt
+						retransmitDelta = localMetricsRetransmitMessages
+						pidTimer = time.Now()
+						if state.windowsize < MIN_WiNDOW_SIZE {
+							state.windowsize = MIN_WiNDOW_SIZE
+						}
+						if state.windowsize > MAX_WINDOW_SIZE {
+							state.windowsize = MAX_WINDOW_SIZE
+						}
+						WindowSizeSer = append(WindowSizeSer, opts.LineData{Value: state.windowsize})
+						retransmitSer = append(retransmitSer, opts.LineData{Value: localMetricsRetransmitMessages})
+						//relative_shiftSer = append(relative_shiftSer, opts.LineData{Value: relative_shift})
+						timeLine = append(timeLine, time.Since(downloadStartTime).Milliseconds())
+					}
+
 					if err = sr.sendPackets(packets, &state.windowsize, shift, relative_shift, &localMetricsRetransmitMessages); err != nil {
+						println("RETURN SEND PACKETS")
+
 						return nil, err
 					}
 
@@ -467,7 +540,7 @@ func (sr *transport) sendARQBlock2ACK(input chan *CoAPMessage, message *CoAPMess
 	state.origMessage = message
 	state.blockSize = MAX_PAYLOAD_SIZE
 	numblocks := math.Ceil(float64(state.lenght) / float64(MAX_PAYLOAD_SIZE))
-	if numblocks < DEFAULT_WINDOW_SIZE {
+	if numblocks < float64(DEFAULT_WINDOW_SIZE) {
 		state.windowsize = int(numblocks)
 	} else {
 		state.windowsize = DEFAULT_WINDOW_SIZE
@@ -499,6 +572,12 @@ func (sr *transport) sendARQBlock2ACK(input chan *CoAPMessage, message *CoAPMess
 	var localMetricsRetransmitMessages = 0
 	downloadStartTime := time.Now()
 
+	pid := pidctrl.NewPIDController(P, I, D)
+	pid.SetOutputLimits(MIN_WiNDOW_SIZE, MAX_WINDOW_SIZE)
+	pid.Set(float64(DEFAULT_WINDOW_SIZE))
+	pidTimer := time.Now()
+	pidCounter := 0
+
 	if err := sr.sendPacketsToAddr(packets, &state.windowsize, shift, relative_shift, &localMetricsRetransmitMessages, addr); err != nil {
 		return err
 	}
@@ -512,6 +591,7 @@ func (sr *transport) sendARQBlock2ACK(input chan *CoAPMessage, message *CoAPMess
 				block := resp.GetBlock2()
 				if block != nil {
 					if len(packets) >= block.BlockNumber {
+						pidCounter++
 						if resp.Code != CoapCodeContinue {
 							log.Info(fmt.Sprintf("U/D: %s, %s, Packets: %d Lost: %d, WindowSize: %d",
 								ByteCountBinary(int64(state.lenght)),
@@ -540,6 +620,14 @@ func (sr *transport) sendARQBlock2ACK(input chan *CoAPMessage, message *CoAPMess
 										break
 									}
 								}
+							}
+
+							if pidCounter%50 == 0 {
+								dt := int(pid.UpdateDuration(float64(state.windowsize), time.Since(pidTimer)))
+								println(fmt.Sprintf("old_ws: %d, cur_ws: %d, dt: %d, retransmits: %d",
+									state.windowsize, state.windowsize+dt, dt, localMetricsRetransmitMessages))
+								state.windowsize += dt
+								pidTimer = time.Now()
 							}
 
 							if err := sr.sendPacketsToAddr(packets, &state.windowsize, shift, relative_shift, &localMetricsRetransmitMessages, addr); err != nil {

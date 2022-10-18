@@ -6,19 +6,20 @@ import (
 )
 
 var (
-	timeWait        = time.Second
-	maxSendAttempts = 6
-	sumTimeAttempts = timeWait*time.Duration(maxSendAttempts) + 100
+	timeWait            = time.Second
+	maxSendAttempts     = 6
+	sumTimeAttempts     = timeWait*time.Duration(maxSendAttempts) + 100
+	DEFAULT_WINDOW_SIZE = 700
 )
 
 const (
 	SESSIONS_POOL_EXPIRATION = time.Second * 60 * 2
 	MAX_PAYLOAD_SIZE         = 1024
-	DEFAULT_WINDOW_SIZE      = 900
-	MIN_WiNDOW_SIZE          = 70
-	MAX_WINDOW_SIZE          = 1500
-	MTU                      = 1500
-	MBIT                     = 1024 * 128
+
+	MIN_WiNDOW_SIZE = 10
+	MAX_WINDOW_SIZE = 1500
+	MTU             = 1500
+	MBIT            = 1024 * 128
 )
 
 const PayloadMarker = 0xff
