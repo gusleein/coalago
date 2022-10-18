@@ -22,8 +22,7 @@ func MakeLocalStateFn(r Resourcer, tr *transport, respHandler func(*CoAPMessage,
 	var totalBlocks1 = -1
 	var runnedHandler int32 = 0
 	var downloadStartTime = time.Now()
-	os.Remove("map")
-	file, _ = os.OpenFile("map", os.O_APPEND|os.O_WRONLY|os.O_CREATE, 0600)
+
 	return func(message *CoAPMessage) {
 		mx.Lock()
 		defer mx.Unlock()
@@ -166,7 +165,6 @@ func localStateReceiveARQBlock1(sr *transport, totalBlocks int, buf map[int][]by
 	}
 
 	buf[block.BlockNumber] = inputMessage.Payload.Bytes()
-	file.Write([]byte(fmt.Sprintf("%d\n", block.BlockNumber)))
 	if totalBlocks == len(buf) {
 		b := []byte{}
 		for i := 0; i < totalBlocks; i++ {
