@@ -451,12 +451,14 @@ func (sr *transport) sendARQBlock1CON(message *CoAPMessage) (*CoAPMessage, error
 				if len(packets) >= block.BlockNumber {
 					balancerCounter++
 					if resp.Code != CoapCodeContinue {
-						log.Debug(fmt.Sprintf("U: %s, %s, Packets: %d Lost: %d, WSize: %d",
-							ByteCountBinary(int64(state.lenght)),
-							ByteCountBinaryBits(int64(state.lenght)*time.Second.Milliseconds()/time.Since(downloadStartTime).Milliseconds()),
-							len(packets),
-							localMetricsRetransmitMessages,
-							state.windowsize))
+						if len(packets) > DEFAULT_WINDOW_SIZE*2 {
+							log.Debug(fmt.Sprintf("COALA U: %s, %s, Packets: %d Lost: %d, FinalWSize: %d",
+								ByteCountBinary(int64(state.lenght)),
+								ByteCountBinaryBits(int64(state.lenght)*time.Second.Milliseconds()/time.Since(downloadStartTime).Milliseconds()),
+								len(packets),
+								localMetricsRetransmitMessages,
+								state.windowsize))
+						}
 						return resp, nil
 					}
 					if !packets[block.BlockNumber].acked && packets[block.BlockNumber].attempts > 3 {
@@ -557,12 +559,14 @@ func (sr *transport) sendARQBlock2ACK(input chan *CoAPMessage, message *CoAPMess
 					if len(packets) >= block.BlockNumber {
 						balancerCounter++
 						if resp.Code != CoapCodeContinue {
-							log.Debug(fmt.Sprintf("U: %s, %s, Packets: %d Lost: %d, WSize: %d",
-								ByteCountBinary(int64(state.lenght)),
-								ByteCountBinaryBits(int64(state.lenght)*time.Second.Milliseconds()/time.Since(downloadStartTime).Milliseconds()),
-								len(packets),
-								localMetricsRetransmitMessages,
-								state.windowsize))
+							if len(packets) > DEFAULT_WINDOW_SIZE*2 {
+								log.Debug(fmt.Sprintf("COALA U: %s, %s, Packets: %d Lost: %d, FinalWSize: %d",
+									ByteCountBinary(int64(state.lenght)),
+									ByteCountBinaryBits(int64(state.lenght)*time.Second.Milliseconds()/time.Since(downloadStartTime).Milliseconds()),
+									len(packets),
+									localMetricsRetransmitMessages,
+									state.windowsize))
+							}
 							return nil
 						}
 						if block.BlockNumber < len(packets) {

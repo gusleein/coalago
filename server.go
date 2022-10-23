@@ -20,6 +20,7 @@ type Server struct {
 }
 
 func NewServer() *Server {
+	//TODO Вывести в лог инфо по парамтерам старта коалы, порт, окно и прочее
 	s := new(Server)
 	return s
 }
