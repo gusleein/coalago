@@ -4,12 +4,13 @@ import (
 	"bytes"
 	"errors"
 	"fmt"
-	log "github.com/ndmsystems/golog"
-	"github.com/patrickmn/go-cache"
 	"math"
 	"net"
 	"sync"
 	"time"
+
+	log "github.com/ndmsystems/golog"
+	"github.com/patrickmn/go-cache"
 )
 
 var (
@@ -231,12 +232,12 @@ func (sr *transport) sendPackets(packets []*packet, windowsize *int, shift int, 
 		}
 	}
 	/*
-	if len(packets) == stop {
-		if time.Since(packets[len(packets)-1].lastSend) >= timeWait {
-			MetricExpiredMessages.Inc()
-			return ErrMaxAttempts
-		}
-	}*/
+		if len(packets) == stop {
+			if time.Since(packets[len(packets)-1].lastSend) >= timeWait {
+				MetricExpiredMessages.Inc()
+				return ErrMaxAttempts
+			}
+		}*/
 
 	return nil
 }
@@ -450,7 +451,7 @@ func (sr *transport) sendARQBlock1CON(message *CoAPMessage) (*CoAPMessage, error
 				if len(packets) >= block.BlockNumber {
 					balancerCounter++
 					if resp.Code != CoapCodeContinue {
-						log.Info(fmt.Sprintf("U/D: %s, %s, Packets: %d Lost: %d, WindowSize: %d",
+						log.Debug(fmt.Sprintf("U: %s, %s, Packets: %d Lost: %d, WSize: %d",
 							ByteCountBinary(int64(state.lenght)),
 							ByteCountBinaryBits(int64(state.lenght)*time.Second.Milliseconds()/time.Since(downloadStartTime).Milliseconds()),
 							len(packets),
@@ -556,7 +557,7 @@ func (sr *transport) sendARQBlock2ACK(input chan *CoAPMessage, message *CoAPMess
 					if len(packets) >= block.BlockNumber {
 						balancerCounter++
 						if resp.Code != CoapCodeContinue {
-							log.Info(fmt.Sprintf("U/D: %s, %s, Packets: %d Lost: %d, WindowSize: %d",
+							log.Debug(fmt.Sprintf("U: %s, %s, Packets: %d Lost: %d, WSize: %d",
 								ByteCountBinary(int64(state.lenght)),
 								ByteCountBinaryBits(int64(state.lenght)*time.Second.Milliseconds()/time.Since(downloadStartTime).Milliseconds()),
 								len(packets),
