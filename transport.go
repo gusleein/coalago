@@ -694,6 +694,9 @@ func (sr *transport) receiveARQBlock2(origMessage *CoAPMessage, inputMessage *Co
 			sr.sendToSocket(ack)
 		}
 	}
+
+	downloadStartTime := time.Now()
+
 	for {
 		inputMessage, err = receiveMessage(sr, origMessage)
 		if err == ErrMaxAttempts {
@@ -730,6 +733,11 @@ func (sr *transport) receiveARQBlock2(origMessage *CoAPMessage, inputMessage *Co
 			ack := ackTo(origMessage, inputMessage, CoapCodeEmpty)
 			if err = sr.sendToSocket(ack); err != nil {
 				return nil, err
+			}
+			if len(buf) > DEFAULT_WINDOW_SIZE * 2 {
+				log.Debug(fmt.Sprintf("U/D: %s, %s",
+					ByteCountBinary(int64(len(b))),
+					ByteCountBinaryBits(int64(len(b))*time.Second.Milliseconds()/time.Since(downloadStartTime).Milliseconds())))
 			}
 			return inputMessage, nil
 		}

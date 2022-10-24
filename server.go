@@ -5,6 +5,7 @@ import (
 	"net"
 	"strings"
 	"sync"
+	log "github.com/ndmsystems/golog"
 )
 
 type rawData struct {
@@ -20,7 +21,6 @@ type Server struct {
 }
 
 func NewServer() *Server {
-	//TODO Вывести в лог инфо по парамтерам старта коалы, порт, окно и прочее
 	s := new(Server)
 	return s
 }
@@ -44,7 +44,8 @@ func (s *Server) Listen(addr string) (err error) {
 
 	s.sr = newtransport(conn)
 	s.sr.privateKey = s.privatekey
-
+	log.Debug(fmt.Sprintf("COALA start Port: %s, WS: %d, MinWS: %d, MaxWS: %d",
+		addr[strings.IndexByte(addr,':') + 1:], DEFAULT_WINDOW_SIZE, MIN_WiNDOW_SIZE, MAX_WINDOW_SIZE))
 	for {
 		readBuf := make([]byte, MTU+1)
 	start:
