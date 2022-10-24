@@ -16,6 +16,7 @@ type Client struct {
 }
 
 func NewClient() *Client {
+	//TODO Вывести в лог инфо по парамтерам старта коалы, порт, окно и прочее
 	c := new(Client)
 	return c
 }

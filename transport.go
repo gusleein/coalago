@@ -4,12 +4,13 @@ import (
 	"bytes"
 	"errors"
 	"fmt"
-	log "github.com/ndmsystems/golog"
-	"github.com/patrickmn/go-cache"
 	"math"
 	"net"
 	"sync"
 	"time"
+
+	log "github.com/ndmsystems/golog"
+	"github.com/patrickmn/go-cache"
 )
 
 var (
@@ -560,6 +561,7 @@ func (sr *transport) sendARQBlock2ACK(input chan *CoAPMessage, message *CoAPMess
 									localMetricsRetransmitMessages,
 									state.windowsize))
 							}
+							return nil
 						}
 						if block.BlockNumber < len(packets) {
 							// wo := resp.GetOption(OptionWindowtOffset)
