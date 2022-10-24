@@ -225,18 +225,12 @@ func (sr *transport) sendPackets(packets []*packet, windowsize *int, shift int, 
 				if err := sr.sendToSocket(packets[i].message); err != nil {
 					return err
 				}
+
 			}
 		} else {
 			acked++
 		}
 	}
-	/*
-	if len(packets) == stop {
-		if time.Since(packets[len(packets)-1].lastSend) >= timeWait {
-			MetricExpiredMessages.Inc()
-			return ErrMaxAttempts
-		}
-	}*/
 
 	return nil
 }
@@ -386,7 +380,7 @@ func (sr *transport) sendARQBlock1CON(message *CoAPMessage) (*CoAPMessage, error
 	state.origMessage = message
 	state.blockSize = MAX_PAYLOAD_SIZE
 	numblocks := math.Ceil(float64(state.lenght) / float64(MAX_PAYLOAD_SIZE))
-	if numblocks < float64(DEFAULT_WINDOW_SIZE) {
+	if int(numblocks) < DEFAULT_WINDOW_SIZE {
 		state.windowsize = int(numblocks)
 	} else {
 		state.windowsize = DEFAULT_WINDOW_SIZE
@@ -450,12 +444,14 @@ func (sr *transport) sendARQBlock1CON(message *CoAPMessage) (*CoAPMessage, error
 				if len(packets) >= block.BlockNumber {
 					balancerCounter++
 					if resp.Code != CoapCodeContinue {
-						log.Info(fmt.Sprintf("U/D: %s, %s, Packets: %d Lost: %d, WindowSize: %d",
-							ByteCountBinary(int64(state.lenght)),
-							ByteCountBinaryBits(int64(state.lenght)*time.Second.Milliseconds()/time.Since(downloadStartTime).Milliseconds()),
-							len(packets),
-							localMetricsRetransmitMessages,
-							state.windowsize))
+						if len(packets) > DEFAULT_WINDOW_SIZE*2 {
+							log.Debug(fmt.Sprintf("COALA U: %s, %s, Packets: %d Lost: %d, FinalWSize: %d",
+								ByteCountBinary(int64(state.lenght)),
+								ByteCountBinaryBits(int64(state.lenght)*time.Second.Milliseconds()/time.Since(downloadStartTime).Milliseconds()),
+								len(packets),
+								localMetricsRetransmitMessages,
+								state.windowsize))
+						}
 						return resp, nil
 					}
 					if !packets[block.BlockNumber].acked && packets[block.BlockNumber].attempts > 3 {
@@ -506,7 +502,7 @@ func (sr *transport) sendARQBlock2ACK(input chan *CoAPMessage, message *CoAPMess
 	state.origMessage = message
 	state.blockSize = MAX_PAYLOAD_SIZE
 	numblocks := math.Ceil(float64(state.lenght) / float64(MAX_PAYLOAD_SIZE))
-	if numblocks < float64(DEFAULT_WINDOW_SIZE) {
+	if int(numblocks) < DEFAULT_WINDOW_SIZE {
 		state.windowsize = int(numblocks)
 	} else {
 		state.windowsize = DEFAULT_WINDOW_SIZE
@@ -556,13 +552,14 @@ func (sr *transport) sendARQBlock2ACK(input chan *CoAPMessage, message *CoAPMess
 					if len(packets) >= block.BlockNumber {
 						balancerCounter++
 						if resp.Code != CoapCodeContinue {
-							log.Info(fmt.Sprintf("U/D: %s, %s, Packets: %d Lost: %d, WindowSize: %d",
-								ByteCountBinary(int64(state.lenght)),
-								ByteCountBinaryBits(int64(state.lenght)*time.Second.Milliseconds()/time.Since(downloadStartTime).Milliseconds()),
-								len(packets),
-								localMetricsRetransmitMessages,
-								state.windowsize))
-							return nil
+							if len(packets) > DEFAULT_WINDOW_SIZE*2 {
+								log.Debug(fmt.Sprintf("COALA U: %s, %s, Packets: %d Lost: %d, FinalWSize: %d",
+									ByteCountBinary(int64(state.lenght)),
+									ByteCountBinaryBits(int64(state.lenght)*time.Second.Milliseconds()/time.Since(downloadStartTime).Milliseconds()),
+									len(packets),
+									localMetricsRetransmitMessages,
+									state.windowsize))
+							}
 						}
 						if block.BlockNumber < len(packets) {
 							// wo := resp.GetOption(OptionWindowtOffset)
