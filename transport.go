@@ -736,7 +736,7 @@ func (sr *transport) receiveARQBlock2(origMessage *CoAPMessage, inputMessage *Co
 				return nil, err
 			}
 			if len(buf) > DEFAULT_WINDOW_SIZE * 2 {
-				log.Debug(fmt.Sprintf("D: %s, %s",
+				log.Debug(fmt.Sprintf("COALA D: %s, %s",
 					ByteCountBinary(int64(len(b))),
 					ByteCountBinaryBits(int64(len(b))*time.Second.Milliseconds()/time.Since(downloadStartTime).Milliseconds())))
 			}
