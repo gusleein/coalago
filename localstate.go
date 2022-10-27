@@ -43,7 +43,7 @@ func MakeLocalStateFn(r Resourcer, tr *transport, respHandler func(*CoAPMessage,
 			requestOnReceive(r.getResourceForPathAndMethod(message.GetURIPath(), message.GetMethod()), tr, message)
 			closeCallback()
 			if len(bufBlock1) > 0 {
-				log.Debug(fmt.Sprintf("U/D: %s, %s",
+				log.Debug(fmt.Sprintf("U: %s, %s",
 					ByteCountBinary(int64(len(bufBlock1)*MAX_PAYLOAD_SIZE)),
 					ByteCountBinaryBits(int64(len(bufBlock1)*MAX_PAYLOAD_SIZE)*time.Second.Milliseconds()/time.Since(downloadStartTime).Milliseconds())))
 			}
