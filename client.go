@@ -3,8 +3,6 @@ package coalago
 import (
 	"net"
 	"net/url"
-	"fmt"
-	log "github.com/ndmsystems/golog"
 )
 
 type Response struct {
@@ -18,8 +16,6 @@ type Client struct {
 }
 
 func NewClient() *Client {
-	log.Debug(fmt.Sprintf("COALA start WS: %d, MinWS: %d, MaxWS: %d",
-		DEFAULT_WINDOW_SIZE, MIN_WiNDOW_SIZE, MAX_WINDOW_SIZE))
 	c := new(Client)
 	return c
 }

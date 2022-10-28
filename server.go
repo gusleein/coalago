@@ -5,6 +5,7 @@ import (
 	"net"
 	"strings"
 	"sync"
+
 	log "github.com/ndmsystems/golog"
 )
 
@@ -44,8 +45,8 @@ func (s *Server) Listen(addr string) (err error) {
 
 	s.sr = newtransport(conn)
 	s.sr.privateKey = s.privatekey
-	log.Debug(fmt.Sprintf("COALA start Port: %s, WS: %d, MinWS: %d, MaxWS: %d",
-		addr[strings.IndexByte(addr,':') + 1:], DEFAULT_WINDOW_SIZE, MIN_WiNDOW_SIZE, MAX_WINDOW_SIZE))
+	log.Debug(fmt.Sprintf("COALA Server start ADDR: %s, WS: %d, MinWS: %d, MaxWS: %d",
+		addr, DEFAULT_WINDOW_SIZE, MIN_WiNDOW_SIZE, MAX_WINDOW_SIZE))
 	for {
 		readBuf := make([]byte, MTU+1)
 	start:
