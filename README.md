@@ -4,6 +4,11 @@
 
 Coala is a Go-Lang library for secure peer-to-peer communication based on Constrained Application Protocol (CoAP, see [RFC#7252](https://tools.ietf.org/html/rfc7252)).
 
+COAP diff:
+
+- curve cripto
+- arq fast data transmission (30MBit./s)
+
 
 
 
@@ -34,11 +39,8 @@ package main
 import (
 	"fmt"
 	"net"
-
 	"github.com/coalalib/coalago"
-	"github.com/coalalib/coalago/resource"
-
-	 
+	"github.com/coalalib/coalago/resource" 
 )
 
 func main() {
@@ -54,7 +56,6 @@ func server() {
 		handlerResult := resource.NewResponse( NewStringPayload(word), CoapCodeContent)
 		return handlerResult
 	})
-
 }
 
 func client() {
@@ -94,23 +95,3 @@ request.SetStringPayload("Put your innermost secrets here... And nobody will be 
 
 
 
-# Dependencies
-
-1. github.com/lucas-clemente/aes12
-2. golang.org/x/crypto/curve25519
-3. golang.org/x/crypto/hkdf
-4. github.com/op/go-logging
-5. golang.org/x/net/ipv4
-
-
-
-
-# Poetry
-
-Однажды был случай в далёком Макао -
-
-Макака коалу в какао макала.
-
-Коала какао лениво лакала,
-
-Макака макала, коала икала.
