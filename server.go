@@ -45,8 +45,9 @@ func (s *Server) Listen(addr string) (err error) {
 
 	s.sr = newtransport(conn)
 	s.sr.privateKey = s.privatekey
-	log.Debug(fmt.Sprintf("COALA Server start ADDR: %s, WS: %d, MinWS: %d, MaxWS: %d",
-		addr, DEFAULT_WINDOW_SIZE, MIN_WiNDOW_SIZE, MAX_WINDOW_SIZE))
+	log.Info(fmt.Sprintf(
+		"COALAServer start ADDR: %s, WS: %d, MinWS: %d, MaxWS: %d, Retransmit:%d, timeWait:%d, poolExpiration:%d",
+		addr, DEFAULT_WINDOW_SIZE, MIN_WiNDOW_SIZE, MAX_WINDOW_SIZE, maxSendAttempts, timeWait, SESSIONS_POOL_EXPIRATION))
 	for {
 		readBuf := make([]byte, MTU+1)
 	start:
