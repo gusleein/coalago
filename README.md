@@ -7,7 +7,7 @@ Coala is a Go-Lang library for secure peer-to-peer communication based on Constr
 COAP diff:
 
 - curve cripto
-- arq fast data transmission (30MBit./s)
+- arq fast data transmission (30MBit./s) + OptionSelectiveRepeatWindowSize option
 
 
 
