@@ -724,7 +724,7 @@ func (sr *transport) receiveARQBlock2(origMessage *CoAPMessage, inputMessage *Co
 		}
 
 		buf[block.BlockNumber] = inputMessage.Payload.Bytes()
-		println(block.BlockNumber)
+
 		if totalBlocks == len(buf) {
 			b := []byte{}
 			for i := 0; i < totalBlocks; i++ {
@@ -735,7 +735,7 @@ func (sr *transport) receiveARQBlock2(origMessage *CoAPMessage, inputMessage *Co
 			if err = sr.sendToSocket(ack); err != nil {
 				return nil, err
 			}
-			if len(buf) > DEFAULT_WINDOW_SIZE * 2 {
+			if len(buf) > DEFAULT_WINDOW_SIZE*2 {
 				log.Debug(fmt.Sprintf("COALA D: %s, %s",
 					ByteCountBinary(int64(len(b))),
 					ByteCountBinaryBits(int64(len(b))*time.Second.Milliseconds()/time.Since(downloadStartTime).Milliseconds())))

@@ -65,6 +65,5 @@ func main() {
 			}()
 		}
 		wg.Wait()
-		println("errors:", count)
 	}
 }
