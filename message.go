@@ -28,6 +28,7 @@ type CoAPMessage struct {
 
 	Attempts int
 	LastSent time.Time
+	Timeout  time.Duration
 
 	IsProxies bool
 
@@ -45,6 +46,7 @@ func NewCoAPMessage(messageType CoapType, messageCode CoapCode) *CoAPMessage {
 		Code:      messageCode,
 		Payload:   NewEmptyPayload(),
 		Token:     generateToken(6),
+		Timeout:   timeWait,
 	}
 }
 
@@ -54,6 +56,7 @@ func NewCoAPMessageId(messageType CoapType, messageCode CoapCode, messageID uint
 		Type:      messageType,
 		Code:      messageCode,
 		Token:     generateToken(6),
+		Timeout:   timeWait,
 	}
 }
 
