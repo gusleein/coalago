@@ -229,6 +229,7 @@ const (
 	OptionProxyURI      OptionCode = 35
 	OptionProxyScheme   OptionCode = 39
 	OptionSize1         OptionCode = 60
+	OptionTimeout       OptionCode = 65
 
 	/// URI scheme options specifies scheme to be used for message transmission
 	/// See `CoAPMessage.GetScheme()`. Scheme is stored using it's raw value

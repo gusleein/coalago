@@ -177,7 +177,7 @@ func deserialize(data []byte) (*CoAPMessage, error) {
 			switch optCode {
 			case OptionURIScheme, OptionProxyScheme, OptionURIPort, OptionContentFormat, OptionMaxAge, OptionAccept, OptionSize1,
 				OptionSize2, OptionBlock1, OptionBlock2, OptionHandshakeType, OptionObserve,
-				OptionSessionNotFound, OptionSessionExpired, OptionSelectiveRepeatWindowSize, OptionProxySecurityID:
+				OptionSessionNotFound, OptionSessionExpired, OptionSelectiveRepeatWindowSize, OptionProxySecurityID, OptionTimeout:
 				// OptionWindowtOffset
 
 				intVal, err := decodeInt(optionValue)
