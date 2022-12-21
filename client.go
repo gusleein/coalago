@@ -39,10 +39,6 @@ func (c *Client) GET(url string, options ...*CoAPMessageOption) (*Response, erro
 func (c *Client) Send(message *CoAPMessage, addr string, options ...*CoAPMessageOption) (*Response, error) {
 	message.AddOptions(options)
 
-	if message.Timeout != timeWait {
-		message.AddOption(OptionTimeout, uint32(message.Timeout.Seconds()))
-	}
-
 	conn, err := globalPoolConnections.Dial(addr)
 	if err != nil {
 		return nil, err
