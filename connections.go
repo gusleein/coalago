@@ -20,6 +20,7 @@ type dialer interface {
 	LocalAddr() net.Addr
 	SetReadDeadline()
 	SetUDPRecvBuf(size int) int
+	SetReadDeadlineSec(timeout time.Duration)
 }
 
 type connection struct {
@@ -120,6 +121,10 @@ func (c *connection) SetReadDeadline() {
 	c.conn.SetReadDeadline(time.Now().Add(timeWait))
 }
 
+func (c *connection) SetReadDeadlineSec(timeout time.Duration) {
+	c.conn.SetReadDeadline(time.Now().Add(timeout))
+}
+
 type packet struct {
 	acked    bool
 	attempts int
@@ -130,10 +135,11 @@ type packet struct {
 
 func receiveMessage(tr *transport, origMessage *CoAPMessage) (*CoAPMessage, error) {
 	for {
-		tr.conn.SetReadDeadline()
+		tr.conn.SetReadDeadlineSec(origMessage.Timeout)
 
 		buff := make([]byte, MTU+1)
 		n, err := tr.conn.Read(buff)
+		origMessage.Timeout = timeWait
 		if err != nil {
 			if neterr, ok := err.(net.Error); ok && neterr.Timeout() {
 				return nil, ErrMaxAttempts

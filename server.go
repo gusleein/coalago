@@ -126,7 +126,11 @@ func (s *Server) AddDELETEResource(path string, handler CoAPResourceHandler) {
 func (s *Server) getResourceForPathAndMethod(path string, method CoapMethod) *CoAPResource {
 	path = strings.Trim(path, "/ ")
 	key := path + fmt.Sprint(method)
-	res, ok := s.resources.Load(key)
+	res, ok := s.resources.Load("*" + fmt.Sprint(method))
+	if ok {
+		return res.(*CoAPResource)
+	}
+	res, ok = s.resources.Load(key)
 	if ok {
 		return res.(*CoAPResource)
 	}
