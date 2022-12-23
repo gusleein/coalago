@@ -19,12 +19,23 @@ type dialer interface {
 	RemoteAddr() net.Addr
 	LocalAddr() net.Addr
 	SetReadDeadline()
+	SetUDPRecvBuf(size int) int
 	SetReadDeadlineSec(timeout time.Duration)
 }
 
 type connection struct {
 	end  chan struct{}
 	conn *net.UDPConn
+}
+
+func (c *connection) SetUDPRecvBuf(size int) int {
+	for {
+		if err := c.conn.SetReadBuffer(size); err == nil {
+			break
+		}
+		size = size / 2
+	}
+	return size
 }
 
 func (c *connection) Close() error {

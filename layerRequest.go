@@ -30,7 +30,6 @@ func requestOnReceive(resource *CoAPResource, sr *transport, message *CoAPMessag
 	if message.Type == CON {
 		return noResultResourceHandler(sr, message)
 	}
-
 	return false
 }
 
