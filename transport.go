@@ -519,7 +519,7 @@ func (sr *transport) sendARQBlock2ACK(input chan *CoAPMessage, message *CoAPMess
 					}
 				}
 			}
-		case <-time.After(sumTimeAttempts):
+		case <-time.After(timeWait):
 			if err := sr.sendPacketsToAddr(packets, state.windowsize, shift, addr); err != nil {
 				return err
 			}
@@ -565,7 +565,7 @@ func (sr *transport) receiveARQBlock1(input chan *CoAPMessage) (*CoAPMessage, er
 				return nil, err
 			}
 
-		case <-time.After(sumTimeAttempts):
+		case <-time.After(timeWait):
 			MetricExpiredMessages.Inc()
 			return nil, ErrMaxAttempts
 		}
