@@ -607,7 +607,7 @@ func (sr *transport) sendARQBlock2ACK(input chan *CoAPMessage, message *CoAPMess
 				}
 			}
 		case <-time.After(timeWait):
-			if err := sr.sendPacketsToAddr(packets, state.windowsize, shift, addr); err != nil {
+			if err := sr.sendPacketsToAddr(packets, &state.windowsize, shift, relative_shift, &localMetricsRetransmitMessages, &overflowIndicator, addr); err != nil {
 				return err
 			}
 		}
