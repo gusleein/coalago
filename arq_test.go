@@ -14,7 +14,7 @@ package coalago
 
 // func init() {
 // 	go func() {
-// 		log.Panic(http.ListenAndServe("localhost:6060", nil))
+// 		panic(http.ListenAndServe("localhost:6060", nil))
 // 	}()
 // }
 
@@ -35,7 +35,7 @@ package coalago
 
 // 	c := NewClient()
 // 	s := NewServer()
-// 	s.AddPOSTResource(pathTestBlock1, func(message *CoAPMessage) *CoAPResourceHandlerResult {
+// 	s.POST(pathTestBlock1, func(message *CoAPMessage) *CoAPResourceHandlerResult {
 // 		if !bytes.Equal(message.Payload.Bytes(), expectedPayload) {
 // 			panic(fmt.Sprintf("Expected payload: %s\n\nActual payload: %s\n", expectedPayload, message.Payload.Bytes()))
 // 		}
@@ -74,7 +74,7 @@ package coalago
 
 // 	c := NewClient()
 // 	s := NewServer()
-// 	s.AddPOSTResource(pathTestBlock1, func(message *CoAPMessage) *CoAPResourceHandlerResult {
+// 	s.POST(pathTestBlock1, func(message *CoAPMessage) *CoAPResourceHandlerResult {
 // 		if !bytes.Equal(message.Payload.Bytes(), expectedPayload) {
 // 			println(fmt.Sprintf("Expected len: %d\n\nActual len: %d\n", len(expectedPayload), message.Payload.Length()))
 // 			// panic(fmt.Sprintf("Expected payload: %s\n\nActual payload: %s\n", expectedPayload, message.Payload.Bytes()))
@@ -118,7 +118,7 @@ package coalago
 // 	c := NewClient()
 // 	s := NewServer()
 
-// 	s.AddGETResource(pathTestBlock2, func(message *CoAPMessage) *CoAPResourceHandlerResult {
+// 	s.GET(pathTestBlock2, func(message *CoAPMessage) *CoAPResourceHandlerResult {
 // 		resp := NewBytesPayload(expectedResponse)
 // 		return NewResponse(resp, CoapCodeContent)
 // 	})
@@ -159,7 +159,7 @@ package coalago
 // 	c := NewClient()
 // 	s := NewServer()
 
-// 	s.AddPOSTResource(pathTestBlockMix, func(message *CoAPMessage) *CoAPResourceHandlerResult {
+// 	s.POST(pathTestBlockMix, func(message *CoAPMessage) *CoAPResourceHandlerResult {
 // 		if !bytes.Equal(message.Payload.Bytes(), expectedResponse) {
 // 			println(fmt.Sprintf("Expected len: %d\n\nActual len: %d\n", len(expectedResponse), message.Payload.Length()))
 // 			panic(fmt.Sprintf("Expected payload: %s\n\nActual payload: %s\n", expectedResponse, message.Payload.Bytes()))

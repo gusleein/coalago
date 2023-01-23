@@ -107,11 +107,11 @@ func (s *Server) addResource(res *CoAPResource) {
 	s.resources.Store(key, res)
 }
 
-func (s *Server) AddGETResource(path string, handler CoAPResourceHandler) {
+func (s *Server) GET(path string, handler CoAPResourceHandler) {
 	s.addResource(NewCoAPResource(CoapMethodGet, path, handler))
 }
 
-func (s *Server) AddPOSTResource(path string, handler CoAPResourceHandler) {
+func (s *Server) POST(path string, handler CoAPResourceHandler) {
 	s.addResource(NewCoAPResource(CoapMethodPost, path, handler))
 }
 
@@ -119,7 +119,7 @@ func (s *Server) AddPUTResource(path string, handler CoAPResourceHandler) {
 	s.addResource(NewCoAPResource(CoapMethodPut, path, handler))
 }
 
-func (s *Server) AddDELETEResource(path string, handler CoAPResourceHandler) {
+func (s *Server) DELETE(path string, handler CoAPResourceHandler) {
 	s.addResource(NewCoAPResource(CoapMethodDelete, path, handler))
 }
 

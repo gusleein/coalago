@@ -3,7 +3,6 @@ package main
 import (
 	"bytes"
 	"fmt"
-	"log"
 	"os"
 	"strings"
 	"sync"
@@ -33,7 +32,7 @@ func main() {
 	switch mode {
 	case "server":
 		s := coalago.NewServer()
-		s.AddPOSTResource(pathTestBlock1, func(message *CoAPMessage) *CoAPResourceHandlerResult {
+		s.POST(pathTestBlock1, func(message *CoAPMessage) *CoAPResourceHandlerResult {
 			if !bytes.Equal(message.Payload.Bytes(), expectedPayload) {
 				panic(fmt.Sprintf("Expected payload: %s\n\nActual payload: %s\n", expectedPayload, message.Payload.Bytes()))
 			}
@@ -42,7 +41,7 @@ func main() {
 			// time.Sleep(time.Second * 15)
 			return NewResponse(resp, CoapCodeChanged)
 		})
-		log.Panic(s.Listen(":1111"))
+		panic(s.Listen(":1111"))
 	case "client":
 		c := coalago.NewClient()
 		var wg sync.WaitGroup

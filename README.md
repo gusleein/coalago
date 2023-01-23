@@ -51,7 +51,7 @@ func main() {
 func server() {
 	coalaServer := coalago.NewListen(5683)
 
-	coalaServer.AddGETResource("/parrot", func(message   *CoAPMessage) *resource.CoAPResourceHandlerResult {
+	coalaServer.GET("/parrot", func(message   *CoAPMessage) *resource.CoAPResourceHandlerResult {
 		word := message.GetURIQuery("word")
 		handlerResult := resource.NewResponse( NewStringPayload(word), CoapCodeContent)
 		return handlerResult

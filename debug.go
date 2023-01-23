@@ -6,14 +6,14 @@ package coalago
 
 // //TODO: delete afer test
 // func (coala *Coala) initResourceTestsMirror() {
-// 	coala.AddPOSTResource("/tests/mirror", func(message   *CoAPMessage) *resource.CoAPResourceHandlerResult {
+// 	coala.POST("/tests/mirror", func(message   *CoAPMessage) *resource.CoAPResourceHandlerResult {
 // 		return resource.NewResponse(message.Payload, CoapCodeContent)
 // 	})
 // }
 
 // //TODO: delete afer test
 // func (coala *Coala) initResourceTestsBlock2() {
-// 	coala.AddGETResource("/tests/large", func(message   *CoAPMessage) *resource.CoAPResourceHandlerResult {
+// 	coala.GET("/tests/large", func(message   *CoAPMessage) *resource.CoAPResourceHandlerResult {
 // 		sizeStr := message.GetURIQuery("size")
 // 		size, err := strconv.Atoi(sizeStr)
 // 		if err != nil {
@@ -26,7 +26,7 @@ package coalago
 // 		return resource.NewResponse( NewBytesPayload(body), CoapCodeContent)
 // 	})
 
-// 	coala.AddPOSTResource("/tests/large", func(message   *CoAPMessage) *resource.CoAPResourceHandlerResult {
+// 	coala.POST("/tests/large", func(message   *CoAPMessage) *resource.CoAPResourceHandlerResult {
 // 		hash := message.GetURIQuery("hash")
 
 // 		var (
