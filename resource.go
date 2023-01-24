@@ -6,29 +6,31 @@ import (
 	"strconv"
 	"strings"
 	"time"
+
+	m "github.com/coalalib/coalago/message"
 )
 
 type CoAPResource struct {
-	Method     CoapMethod
+	Method     m.CoapMethod
 	Path       string
 	Handler    CoAPResourceHandler
-	MediaTypes []MediaType
+	MediaTypes []m.MediaType
 	Hash       string // Unique Resource ID
 }
 
-type CoAPResourceHandler func(message *CoAPMessage) *CoAPResourceHandlerResult
+type CoAPResourceHandler func(message *m.CoAPMessage) *CoAPResourceHandlerResult
 
 type CoAPResourceHandlerResult struct {
-	Payload   CoAPMessagePayload
-	Code      CoapCode
-	MediaType MediaType
+	Payload   m.CoAPMessagePayload
+	Code      m.CoapCode
+	MediaType m.MediaType
 }
 
-func NewResponse(payload CoAPMessagePayload, code CoapCode) *CoAPResourceHandlerResult {
+func NewResponse(payload m.CoAPMessagePayload, code m.CoapCode) *CoAPResourceHandlerResult {
 	return &CoAPResourceHandlerResult{Payload: payload, Code: code, MediaType: -1} // -1 means no value
 }
 
-func NewCoAPResource(method CoapMethod, path string, handler CoAPResourceHandler) *CoAPResource {
+func NewCoAPResource(method m.CoapMethod, path string, handler CoAPResourceHandler) *CoAPResource {
 	path = strings.Trim(path, "/ ")
 
 	h := md5.New()
@@ -38,12 +40,14 @@ func NewCoAPResource(method CoapMethod, path string, handler CoAPResourceHandler
 	return &CoAPResource{Method: method, Path: path, Handler: handler, Hash: string(hash)}
 }
 
+/*
 func (resource *CoAPResource) DoesMatchPath(path string) bool {
 	path = strings.Trim(path, "/ ")
 	return (resource.Path == path)
 }
 
-func (resource *CoAPResource) DoesMatchPathAndMethod(path string, method CoapMethod) bool {
+func (resource *CoAPResource) DoesMatchPathAndMethod(path string, method m.CoapMethod) bool {
 	path = strings.Trim(path, "/ ")
 	return (resource.Path == path && resource.Method == method)
 }
+*/

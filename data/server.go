@@ -6,6 +6,7 @@ import (
 	"sync"
 	"time"
 
+	cerr "github.com/coalalib/coalago/errors"
 	m "github.com/coalalib/coalago/message"
 	"github.com/coalalib/coalago/util"
 )
@@ -87,7 +88,7 @@ func buildMsg(addr net.Addr, buf []byte) (*m.CoAPMessage, error) {
 		return nil, err
 	}
 	if message == nil {
-		return nil, ErrNilMessage
+		return nil, cerr.NilMessage
 	}
 
 	message.Sender = addr
@@ -201,7 +202,7 @@ func (s *Server) resourceProcessor(pc net.PacketConn, msg *m.CoAPMessage, res Co
 	}
 
 	// Validate message scheme
-	if msg.GetScheme() == COAPS_SCHEME {
+	if msg.GetScheme() == m.COAPS_SCHEME {
 		responseMessage.SetSchemeCOAPS()
 	}
 
@@ -329,7 +330,7 @@ func (s *Server) sendPacketsToAddr(pc net.PacketConn, packets []*packet, windows
 	}
 
 	if shift == len(packets) {
-		return ErrMaxAttempts
+		return cerr.MaxAttempts
 	}
 
 	for i := 0; i < stop; i++ {
@@ -343,7 +344,7 @@ func (s *Server) sendPacketsToAddr(pc net.PacketConn, packets []*packet, windows
 
 		if packets[i].attempts == maxSendAttempts {
 			util.MetricExpiredMessages.Inc()
-			return ErrMaxAttempts
+			return cerr.MaxAttempts
 		}
 		packets[i].attempts++
 		if packets[i].attempts > 1 {
@@ -361,9 +362,9 @@ func (s *Server) sendPacketsToAddr(pc net.PacketConn, packets []*packet, windows
 	return nil
 }
 
-func (s *Server) send(pc net.PacketConn, m *m.CoAPMessage, addr net.Addr) error {
-	if err := s.securityOutputLayer(pc, m, addr); err == nil {
-		if b, err := m.Serialize(m); err == nil {
+func (s *Server) send(pc net.PacketConn, msg *m.CoAPMessage, addr net.Addr) error {
+	if err := s.securityOutputLayer(pc, msg, addr); err == nil {
+		if b, err := m.Serialize(msg); err == nil {
 			util.MetricSentMessages.Inc()
 			pc.WriteTo(b, addr)
 		}

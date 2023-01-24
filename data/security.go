@@ -4,6 +4,8 @@ import (
 	"net"
 	"time"
 
+	"github.com/coalalib/coalago/encription"
+	cerr "github.com/coalalib/coalago/errors"
 	m "github.com/coalalib/coalago/message"
 	"github.com/coalalib/coalago/session"
 	"github.com/coalalib/coalago/util"
@@ -57,15 +59,15 @@ func (s *securitySessionStorage) Get(k string) (sess session.SecuredSession, ok 
 }
 
 func (s *Server) securityOutputLayer(pc net.PacketConn, message *m.CoAPMessage, addr net.Addr) error {
-	if message.GetScheme() != COAPS_SCHEME {
+	if message.GetScheme() != m.COAPS_SCHEME {
 		return nil
 	}
 	session, ok := s.secSessions.Get(addr.String())
 	if !ok {
-		return ErrorClientSessionNotFound
+		return cerr.ClientSessionNotFound
 	}
 
-	if err := encrypt(message, addr, session.AEAD); err != nil {
+	if err := encription.Encrypt(message, addr, session.AEAD); err != nil {
 		return err
 	}
 
@@ -80,7 +82,7 @@ func (s *Server) securityInputLayer(pc net.PacketConn, privateKey []byte, messag
 	}
 
 	// Check if the message has coaps:// scheme and requires a new Session
-	if message.GetScheme() == COAPS_SCHEME {
+	if message.GetScheme() == m.COAPS_SCHEME {
 		currentSession, ok := s.secSessions.Get(message.Sender.String())
 		if !ok {
 			go func() {
@@ -92,11 +94,11 @@ func (s *Server) securityInputLayer(pc net.PacketConn, privateKey []byte, messag
 					pc.WriteTo(b, message.Sender)
 				}
 			}()
-			return false, ErrorClientSessionNotFound
+			return false, cerr.ClientSessionNotFound
 		}
 
 		// Decrypt message payload
-		err := decrypt(message, currentSession.AEAD)
+		err := encription.Decrypt(message, currentSession.AEAD)
 		if err != nil {
 			s.secSessions.Delete(message.Sender.String())
 
@@ -109,7 +111,7 @@ func (s *Server) securityInputLayer(pc net.PacketConn, privateKey []byte, messag
 				pc.WriteTo(b, message.Sender)
 			}
 
-			return false, ErrorClientSessionExpired
+			return false, cerr.ClientSessionExpired
 		}
 
 		s.secSessions.Update(message.Sender.String(), currentSession)
@@ -124,11 +126,11 @@ func (s *Server) securityInputLayer(pc net.PacketConn, privateKey []byte, messag
 	if message.Code == m.CoapCodeUnauthorized {
 		if sessionNotFound != nil {
 			s.secSessions.Delete(message.Sender.String())
-			return false, ErrorSessionNotFound
+			return false, cerr.SessionNotFound
 		}
 		if sessionExpired != nil {
 			s.secSessions.Delete(message.Sender.String())
-			return false, ErrorSessionExpired
+			return false, cerr.SessionExpired
 		}
 	}
 
@@ -137,26 +139,26 @@ func (s *Server) securityInputLayer(pc net.PacketConn, privateKey []byte, messag
 
 func (s *Server) receiveHandshake(pc net.PacketConn, privatekey []byte, option *m.CoAPMessageOption, message *m.CoAPMessage) (isContinue bool, err error) {
 	value := option.IntValue()
-	if value != CoapHandshakeTypeClientSignature && value != CoapHandshakeTypeClientHello {
+	if value != m.CoapHandshakeTypeClientSignature && value != m.CoapHandshakeTypeClientHello {
 		return false, nil
 	}
 	peerSession, ok := s.secSessions.Get(message.Sender.String())
 
 	if !ok {
 		if peerSession, err = session.NewSecuredSession(privatekey); err != nil {
-			return false, ErrorHandshake
+			return false, cerr.Handshake
 		}
 	}
-	if value == CoapHandshakeTypeClientHello && message.Payload != nil {
+	if value == m.CoapHandshakeTypeClientHello && message.Payload != nil {
 		peerSession.PeerPublicKey = message.Payload.Bytes()
 
 		if err := incomingHandshake(pc, peerSession.Curve.GetPublicKey(), message); err != nil {
-			return false, ErrorHandshake
+			return false, cerr.Handshake
 		}
 
 		if signature, err := peerSession.GetSignature(); err == nil {
 			if err = peerSession.PeerVerify(signature); err != nil {
-				return false, ErrorHandshake
+				return false, cerr.Handshake
 			}
 		}
 
@@ -169,7 +171,7 @@ func (s *Server) receiveHandshake(pc net.PacketConn, privatekey []byte, option *
 		return false, nil
 	}
 
-	return false, ErrorHandshake
+	return false, cerr.Handshake
 }
 
 const (
@@ -178,7 +180,7 @@ const (
 
 func newServerHelloMessage(origMessage *m.CoAPMessage, publicKey []byte) *m.CoAPMessage {
 	message := m.NewCoAPMessageId(m.ACK, m.CoapCodeContent, origMessage.MessageID)
-	message.AddOption(m.OptionHandshakeType, CoapHandshakeTypePeerHello)
+	message.AddOption(m.OptionHandshakeType, m.CoapHandshakeTypePeerHello)
 	message.Payload = m.NewBytesPayload(publicKey)
 	message.Token = origMessage.Token
 	message.CloneOptions(origMessage, m.OptionProxySecurityID)

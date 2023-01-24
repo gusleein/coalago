@@ -6,6 +6,9 @@ import (
 	"sync/atomic"
 	"time"
 
+	"github.com/coalalib/coalago/encription"
+	cerr "github.com/coalalib/coalago/errors"
+	m "github.com/coalalib/coalago/message"
 	"github.com/coalalib/coalago/util"
 	log "github.com/ndmsystems/golog"
 	"github.com/patrickmn/go-cache"
@@ -13,16 +16,16 @@ import (
 
 var StorageLocalStates = cache.New(sumTimeAttempts, time.Second)
 
-type LocalStateFn func(*CoAPMessage)
+type LocalStateFn func(*m.CoAPMessage)
 
-func MakeLocalStateFn(r Resourcer, tr *transport, respHandler func(*CoAPMessage, error), closeCallback func()) LocalStateFn {
+func MakeLocalStateFn(r Resourcer, tr *transport, respHandler func(*m.CoAPMessage, error), closeCallback func()) LocalStateFn {
 	var mx sync.Mutex
 	var bufBlock1 = make(map[int][]byte)
 	var totalBlocks1 = -1
 	var runnedHandler int32 = 0
 	var downloadStartTime = time.Now()
 
-	return func(message *CoAPMessage) {
+	return func(message *m.CoAPMessage) {
 		mx.Lock()
 		defer mx.Unlock()
 
@@ -32,7 +35,7 @@ func MakeLocalStateFn(r Resourcer, tr *transport, respHandler func(*CoAPMessage,
 
 		util.MetricReceivedMessages.Inc()
 
-		respHandler = func(message *CoAPMessage, err error) {
+		respHandler = func(message *m.CoAPMessage, err error) {
 			if atomic.LoadInt32(&runnedHandler) == 1 {
 				return
 			}
@@ -55,7 +58,7 @@ func MakeLocalStateFn(r Resourcer, tr *transport, respHandler func(*CoAPMessage,
 	}
 }
 
-func localStateSecurityInputLayer(tr *transport, message *CoAPMessage, proxyAddr string) (isContinue bool, err error) {
+func localStateSecurityInputLayer(tr *transport, message *m.CoAPMessage, proxyAddr string) (isContinue bool, err error) {
 	if len(proxyAddr) > 0 {
 		proxyID, ok := getProxyIDIfNeed(proxyAddr, tr.conn.LocalAddr().String())
 		if ok {
@@ -68,44 +71,44 @@ func localStateSecurityInputLayer(tr *transport, message *CoAPMessage, proxyAddr
 	}
 
 	// Check if the message has coaps:// scheme and requires a new Session
-	if message.GetScheme() == COAPS_SCHEME {
+	if message.GetScheme() == m.COAPS_SCHEME {
 		addressSession := message.Sender.String()
 
 		currentSession, ok := getSessionForAddress(tr, tr.conn.LocalAddr().String(), addressSession, proxyAddr)
 
 		if !ok {
-			responseMessage := NewCoAPMessageId(ACK, CoapCodeUnauthorized, message.MessageID)
-			responseMessage.AddOption(OptionSessionNotFound, 1)
+			responseMessage := m.NewCoAPMessageId(m.ACK, m.CoapCodeUnauthorized, message.MessageID)
+			responseMessage.AddOption(m.OptionSessionNotFound, 1)
 			responseMessage.Token = message.Token
 			tr.SendTo(responseMessage, message.Sender)
-			return false, ErrorClientSessionNotFound
+			return false, cerr.ClientSessionNotFound
 		}
 
 		// Decrypt message payload
-		err := decrypt(message, currentSession.AEAD)
+		err := encription.Decrypt(message, currentSession.AEAD)
 		if err != nil {
 			deleteSessionForAddress(tr.conn.LocalAddr().String(), addressSession, proxyAddr)
-			responseMessage := NewCoAPMessageId(ACK, CoapCodeUnauthorized, message.MessageID)
-			responseMessage.AddOption(OptionSessionExpired, 1)
+			responseMessage := m.NewCoAPMessageId(m.ACK, m.CoapCodeUnauthorized, message.MessageID)
+			responseMessage.AddOption(m.OptionSessionExpired, 1)
 			responseMessage.Token = message.Token
 			tr.SendTo(responseMessage, message.Sender)
-			return false, ErrorClientSessionExpired
+			return false, cerr.ClientSessionExpired
 		}
 
 		message.PeerPublicKey = currentSession.PeerPublicKey
 	}
 
 	/* Receive Errors */
-	sessionNotFound := message.GetOption(OptionSessionNotFound)
-	sessionExpired := message.GetOption(OptionSessionExpired)
-	if message.Code == CoapCodeUnauthorized {
+	sessionNotFound := message.GetOption(m.OptionSessionNotFound)
+	sessionExpired := message.GetOption(m.OptionSessionExpired)
+	if message.Code == m.CoapCodeUnauthorized {
 		if sessionNotFound != nil {
 			deleteSessionForAddress(tr.conn.LocalAddr().String(), message.Sender.String(), proxyAddr)
-			return false, ErrorSessionNotFound
+			return false, cerr.SessionNotFound
 		}
 		if sessionExpired != nil {
 			deleteSessionForAddress(tr.conn.LocalAddr().String(), message.Sender.String(), proxyAddr)
-			return false, ErrorSessionExpired
+			return false, cerr.SessionExpired
 		}
 	}
 
@@ -117,8 +120,8 @@ func localStateMessageHandlerSelector(
 	totalBlocks int,
 	buffer map[int][]byte,
 
-	message *CoAPMessage,
-	respHandler func(*CoAPMessage, error),
+	message *m.CoAPMessage,
+	respHandler func(*m.CoAPMessage, error),
 ) (
 	int, map[int][]byte,
 ) {
@@ -126,7 +129,7 @@ func localStateMessageHandlerSelector(
 	block2 := message.GetBlock2()
 
 	if block1 != nil {
-		if message.Type == CON {
+		if message.Type == m.CON {
 			var (
 				ok  bool
 				err error
@@ -140,12 +143,12 @@ func localStateMessageHandlerSelector(
 	}
 
 	if block2 != nil {
-		if message.Type == ACK {
+		if message.Type == m.ACK {
 			id := message.Sender.String() + string(message.Token)
 
 			c, ok := sr.block2channels.Load(id)
 			if ok {
-				c.(chan *CoAPMessage) <- message
+				c.(chan *m.CoAPMessage) <- message
 			}
 		}
 		return totalBlocks, buffer
@@ -154,9 +157,9 @@ func localStateMessageHandlerSelector(
 	return totalBlocks, buffer
 }
 
-func localStateReceiveARQBlock1(sr *transport, totalBlocks int, buf map[int][]byte, inputMessage *CoAPMessage) (bool, int, map[int][]byte, *CoAPMessage, error) {
+func localStateReceiveARQBlock1(sr *transport, totalBlocks int, buf map[int][]byte, inputMessage *m.CoAPMessage) (bool, int, map[int][]byte, *m.CoAPMessage, error) {
 	block := inputMessage.GetBlock1()
-	if block == nil || inputMessage.Type != CON {
+	if block == nil || inputMessage.Type != m.CON {
 		return false, totalBlocks, buf, inputMessage, nil
 	}
 	if !block.MoreBlocks {
@@ -169,16 +172,16 @@ func localStateReceiveARQBlock1(sr *transport, totalBlocks int, buf map[int][]by
 		for i := 0; i < totalBlocks; i++ {
 			b = append(b, buf[i]...)
 		}
-		inputMessage.Payload = NewBytesPayload(b)
+		inputMessage.Payload = m.NewBytesPayload(b)
 		return true, totalBlocks, buf, inputMessage, nil
 	}
 
-	var ack *CoAPMessage
-	w := inputMessage.GetOption(OptionSelectiveRepeatWindowSize)
+	var ack *m.CoAPMessage
+	w := inputMessage.GetOption(m.OptionSelectiveRepeatWindowSize)
 	if w != nil {
-		ack = ackToWithWindowOffset(nil, inputMessage, CoapCodeContinue, w.IntValue(), block.BlockNumber, buf)
+		ack = m.AckToWithWindowOffset(nil, inputMessage, m.CoapCodeContinue, w.IntValue(), block.BlockNumber, buf)
 	} else {
-		ack = ackTo(nil, inputMessage, CoapCodeContinue)
+		ack = m.AckTo(nil, inputMessage, m.CoapCodeContinue)
 	}
 
 	if err := sr.sendToSocketByAddress(ack, inputMessage.Sender); err != nil {

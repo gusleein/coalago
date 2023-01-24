@@ -1,9 +1,5 @@
 package message
 
-import (
-	"errors"
-)
-
 const PayloadMarker = 0xff
 
 const (
@@ -245,30 +241,4 @@ const (
 	DataMsgIDStart = 2
 	DataMsgIDEnd   = 4
 	DataTokenStart = 4
-)
-
-// TODO вынести в отдельынй пакет
-var (
-	ErrMaxAttempts                   = errors.New("max attempts")
-	ErrorSessionNotFound             = errors.New("session not found")
-	ErrorClientSessionNotFound       = errors.New("client session not found")
-	ErrorSessionExpired              = errors.New("session expired")
-	ErrorClientSessionExpired        = errors.New("client session expired")
-	ErrorHandshake                   = errors.New("error handshake")
-	ErrPacketLengthLessThan4         = errors.New("Packet length less than 4 bytes")
-	ErrInvalidCoapVersion            = errors.New("Invalid CoAP version. Should be 1.")
-	ErrOptionLengthUsesValue15       = errors.New(("Message format error. Option length has reserved value of 15"))
-	ErrOptionDeltaUsesValue15        = errors.New(("Message format error. Option delta has reserved value of 15"))
-	ErrUnknownMessageType            = errors.New("Unknown message type")
-	ErrInvalidTokenLength            = errors.New("Invalid Token Length ( > 8)")
-	ErrUnknownCriticalOption         = errors.New("Unknown critical option encountered")
-	ErrUnsupportedMethod             = errors.New("Unsupported Method")
-	ErrNoMatchingRoute               = errors.New("No matching route found")
-	ErrUnsupportedContentFormat      = errors.New("Unsupported Content-Format")
-	ErrNoMatchingMethod              = errors.New("No matching method")
-	ErrNilMessage                    = errors.New("Message is nil")
-	ErrRepeatedMessage               = errors.New("Repeated message")
-	ErrNilConn                       = errors.New("Connection object is nil")
-	ErrNilAddr                       = errors.New("Address cannot be nil")
-	ErrOptionLenghtOutOfRangePackets = errors.New("Option lenght out of range packet")
 )

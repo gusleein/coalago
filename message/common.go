@@ -8,6 +8,7 @@ import (
 	"sync/atomic"
 	"time"
 
+	cerr "github.com/coalalib/coalago/errors"
 	"github.com/coalalib/coalago/util"
 )
 
@@ -29,7 +30,7 @@ func generateMessageID() uint16 {
 	return uint16(atomic.LoadInt32(&currentMessageID))
 }
 
-func generateToken(l int) []byte {
+func GenerateToken(l int) []byte {
 	token := make([]byte, l)
 	rand.Read(token)
 	return token
@@ -77,11 +78,11 @@ func getOptionHeaderValue(optValue int) (int, error) {
 // Validates a message object and returns any error upon validation failure
 func validateMessage(msg *CoAPMessage) error {
 	if msg.Type > 3 {
-		return ErrUnknownMessageType
+		return cerr.UnknownMessageType
 	}
 
 	if msg.GetTokenLength() > 8 {
-		return ErrInvalidTokenLength
+		return cerr.InvalidTokenLength
 	}
 
 	// Repeated Unrecognized Options
@@ -91,7 +92,7 @@ func validateMessage(msg *CoAPMessage) error {
 		if len(opts) > 1 {
 			if !opts[0].IsRepeatableOption() {
 				if opts[0].Code&0x01 == 1 {
-					return ErrUnknownCriticalOption
+					return cerr.UnknownCriticalOption
 				}
 			}
 		}
@@ -158,7 +159,7 @@ func encodeInt(v uint32) []byte {
 }
 
 // Gets the string representation of a CoAP Method code (e.g. GET, PUT, DELETE etc)
-func methodString(c CoapMethod) string {
+func MethodString(c CoapMethod) string {
 	switch c {
 	case CoapMethodGet:
 		return "GET"

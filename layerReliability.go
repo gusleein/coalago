@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"net"
 
+	m "github.com/coalalib/coalago/message"
 	cache "github.com/patrickmn/go-cache"
 )
 
@@ -11,8 +12,8 @@ type reliabilityLayer struct {
 	inProcess *cache.Cache
 }
 
-func (layer *reliabilityLayer) OnReceive(message *CoAPMessage) bool {
-	if message.Type == ACK || message.Type == RST {
+func (layer *reliabilityLayer) OnReceive(message *m.CoAPMessage) bool {
+	if message.Type == m.ACK || message.Type == m.RST {
 		return true
 	}
 
@@ -26,6 +27,6 @@ func (layer *reliabilityLayer) OnReceive(message *CoAPMessage) bool {
 	return true
 }
 
-func (layer *reliabilityLayer) OnSend(message *CoAPMessage, address net.Addr) (bool, error) {
+func (layer *reliabilityLayer) OnSend(message *m.CoAPMessage, address net.Addr) (bool, error) {
 	return true, nil
 }

@@ -4,6 +4,9 @@ import (
 	"bytes"
 	"net"
 	"time"
+
+	cerr "github.com/coalalib/coalago/errors"
+	m "github.com/coalalib/coalago/message"
 )
 
 var NumberConnections = 1024
@@ -129,11 +132,11 @@ type packet struct {
 	acked    bool
 	attempts int
 	lastSend time.Time
-	message  *CoAPMessage
-	response *CoAPMessage
+	message  *m.CoAPMessage
+	response *m.CoAPMessage
 }
 
-func receiveMessage(tr *transport, origMessage *CoAPMessage) (*CoAPMessage, error) {
+func receiveMessage(tr *transport, origMessage *m.CoAPMessage) (*m.CoAPMessage, error) {
 	for {
 		tr.conn.SetReadDeadlineSec(origMessage.Timeout)
 
@@ -142,7 +145,7 @@ func receiveMessage(tr *transport, origMessage *CoAPMessage) (*CoAPMessage, erro
 		origMessage.Timeout = timeWait
 		if err != nil {
 			if neterr, ok := err.(net.Error); ok && neterr.Timeout() {
-				return nil, ErrMaxAttempts
+				return nil, cerr.MaxAttempts
 			}
 			return nil, err
 		}

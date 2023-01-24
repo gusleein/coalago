@@ -3,11 +3,14 @@ package coalago
 import (
 	"net"
 	"net/url"
+
+	cerr "github.com/coalalib/coalago/errors"
+	m "github.com/coalalib/coalago/message"
 )
 
 type Response struct {
 	Body          []byte
-	Code          CoapCode
+	Code          m.CoapCode
 	PeerPublicKey []byte
 }
 
@@ -26,8 +29,8 @@ func NewClientWithPrivateKey(pk []byte) *Client {
 	return c
 }
 
-func (c *Client) GET(url string, options ...*CoAPMessageOption) (*Response, error) {
-	message, err := constructMessage(GET, url)
+func (c *Client) GET(url string, options ...*m.CoAPMessageOption) (*Response, error) {
+	message, err := constructMessage(m.GET, url)
 	message.AddOptions(options)
 
 	if err != nil {
@@ -36,7 +39,7 @@ func (c *Client) GET(url string, options ...*CoAPMessageOption) (*Response, erro
 	return clientSendCONMessage(message, c.privateKey, message.Recipient.String())
 }
 
-func (c *Client) Send(message *CoAPMessage, addr string, options ...*CoAPMessageOption) (*Response, error) {
+func (c *Client) Send(message *m.CoAPMessage, addr string, options ...*m.CoAPMessageOption) (*Response, error) {
 	message.AddOptions(options)
 
 	conn, err := globalPoolConnections.Dial(addr)
@@ -54,7 +57,7 @@ func (c *Client) Send(message *CoAPMessage, addr string, options ...*CoAPMessage
 		return nil, err
 	}
 	switch message.Type {
-	case NON, ACK:
+	case m.NON, m.ACK:
 		return nil, nil
 	}
 	r := new(Response)
@@ -64,19 +67,19 @@ func (c *Client) Send(message *CoAPMessage, addr string, options ...*CoAPMessage
 	return r, nil
 }
 
-func (c *Client) POST(data []byte, url string, options ...*CoAPMessageOption) (*Response, error) {
-	message, err := constructMessage(POST, url)
+func (c *Client) POST(data []byte, url string, options ...*m.CoAPMessageOption) (*Response, error) {
+	message, err := constructMessage(m.POST, url)
 	if err != nil {
 		return nil, err
 	}
 	message.AddOptions(options)
 
-	message.Payload = NewBytesPayload(data)
+	message.Payload = m.NewBytesPayload(data)
 	return clientSendCONMessage(message, c.privateKey, message.Recipient.String())
 }
 
-func (c *Client) DELETE(data []byte, url string, options ...*CoAPMessageOption) (*Response, error) {
-	message, err := constructMessage(DELETE, url)
+func (c *Client) DELETE(data []byte, url string, options ...*m.CoAPMessageOption) (*Response, error) {
+	message, err := constructMessage(m.DELETE, url)
 	if err != nil {
 		return nil, err
 	}
@@ -85,7 +88,7 @@ func (c *Client) DELETE(data []byte, url string, options ...*CoAPMessageOption) 
 	return clientSendCONMessage(message, c.privateKey, message.Recipient.String())
 }
 
-func clientSendCONMessage(message *CoAPMessage, privateKey []byte, addr string) (*Response, error) {
+func clientSendCONMessage(message *m.CoAPMessage, privateKey []byte, addr string) (*Response, error) {
 	resp, err := clientSendCON(message, privateKey, addr)
 	if err != nil {
 		return nil, err
@@ -97,7 +100,7 @@ func clientSendCONMessage(message *CoAPMessage, privateKey []byte, addr string) 
 	return r, nil
 }
 
-func clientSendCON(message *CoAPMessage, privateKey []byte, addr string) (resp *CoAPMessage, err error) {
+func clientSendCON(message *m.CoAPMessage, privateKey []byte, addr string) (resp *m.CoAPMessage, err error) {
 	conn, err := globalPoolConnections.Dial(addr)
 	if err != nil {
 		return nil, err
@@ -110,20 +113,20 @@ func clientSendCON(message *CoAPMessage, privateKey []byte, addr string) (resp *
 	return sr.Send(message)
 }
 
-func constructMessage(code CoapCode, url string) (*CoAPMessage, error) {
+func constructMessage(code m.CoapCode, url string) (*m.CoAPMessage, error) {
 	path, scheme, queries, addr, err := parseURI(url)
 	if err != nil {
 		return nil, err
 	}
 
-	message := NewCoAPMessage(CON, code)
+	message := m.NewCoAPMessage(m.CON, code)
 	switch scheme {
 	case "coap":
 		message.SetSchemeCOAP()
 	case "coaps":
 		message.SetSchemeCOAPS()
 	default:
-		return nil, ErrUndefinedScheme
+		return nil, cerr.UndefinedScheme
 	}
 
 	message.SetURIPath(path)
@@ -157,7 +160,7 @@ func parseURI(uri string) (path, scheme string, queries url.Values, addr net.Add
 	return
 }
 
-func isBigPayload(message *CoAPMessage) bool {
+func isBigPayload(message *m.CoAPMessage) bool {
 	if message.Payload != nil {
 		return message.Payload.Length() > MAX_PAYLOAD_SIZE
 	}
@@ -166,11 +169,11 @@ func isBigPayload(message *CoAPMessage) bool {
 }
 
 func Ping(addr string) (isPing bool, err error) {
-	msg := NewCoAPMessage(CON, CoapCodeEmpty)
+	msg := m.NewCoAPMessage(m.CON, m.CoapCodeEmpty)
 	resp, err := clientSendCON(msg, nil, addr)
 	if err != nil {
 		return false, err
 	}
 
-	return resp.Type == RST && resp.Code == CoapCodeEmpty && resp.MessageID == msg.MessageID, nil
+	return resp.Type == m.RST && resp.Code == m.CoapCodeEmpty && resp.MessageID == msg.MessageID, nil
 }

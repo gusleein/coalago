@@ -7,24 +7,24 @@ import (
 )
 
 type CoAPResource struct {
-	Method     CoapMethod
+	Method     m.CoapMethod
 	Path       string
 	Handler    CoAPResourceHandler
-	MediaTypes []MediaType
+	MediaTypes []m.MediaType
 }
 
 type CoAPResourceHandler func(message *m.CoAPMessage) *CoAPResourceHandlerResult
 
 type CoAPResourceHandlerResult struct {
 	Payload   m.CoAPMessagePayload
-	Code      CoapCode
-	MediaType MediaType
+	Code      m.CoapCode
+	MediaType m.MediaType
 }
 
-func NewResponse(payload m.CoAPMessagePayload, code CoapCode) *CoAPResourceHandlerResult {
+func NewResponse(payload m.CoAPMessagePayload, code m.CoapCode) *CoAPResourceHandlerResult {
 	return &CoAPResourceHandlerResult{Payload: payload, Code: code, MediaType: -1} // -1 means no value
 }
 
-func NewCoAPResource(method CoapMethod, path string, handler CoAPResourceHandler) *CoAPResource {
+func NewCoAPResource(method m.CoapMethod, path string, handler CoAPResourceHandler) *CoAPResource {
 	return &CoAPResource{Method: method, Path: strings.Trim(path, "/ "), Handler: handler}
 }

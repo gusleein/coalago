@@ -6,6 +6,7 @@ import (
 	"strings"
 	"sync"
 
+	m "github.com/coalalib/coalago/message"
 	log "github.com/ndmsystems/golog"
 )
 
@@ -34,7 +35,7 @@ func NewServerWithPrivateKey(privatekey []byte) *Server {
 }
 
 type Resourcer interface {
-	getResourceForPathAndMethod(path string, method CoapMethod) *CoAPResource
+	getResourceForPathAndMethod(path string, method m.CoapMethod) *CoAPResource
 }
 
 func (s *Server) Listen(addr string) (err error) {
@@ -85,7 +86,7 @@ func (s *Server) Serve(conn *net.UDPConn) {
 
 }
 
-func (s *Server) ServeMessage(message *CoAPMessage) {
+func (s *Server) ServeMessage(message *m.CoAPMessage) {
 	id := message.Sender.String() + message.GetTokenString()
 	fn, ok := StorageLocalStates.Get(id)
 	if !ok {
@@ -104,22 +105,22 @@ func (s *Server) addResource(res *CoAPResource) {
 }
 
 func (s *Server) GET(path string, handler CoAPResourceHandler) {
-	s.addResource(NewCoAPResource(CoapMethodGet, path, handler))
+	s.addResource(NewCoAPResource(m.CoapMethodGet, path, handler))
 }
 
 func (s *Server) POST(path string, handler CoAPResourceHandler) {
-	s.addResource(NewCoAPResource(CoapMethodPost, path, handler))
+	s.addResource(NewCoAPResource(m.CoapMethodPost, path, handler))
 }
 
 func (s *Server) AddPUTResource(path string, handler CoAPResourceHandler) {
-	s.addResource(NewCoAPResource(CoapMethodPut, path, handler))
+	s.addResource(NewCoAPResource(m.CoapMethodPut, path, handler))
 }
 
 func (s *Server) DELETE(path string, handler CoAPResourceHandler) {
-	s.addResource(NewCoAPResource(CoapMethodDelete, path, handler))
+	s.addResource(NewCoAPResource(m.CoapMethodDelete, path, handler))
 }
 
-func (s *Server) getResourceForPathAndMethod(path string, method CoapMethod) *CoAPResource {
+func (s *Server) getResourceForPathAndMethod(path string, method m.CoapMethod) *CoAPResource {
 	path = strings.Trim(path, "/ ")
 	key := path + fmt.Sprint(method)
 	res, ok := s.resources.Load("*" + fmt.Sprint(method))
@@ -149,8 +150,8 @@ func (s *Server) GetPrivateKey() []byte {
 	return s.privatekey
 }
 
-func (s *Server) SendToSocket(message *CoAPMessage, addr string) error {
-	b, err := Serialize(message)
+func (s *Server) SendToSocket(message *m.CoAPMessage, addr string) error {
+	b, err := m.Serialize(message)
 	if err != nil {
 		return err
 	}

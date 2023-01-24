@@ -8,6 +8,8 @@ import (
 	"sync"
 	"time"
 
+	cerr "github.com/coalalib/coalago/errors"
+	m "github.com/coalalib/coalago/message"
 	"github.com/coalalib/coalago/util"
 	log "github.com/ndmsystems/golog"
 	"github.com/patrickmn/go-cache"
@@ -37,11 +39,11 @@ func (tr *transport) SetPrivateKey(pk []byte) {
 	tr.privateKey = pk
 }
 
-func (sr *transport) Send(message *CoAPMessage) (resp *CoAPMessage, err error) {
+func (sr *transport) Send(message *m.CoAPMessage) (resp *m.CoAPMessage, err error) {
 	switch message.Type {
-	case CON:
+	case m.CON:
 
-		if message.GetScheme() == COAPS_SCHEME {
+		if message.GetScheme() == m.COAPS_SCHEME {
 			proxyAddr := message.ProxyAddr
 			if len(proxyAddr) > 0 {
 				proxyID := setProxyIDIfNeed(message, sr.conn.LocalAddr().String())
@@ -55,9 +57,9 @@ func (sr *transport) Send(message *CoAPMessage) (resp *CoAPMessage, err error) {
 		}
 
 		resp, err := sr.sendCON(message)
-		if err == ErrorSessionExpired || err == ErrorSessionNotFound ||
-			err == ErrorClientSessionExpired || err == ErrorClientSessionNotFound {
-			if message.GetScheme() == COAPS_SCHEME {
+		if err == cerr.SessionExpired || err == cerr.SessionNotFound ||
+			err == cerr.ClientSessionExpired || err == cerr.ClientSessionNotFound {
+			if message.GetScheme() == m.COAPS_SCHEME {
 				proxyAddr := message.ProxyAddr
 				if len(proxyAddr) > 0 {
 					proxyID := setProxyIDIfNeed(message, sr.conn.LocalAddr().String())
@@ -71,23 +73,23 @@ func (sr *transport) Send(message *CoAPMessage) (resp *CoAPMessage, err error) {
 			resp, err = sr.sendCON(message)
 		}
 		return resp, err
-	case RST, NON:
+	case m.RST, m.NON:
 		return nil, sr.sendToSocket(message)
 	default:
-		return nil, ErrUnsupportedType
+		return nil, cerr.UnsupportedType
 	}
 }
 
-func (sr *transport) SendTo(message *CoAPMessage, addr net.Addr) (resp *CoAPMessage, err error) {
+func (sr *transport) SendTo(message *m.CoAPMessage, addr net.Addr) (resp *m.CoAPMessage, err error) {
 	switch message.Type {
-	case ACK, NON, RST:
+	case m.ACK, m.NON, m.RST:
 		return nil, sr.sendACKTo(message, addr)
 	default:
-		return nil, ErrUnsupportedType
+		return nil, cerr.UnsupportedType
 	}
 }
 
-func (sr *transport) sendCON(message *CoAPMessage) (resp *CoAPMessage, err error) {
+func (sr *transport) sendCON(message *m.CoAPMessage) (resp *m.CoAPMessage, err error) {
 	if isBigPayload(message) {
 		resp, err = sr.sendARQBlock1CON(message)
 		return
@@ -113,7 +115,7 @@ func (sr *transport) sendCON(message *CoAPMessage) (resp *CoAPMessage, err error
 		}
 
 		resp, err = receiveMessage(sr, message)
-		if err == ErrMaxAttempts {
+		if err == cerr.MaxAttempts {
 			if attempts == maxSendAttempts {
 				util.MetricExpiredMessages.Inc()
 				return nil, err
@@ -128,7 +130,7 @@ func (sr *transport) sendCON(message *CoAPMessage) (resp *CoAPMessage, err error
 			return resp, nil
 		}
 
-		if resp.Type == ACK && resp.Code == CoapCodeEmpty {
+		if resp.Type == m.ACK && resp.Code == m.CoapCodeEmpty {
 			resp, err = sr.receiveARQBlock2(message, nil)
 			return resp, err
 		}
@@ -144,14 +146,14 @@ func (sr *transport) sendCON(message *CoAPMessage) (resp *CoAPMessage, err error
 	return
 }
 
-func isPingACK(resp *CoAPMessage) bool {
-	return resp.Type == RST && resp.Code == CoapCodeEmpty
+func isPingACK(resp *m.CoAPMessage) bool {
+	return resp.Type == m.RST && resp.Code == m.CoapCodeEmpty
 }
 
-func (sr *transport) sendACKTo(message *CoAPMessage, addr net.Addr) (err error) {
-	if message.Type == ACK {
+func (sr *transport) sendACKTo(message *m.CoAPMessage, addr net.Addr) (err error) {
+	if message.Type == m.ACK {
 		if isBigPayload(message) {
-			ch := make(chan *CoAPMessage, 102400)
+			ch := make(chan *m.CoAPMessage, 102400)
 			id := addr.String() + message.GetTokenString()
 			sr.block2channels.Store(id, ch)
 			err = sr.sendARQBlock2ACK(ch, message, addr)
@@ -163,7 +165,7 @@ func (sr *transport) sendACKTo(message *CoAPMessage, addr net.Addr) (err error) 
 	return sr.sendToSocketByAddress(message, addr)
 }
 
-func (sr *transport) sendToSocket(message *CoAPMessage) error {
+func (sr *transport) sendToSocket(message *m.CoAPMessage) error {
 	buf, err := preparationSendingMessage(sr, message, sr.conn.RemoteAddr())
 	if err != nil {
 		return err
@@ -177,7 +179,7 @@ func (sr *transport) sendToSocket(message *CoAPMessage) error {
 	return err
 }
 
-func (sr *transport) sendToSocketByAddress(message *CoAPMessage, addr net.Addr) error {
+func (sr *transport) sendToSocketByAddress(message *m.CoAPMessage, addr net.Addr) error {
 
 	buf, err := preparationSendingMessage(sr, message, addr)
 	if err != nil {
@@ -214,7 +216,7 @@ func (sr *transport) sendPackets(packets []*packet, windowsize *int, shift int, 
 
 				if packets[i].attempts == maxSendAttempts {
 					util.MetricExpiredMessages.Inc()
-					return ErrMaxAttempts
+					return cerr.MaxAttempts
 				}
 				if packets[i].attempts == 3 {
 					*overflowIndicator++
@@ -257,7 +259,7 @@ func (sr *transport) sendPacketsByWindowOffset(packets []*packet, windowsize, sh
 				}
 				if packets[i].attempts == maxSendAttempts {
 					util.MetricExpiredMessages.Inc()
-					return ErrMaxAttempts
+					return cerr.MaxAttempts
 				}
 				packets[i].attempts++
 				packets[i].lastSend = time.Now()
@@ -273,7 +275,7 @@ func (sr *transport) sendPacketsByWindowOffset(packets []*packet, windowsize, sh
 	if len(packets) == stop {
 		if time.Since(packets[len(packets)-1].lastSend) >= timeWait {
 			util.MetricExpiredMessages.Inc()
-			return ErrMaxAttempts
+			return cerr.MaxAttempts
 		}
 	}
 
@@ -302,7 +304,7 @@ func (sr *transport) sendPacketsByWindowOffsetToAddr(packets []*packet, windowsi
 				}
 				if packets[i].attempts == maxSendAttempts {
 					util.MetricExpiredMessages.Inc()
-					return ErrMaxAttempts
+					return cerr.MaxAttempts
 				}
 				packets[i].attempts++
 				packets[i].lastSend = time.Now()
@@ -318,7 +320,7 @@ func (sr *transport) sendPacketsByWindowOffsetToAddr(packets []*packet, windowsi
 	if len(packets) == stop {
 		if time.Since(packets[len(packets)-1].lastSend) >= timeWait {
 			util.MetricExpiredMessages.Inc()
-			return ErrMaxAttempts
+			return cerr.MaxAttempts
 		}
 	}
 
@@ -337,7 +339,7 @@ func (sr *transport) sendPacketsToAddr(packets []*packet, windowsize *int, shift
 	}
 	// need a more elegant solution
 	if shift == len(packets) {
-		return ErrMaxAttempts
+		return cerr.MaxAttempts
 	}
 
 	var acked int
@@ -346,7 +348,7 @@ func (sr *transport) sendPacketsToAddr(packets []*packet, windowsize *int, shift
 			if time.Since(packets[i].lastSend) >= timeWait {
 				if packets[i].attempts == maxSendAttempts {
 					util.MetricExpiredMessages.Inc()
-					return ErrMaxAttempts
+					return cerr.MaxAttempts
 				}
 
 				if packets[i].attempts == 3 {
@@ -372,24 +374,24 @@ func (sr *transport) sendPacketsToAddr(packets []*packet, windowsize *int, shift
 	return nil
 }
 
-func (sr *transport) sendARQBlock1CON(message *CoAPMessage) (*CoAPMessage, error) {
+func (sr *transport) sendARQBlock1CON(message *m.CoAPMessage) (*m.CoAPMessage, error) {
 
-	state := new(stateSend)
-	state.payload = message.Payload.Bytes()
-	state.lenght = len(state.payload)
-	state.origMessage = message
-	state.blockSize = MAX_PAYLOAD_SIZE
-	numblocks := math.Ceil(float64(state.lenght) / float64(MAX_PAYLOAD_SIZE))
+	state := new(m.StateSend)
+	state.Payload = message.Payload.Bytes()
+	state.Lenght = len(state.Payload)
+	state.OrigMessage = message
+	state.BlockSize = MAX_PAYLOAD_SIZE
+	numblocks := math.Ceil(float64(state.Lenght) / float64(MAX_PAYLOAD_SIZE))
 	if int(numblocks) < DEFAULT_WINDOW_SIZE {
-		state.windowsize = int(numblocks)
+		state.Windowsize = int(numblocks)
 	} else {
-		state.windowsize = DEFAULT_WINDOW_SIZE
+		state.Windowsize = DEFAULT_WINDOW_SIZE
 	}
 
 	packets := []*packet{}
 
 	for {
-		blockMessage, end := constructNextBlock(OptionBlock1, state)
+		blockMessage, end := m.ConstructNextBlock(m.OptionBlock1, state)
 		packets = append(packets, &packet{
 			acked:   false,
 			message: blockMessage,
@@ -408,7 +410,7 @@ func (sr *transport) sendARQBlock1CON(message *CoAPMessage) (*CoAPMessage, error
 	var balancerCounter = 0
 	var overflowIndicator = 0
 
-	err := sr.sendPackets(packets, &state.windowsize, shift, relative_shift, &localMetricsRetransmitMessages, &overflowIndicator)
+	err := sr.sendPackets(packets, &state.Windowsize, shift, relative_shift, &localMetricsRetransmitMessages, &overflowIndicator)
 
 	if err != nil {
 		return nil, err
@@ -417,8 +419,8 @@ func (sr *transport) sendARQBlock1CON(message *CoAPMessage) (*CoAPMessage, error
 	for {
 		resp, err := receiveMessage(sr, message)
 		if err != nil {
-			if err == ErrMaxAttempts {
-				if err = sr.sendPackets(packets, &state.windowsize, shift, relative_shift, &localMetricsRetransmitMessages, &overflowIndicator); err != nil {
+			if err == cerr.MaxAttempts {
+				if err = sr.sendPackets(packets, &state.Windowsize, shift, relative_shift, &localMetricsRetransmitMessages, &overflowIndicator); err != nil {
 					return nil, err
 				}
 				continue
@@ -426,8 +428,8 @@ func (sr *transport) sendARQBlock1CON(message *CoAPMessage) (*CoAPMessage, error
 			return nil, err
 		}
 
-		if resp.Type == ACK {
-			if resp.Type == ACK && resp.Code == CoapCodeEmpty {
+		if resp.Type == m.ACK {
+			if resp.Type == m.ACK && resp.Code == m.CoapCodeEmpty {
 				return sr.receiveARQBlock2(message, nil)
 			}
 
@@ -443,14 +445,14 @@ func (sr *transport) sendARQBlock1CON(message *CoAPMessage) (*CoAPMessage, error
 				// }
 				if len(packets) >= block.BlockNumber {
 					balancerCounter++
-					if resp.Code != CoapCodeContinue {
+					if resp.Code != m.CoapCodeContinue {
 						if len(packets) > DEFAULT_WINDOW_SIZE*2 {
 							log.Debug(fmt.Sprintf("COALA U: %s, %s, Packets: %d Lost: %d, FinalWSize: %d",
-								util.ByteCountBinary(int64(state.lenght)),
-								util.ByteCountBinaryBits(int64(state.lenght)*time.Second.Milliseconds()/time.Since(downloadStartTime).Milliseconds()),
+								util.ByteCountBinary(int64(state.Lenght)),
+								util.ByteCountBinaryBits(int64(state.Lenght)*time.Second.Milliseconds()/time.Since(downloadStartTime).Milliseconds()),
 								len(packets),
 								localMetricsRetransmitMessages,
-								state.windowsize))
+								state.Windowsize))
 						}
 						return resp, nil
 					}
@@ -473,19 +475,19 @@ func (sr *transport) sendARQBlock1CON(message *CoAPMessage) (*CoAPMessage, error
 
 					if balancerCounter%25 == 0 {
 						dt := int(float64(2-localMetricsRetransmitMessages+retransmitsTmp) * 0.7)
-						state.windowsize += dt
+						state.Windowsize += dt
 						retransmitsTmp = localMetricsRetransmitMessages
 
-						if state.windowsize < MIN_WiNDOW_SIZE {
-							state.windowsize = MIN_WiNDOW_SIZE
+						if state.Windowsize < MIN_WiNDOW_SIZE {
+							state.Windowsize = MIN_WiNDOW_SIZE
 						}
-						if state.windowsize > MAX_WINDOW_SIZE {
-							state.windowsize = MAX_WINDOW_SIZE
+						if state.Windowsize > MAX_WINDOW_SIZE {
+							state.Windowsize = MAX_WINDOW_SIZE
 						}
 
 					}
 
-					if err = sr.sendPackets(packets, &state.windowsize, shift, relative_shift, &localMetricsRetransmitMessages, &overflowIndicator); err != nil {
+					if err = sr.sendPackets(packets, &state.Windowsize, shift, relative_shift, &localMetricsRetransmitMessages, &overflowIndicator); err != nil {
 						return nil, err
 					}
 
@@ -495,22 +497,22 @@ func (sr *transport) sendARQBlock1CON(message *CoAPMessage) (*CoAPMessage, error
 	}
 }
 
-func (sr *transport) sendARQBlock2ACK(input chan *CoAPMessage, message *CoAPMessage, addr net.Addr) error {
-	state := new(stateSend)
-	state.payload = message.Payload.Bytes()
-	state.lenght = len(state.payload)
-	state.origMessage = message
-	state.blockSize = MAX_PAYLOAD_SIZE
-	numblocks := math.Ceil(float64(state.lenght) / float64(MAX_PAYLOAD_SIZE))
+func (sr *transport) sendARQBlock2ACK(input chan *m.CoAPMessage, message *m.CoAPMessage, addr net.Addr) error {
+	state := new(m.StateSend)
+	state.Payload = message.Payload.Bytes()
+	state.Lenght = len(state.Payload)
+	state.OrigMessage = message
+	state.BlockSize = MAX_PAYLOAD_SIZE
+	numblocks := math.Ceil(float64(state.Lenght) / float64(MAX_PAYLOAD_SIZE))
 	if int(numblocks) < DEFAULT_WINDOW_SIZE {
-		state.windowsize = int(numblocks)
+		state.Windowsize = int(numblocks)
 	} else {
-		state.windowsize = DEFAULT_WINDOW_SIZE
+		state.Windowsize = DEFAULT_WINDOW_SIZE
 	}
 
 	packets := []*packet{}
 
-	emptyAckMessage := newACKEmptyMessage(message, state.windowsize)
+	emptyAckMessage := m.NewACKEmptyMessage(message, state.Windowsize)
 	err := sr.sendToSocketByAddress(emptyAckMessage, addr)
 	if err != nil {
 		return err
@@ -518,7 +520,7 @@ func (sr *transport) sendARQBlock2ACK(input chan *CoAPMessage, message *CoAPMess
 	emptyAckMessage = nil
 
 	for {
-		blockMessage, end := constructNextBlock(OptionBlock2, state)
+		blockMessage, end := m.ConstructNextBlock(m.OptionBlock2, state)
 		packets = append(packets, &packet{
 			acked:   false,
 			message: blockMessage,
@@ -537,7 +539,7 @@ func (sr *transport) sendARQBlock2ACK(input chan *CoAPMessage, message *CoAPMess
 	var balancerCounter = 0
 	var overflowIndicator = 0
 
-	if err := sr.sendPacketsToAddr(packets, &state.windowsize, shift, relative_shift, &localMetricsRetransmitMessages, &overflowIndicator, addr); err != nil {
+	if err := sr.sendPacketsToAddr(packets, &state.Windowsize, shift, relative_shift, &localMetricsRetransmitMessages, &overflowIndicator, addr); err != nil {
 		return err
 	}
 	for {
@@ -546,19 +548,19 @@ func (sr *transport) sendARQBlock2ACK(input chan *CoAPMessage, message *CoAPMess
 			if !bytes.Equal(resp.Token, message.Token) {
 				continue
 			}
-			if resp.Type == ACK {
+			if resp.Type == m.ACK {
 				block := resp.GetBlock2()
 				if block != nil {
 					if len(packets) >= block.BlockNumber {
 						balancerCounter++
-						if resp.Code != CoapCodeContinue {
+						if resp.Code != m.CoapCodeContinue {
 							if len(packets) > DEFAULT_WINDOW_SIZE*2 {
 								log.Debug(fmt.Sprintf("COALA U: %s, %s, Packets: %d Lost: %d, FinalWSize: %d",
-									util.ByteCountBinary(int64(state.lenght)),
-									util.ByteCountBinaryBits(int64(state.lenght)*time.Second.Milliseconds()/time.Since(downloadStartTime).Milliseconds()),
+									util.ByteCountBinary(int64(state.Lenght)),
+									util.ByteCountBinaryBits(int64(state.Lenght)*time.Second.Milliseconds()/time.Since(downloadStartTime).Milliseconds()),
 									len(packets),
 									localMetricsRetransmitMessages,
-									state.windowsize))
+									state.Windowsize))
 							}
 							return nil
 						}
@@ -587,18 +589,18 @@ func (sr *transport) sendARQBlock2ACK(input chan *CoAPMessage, message *CoAPMess
 
 							if balancerCounter%25 == 0 {
 								dt := int(float64(2-localMetricsRetransmitMessages+retransmitsTmp) * 0.7)
-								state.windowsize += dt
+								state.Windowsize += dt
 								retransmitsTmp = localMetricsRetransmitMessages
 
-								if state.windowsize < MIN_WiNDOW_SIZE {
-									state.windowsize = MIN_WiNDOW_SIZE
+								if state.Windowsize < MIN_WiNDOW_SIZE {
+									state.Windowsize = MIN_WiNDOW_SIZE
 								}
-								if state.windowsize > MAX_WINDOW_SIZE {
-									state.windowsize = MAX_WINDOW_SIZE
+								if state.Windowsize > MAX_WINDOW_SIZE {
+									state.Windowsize = MAX_WINDOW_SIZE
 								}
 							}
 
-							if err := sr.sendPacketsToAddr(packets, &state.windowsize, shift, relative_shift, &localMetricsRetransmitMessages, &overflowIndicator, addr); err != nil {
+							if err := sr.sendPacketsToAddr(packets, &state.Windowsize, shift, relative_shift, &localMetricsRetransmitMessages, &overflowIndicator, addr); err != nil {
 								return err
 							}
 						}
@@ -606,14 +608,14 @@ func (sr *transport) sendARQBlock2ACK(input chan *CoAPMessage, message *CoAPMess
 				}
 			}
 		case <-time.After(timeWait):
-			if err := sr.sendPacketsToAddr(packets, &state.windowsize, shift, relative_shift, &localMetricsRetransmitMessages, &overflowIndicator, addr); err != nil {
+			if err := sr.sendPacketsToAddr(packets, &state.Windowsize, shift, relative_shift, &localMetricsRetransmitMessages, &overflowIndicator, addr); err != nil {
 				return err
 			}
 		}
 	}
 }
 
-func (sr *transport) receiveARQBlock1(input chan *CoAPMessage) (*CoAPMessage, error) {
+func (sr *transport) receiveARQBlock1(input chan *m.CoAPMessage) (*m.CoAPMessage, error) {
 	buf := make(map[int][]byte)
 	totalBlocks := -1
 
@@ -621,7 +623,7 @@ func (sr *transport) receiveARQBlock1(input chan *CoAPMessage) (*CoAPMessage, er
 		select {
 		case inputMessage := <-input:
 			block := inputMessage.GetBlock1()
-			if block == nil || inputMessage.Type != CON {
+			if block == nil || inputMessage.Type != m.CON {
 				continue
 			}
 			if !block.MoreBlocks {
@@ -633,17 +635,17 @@ func (sr *transport) receiveARQBlock1(input chan *CoAPMessage) (*CoAPMessage, er
 				for i := 0; i < totalBlocks; i++ {
 					b = append(b, buf[i]...)
 				}
-				inputMessage.Payload = NewBytesPayload(b)
+				inputMessage.Payload = m.NewBytesPayload(b)
 
 				return inputMessage, nil
 			}
 
-			var ack *CoAPMessage
-			w := inputMessage.GetOption(OptionSelectiveRepeatWindowSize)
+			var ack *m.CoAPMessage
+			w := inputMessage.GetOption(m.OptionSelectiveRepeatWindowSize)
 			if w != nil {
-				ack = ackToWithWindowOffset(nil, inputMessage, CoapCodeContinue, w.IntValue(), block.BlockNumber, buf)
+				ack = m.AckToWithWindowOffset(nil, inputMessage, m.CoapCodeContinue, w.IntValue(), block.BlockNumber, buf)
 			} else {
-				ack = ackTo(nil, inputMessage, CoapCodeContinue)
+				ack = m.AckTo(nil, inputMessage, m.CoapCodeContinue)
 			}
 
 			if err := sr.sendToSocketByAddress(ack, inputMessage.Sender); err != nil {
@@ -652,12 +654,12 @@ func (sr *transport) receiveARQBlock1(input chan *CoAPMessage) (*CoAPMessage, er
 
 		case <-time.After(timeWait):
 			util.MetricExpiredMessages.Inc()
-			return nil, ErrMaxAttempts
+			return nil, cerr.MaxAttempts
 		}
 	}
 }
 
-func (sr *transport) receiveARQBlock2(origMessage *CoAPMessage, inputMessage *CoAPMessage) (rsp *CoAPMessage, err error) {
+func (sr *transport) receiveARQBlock2(origMessage *m.CoAPMessage, inputMessage *m.CoAPMessage) (rsp *m.CoAPMessage, err error) {
 	buf := make(map[int][]byte)
 	totalBlocks := -1
 	var attempts int
@@ -665,7 +667,7 @@ func (sr *transport) receiveARQBlock2(origMessage *CoAPMessage, inputMessage *Co
 	if inputMessage != nil {
 		block := inputMessage.GetBlock2()
 
-		if block != nil && inputMessage.Type == CON {
+		if block != nil && inputMessage.Type == m.CON {
 			if !block.MoreBlocks {
 				totalBlocks = block.BlockNumber + 1
 			}
@@ -675,19 +677,19 @@ func (sr *transport) receiveARQBlock2(origMessage *CoAPMessage, inputMessage *Co
 				for i := 0; i < totalBlocks; i++ {
 					b = append(b, buf[i]...)
 				}
-				inputMessage.Payload = NewBytesPayload(b)
+				inputMessage.Payload = m.NewBytesPayload(b)
 
-				ack := ackTo(origMessage, inputMessage, CoapCodeEmpty)
+				ack := m.AckTo(origMessage, inputMessage, m.CoapCodeEmpty)
 				sr.sendToSocket(ack)
 				return inputMessage, nil
 			}
 
-			var ack *CoAPMessage
-			w := inputMessage.GetOption(OptionSelectiveRepeatWindowSize)
+			var ack *m.CoAPMessage
+			w := inputMessage.GetOption(m.OptionSelectiveRepeatWindowSize)
 			if w != nil {
-				ack = ackToWithWindowOffset(origMessage, inputMessage, CoapCodeContinue, w.IntValue(), block.BlockNumber, buf)
+				ack = m.AckToWithWindowOffset(origMessage, inputMessage, m.CoapCodeContinue, w.IntValue(), block.BlockNumber, buf)
 			} else {
-				ack = ackTo(origMessage, inputMessage, CoapCodeContinue)
+				ack = m.AckTo(origMessage, inputMessage, m.CoapCodeContinue)
 			}
 			sr.sendToSocket(ack)
 		}
@@ -697,7 +699,7 @@ func (sr *transport) receiveARQBlock2(origMessage *CoAPMessage, inputMessage *Co
 
 	for {
 		inputMessage, err = receiveMessage(sr, origMessage)
-		if err == ErrMaxAttempts {
+		if err == cerr.MaxAttempts {
 			if attempts == maxSendAttempts {
 				util.MetricExpiredMessages.Inc()
 				return nil, err
@@ -713,7 +715,7 @@ func (sr *transport) receiveARQBlock2(origMessage *CoAPMessage, inputMessage *Co
 			util.MetricRetransmitMessages.Inc()
 		}
 		block := inputMessage.GetBlock2()
-		if block == nil || inputMessage.Type != CON {
+		if block == nil || inputMessage.Type != m.CON {
 			continue
 		}
 
@@ -728,8 +730,8 @@ func (sr *transport) receiveARQBlock2(origMessage *CoAPMessage, inputMessage *Co
 			for i := 0; i < totalBlocks; i++ {
 				b = append(b, buf[i]...)
 			}
-			inputMessage.Payload = NewBytesPayload(b)
-			ack := ackTo(origMessage, inputMessage, CoapCodeEmpty)
+			inputMessage.Payload = m.NewBytesPayload(b)
+			ack := m.AckTo(origMessage, inputMessage, m.CoapCodeEmpty)
 			if err = sr.sendToSocket(ack); err != nil {
 				return nil, err
 			}
@@ -741,12 +743,12 @@ func (sr *transport) receiveARQBlock2(origMessage *CoAPMessage, inputMessage *Co
 			return inputMessage, nil
 		}
 
-		var ack *CoAPMessage
-		w := inputMessage.GetOption(OptionSelectiveRepeatWindowSize)
+		var ack *m.CoAPMessage
+		w := inputMessage.GetOption(m.OptionSelectiveRepeatWindowSize)
 		if w != nil {
-			ack = ackToWithWindowOffset(origMessage, inputMessage, CoapCodeContinue, w.IntValue(), block.BlockNumber, buf)
+			ack = m.AckToWithWindowOffset(origMessage, inputMessage, m.CoapCodeContinue, w.IntValue(), block.BlockNumber, buf)
 		} else {
-			ack = ackTo(origMessage, inputMessage, CoapCodeContinue)
+			ack = m.AckTo(origMessage, inputMessage, m.CoapCodeContinue)
 		}
 
 		if err = sr.sendToSocket(ack); err != nil {
@@ -755,14 +757,14 @@ func (sr *transport) receiveARQBlock2(origMessage *CoAPMessage, inputMessage *Co
 	}
 }
 
-func preparationSendingMessage(tr *transport, message *CoAPMessage, addr net.Addr) ([]byte, error) {
+func preparationSendingMessage(tr *transport, message *m.CoAPMessage, addr net.Addr) ([]byte, error) {
 	secMessage := message.Clone(true)
 
 	if err := securityOutputLayer(tr, secMessage, addr); err != nil {
 		return nil, err
 	}
 
-	buf, err := Serialize(secMessage)
+	buf, err := m.Serialize(secMessage)
 	if err != nil {
 		return nil, err
 	}
@@ -770,13 +772,13 @@ func preparationSendingMessage(tr *transport, message *CoAPMessage, addr net.Add
 	return buf, nil
 }
 
-func preparationReceivingBufferForStorageLocalStates(data []byte, senderAddr net.Addr) (*CoAPMessage, error) {
-	message, err := Deserialize(data)
+func preparationReceivingBufferForStorageLocalStates(data []byte, senderAddr net.Addr) (*m.CoAPMessage, error) {
+	message, err := m.Deserialize(data)
 	if err != nil {
 		return nil, err
 	}
 	if message == nil {
-		return nil, ErrNilMessage
+		return nil, cerr.NilMessage
 	}
 
 	util.MetricReceivedMessages.Inc()
@@ -786,13 +788,13 @@ func preparationReceivingBufferForStorageLocalStates(data []byte, senderAddr net
 	return message, nil
 }
 
-func preparationReceivingBuffer(tr *transport, data []byte, senderAddr net.Addr, proxyAddr string) (*CoAPMessage, error) {
-	message, err := Deserialize(data)
+func preparationReceivingBuffer(tr *transport, data []byte, senderAddr net.Addr, proxyAddr string) (*m.CoAPMessage, error) {
+	message, err := m.Deserialize(data)
 	if err != nil {
 		return nil, err
 	}
 	if message == nil {
-		return nil, ErrNilMessage
+		return nil, cerr.NilMessage
 	}
 
 	util.MetricReceivedMessages.Inc()

@@ -13,6 +13,7 @@ import (
 	"strings"
 	"time"
 
+	cerr "github.com/coalalib/coalago/errors"
 	"github.com/coalalib/coalago/util"
 )
 
@@ -30,6 +31,7 @@ type CoAPMessage struct {
 
 	Attempts int
 	LastSent time.Time
+	Timeout  time.Duration
 
 	IsProxies bool
 
@@ -46,7 +48,7 @@ func NewCoAPMessage(messageType CoapType, messageCode CoapCode) *CoAPMessage {
 		Type:      messageType,
 		Code:      messageCode,
 		Payload:   NewEmptyPayload(),
-		Token:     generateToken(6),
+		Token:     GenerateToken(6),
 	}
 }
 
@@ -55,7 +57,7 @@ func NewCoAPMessageId(messageType CoapType, messageCode CoapCode, messageID uint
 		MessageID: messageID,
 		Type:      messageType,
 		Code:      messageCode,
-		Token:     generateToken(6),
+		Token:     GenerateToken(6),
 	}
 }
 
@@ -64,7 +66,7 @@ func NewCoAPMessageId(messageType CoapType, messageCode CoapCode, messageID uint
 func Deserialize(data []byte) (*CoAPMessage, error) {
 	m, err := deserialize(data)
 	if m == nil && err == nil {
-		return nil, ErrNilMessage
+		return nil, cerr.NilMessage
 	}
 	return m, err
 }
@@ -78,12 +80,12 @@ func deserialize(data []byte) (*CoAPMessage, error) {
 
 	dataLen := len(data)
 	if dataLen < 4 {
-		return msg, ErrPacketLengthLessThan4
+		return msg, cerr.PacketLengthLessThan4
 	}
 
 	ver := data[DataHeader] >> 6
 	if ver != 1 {
-		return nil, ErrInvalidCoapVersion
+		return nil, cerr.InvalidCoapVersion
 	}
 
 	msg.Type = CoapType(data[DataHeader] >> 4 & 0x03)
@@ -146,7 +148,7 @@ func deserialize(data []byte) (*CoAPMessage, error) {
 			tmp = tmp[2:]
 
 		case 15:
-			return msg, ErrOptionDeltaUsesValue15
+			return msg, cerr.OptionDeltaUsesValue15
 		}
 
 		lastOptionID += optionDelta
@@ -163,7 +165,7 @@ func deserialize(data []byte) (*CoAPMessage, error) {
 			tmp = tmp[2:]
 
 		case 15:
-			return msg, ErrOptionLengthUsesValue15
+			return msg, cerr.OptionLengthUsesValue15
 		}
 
 		optCode := OptionCode(lastOptionID)
@@ -187,7 +189,7 @@ func deserialize(data []byte) (*CoAPMessage, error) {
 				msg.Options = append(msg.Options, NewOption(optCode, string(optionValue)))
 			default:
 				if lastOptionID&0x01 == 1 {
-					return msg, ErrUnknownCriticalOption
+					return msg, cerr.UnknownCriticalOption
 				}
 			}
 			tmp = tmp[optionLength:]
