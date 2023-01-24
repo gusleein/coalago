@@ -58,10 +58,6 @@ func (s *Server) Listen(addr string) (err error) {
 		if n == 0 {
 			goto start
 		}
-		if n > MTU {
-			MetricMaxMTU.Inc()
-			goto start
-		}
 
 		message, err := preparationReceivingBufferForStorageLocalStates(readBuf[:n], senderAddr)
 		if err != nil {
