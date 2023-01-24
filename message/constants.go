@@ -1,4 +1,4 @@
-package message
+package coalaMsg
 
 const PayloadMarker = 0xff
 

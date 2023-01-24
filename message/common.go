@@ -1,4 +1,4 @@
-package message
+package coalaMsg
 
 import (
 	"encoding/binary"
