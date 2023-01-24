@@ -11,8 +11,7 @@ var (
 	MetricSentMessageErrors,
 	MetricSessionsRate,
 	MetricSessionsCount,
-	MetricSuccessfulHandhshakes,
-	MetricMaxMTU counterImpl
+	MetricSuccessfulHandhshakes counterImpl
 )
 
 type Counter interface {

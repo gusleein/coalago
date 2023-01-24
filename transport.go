@@ -2,7 +2,6 @@ package coalago
 
 import (
 	"bytes"
-	"errors"
 	"fmt"
 	"math"
 	"net"
@@ -14,7 +13,6 @@ import (
 )
 
 var (
-	ErrUnsupportedType = errors.New("unsupported type of message")
 	globalSessions     = newSessionStorageImpl()
 	handlersStateCache = cache.New(sumTimeAttempts, time.Second)
 	proxyIDSessions    = newProxySessionStorage()

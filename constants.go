@@ -6,18 +6,18 @@ import (
 )
 
 var (
-	timeWait            = time.Second
-	maxSendAttempts     = 6
-	sumTimeAttempts     = timeWait*time.Duration(maxSendAttempts) + 100
+	timeWait        = time.Second
+	maxSendAttempts = 6
+	sumTimeAttempts = timeWait*time.Duration(maxSendAttempts) + 100
 )
 
 const (
 	SESSIONS_POOL_EXPIRATION = time.Second * 60 * 2
 	MAX_PAYLOAD_SIZE         = 1024
-	DEFAULT_WINDOW_SIZE 	 = 300
-	MIN_WiNDOW_SIZE 		 = 50
-	MAX_WINDOW_SIZE 	     = 1500
-	MTU             		 = 1500
+	DEFAULT_WINDOW_SIZE      = 300
+	MIN_WiNDOW_SIZE          = 50
+	MAX_WINDOW_SIZE          = 1500
+	MTU                      = 1500
 )
 
 const PayloadMarker = 0xff
@@ -264,6 +264,7 @@ const (
 )
 
 var (
+	ErrUnsupportedType               = errors.New("unsupported type of message")
 	ErrPacketLengthLessThan4         = errors.New("Packet length less than 4 bytes")
 	ErrInvalidCoapVersion            = errors.New("Invalid CoAP version. Should be 1.")
 	ErrOptionLengthUsesValue15       = errors.New(("Message format error. Option length has reserved value of 15"))

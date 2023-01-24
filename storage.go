@@ -21,13 +21,12 @@ type sessionStorageImpl struct {
 func newSessionStorageImpl() *sessionStorageImpl {
 	s := new(sessionStorageImpl)
 	s.storage = cache.New(SESSIONS_POOL_EXPIRATION, time.Second*1)
-
 	return s
 }
 
 func (s *sessionStorageImpl) Set(sender string, receiver string, proxy string, sess session.SecuredSession) {
 	if len(proxy) != 0 {
-		sender = ""
+		sender = "" //TODO понять надо ли это зануление
 	}
 	s.storage.SetDefault(sender+receiver+proxy, sess)
 }
@@ -52,32 +51,4 @@ func (s *sessionStorageImpl) Delete(sender string, receiver string, proxy string
 
 func (s *sessionStorageImpl) ItemCount() int {
 	return s.storage.ItemCount()
-}
-
-type proxySessionStorage struct {
-	storage *cache.Cache
-}
-
-func newProxySessionStorage() *proxySessionStorage {
-	s := new(proxySessionStorage)
-	s.storage = cache.New(time.Minute, time.Second*1)
-
-	return s
-}
-
-func (s *proxySessionStorage) Set(key string, value interface{}) {
-	s.storage.SetDefault(key, value)
-}
-
-func (s *proxySessionStorage) Get(key string) (interface{}, bool) {
-
-	v, ok := s.storage.Get(key)
-	if ok {
-		return v, true
-	}
-	return "", false
-}
-
-func (s *proxySessionStorage) Delete(key string) {
-	s.storage.Delete(key)
 }
