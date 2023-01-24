@@ -8,8 +8,8 @@ import (
 )
 
 type sessionStorage interface {
-	Set(sender string, receiver string, proxy string, sess session.SecuredSession)
-	Get(sender string, receiver string, proxy string) (session.SecuredSession, bool)
+	Set(sender string, receiver string, proxy string, sess *session.SecuredSession)
+	Get(sender string, receiver string, proxy string) (*session.SecuredSession, bool)
 	Delete(sender string, receiver string, proxy string)
 	ItemCount() int
 }

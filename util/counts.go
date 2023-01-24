@@ -1,4 +1,4 @@
-package coalago
+package util
 
 import "fmt"
 

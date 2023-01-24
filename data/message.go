@@ -1,4 +1,4 @@
-package coalago
+package newcoala
 
 import (
 	"bytes"
@@ -12,8 +12,6 @@ import (
 	"strconv"
 	"strings"
 	"time"
-
-	"github.com/coalalib/coalago/util"
 )
 
 // A Message object represents a CoAP payload
@@ -30,7 +28,6 @@ type CoAPMessage struct {
 
 	Attempts int
 	LastSent time.Time
-	Timeout  time.Duration
 
 	IsProxies bool
 
@@ -48,7 +45,6 @@ func NewCoAPMessage(messageType CoapType, messageCode CoapCode) *CoAPMessage {
 		Code:      messageCode,
 		Payload:   NewEmptyPayload(),
 		Token:     generateToken(6),
-		Timeout:   timeWait,
 	}
 }
 
@@ -58,7 +54,6 @@ func NewCoAPMessageId(messageType CoapType, messageCode CoapCode, messageID uint
 		Type:      messageType,
 		Code:      messageCode,
 		Token:     generateToken(6),
-		Timeout:   timeWait,
 	}
 }
 
@@ -68,9 +63,6 @@ func Deserialize(data []byte) (*CoAPMessage, error) {
 	m, err := deserialize(data)
 	if m == nil && err == nil {
 		return nil, ErrNilMessage
-	}
-	if err != nil {
-		util.MetricBreakedMessages.Inc()
 	}
 	return m, err
 }
@@ -588,16 +580,6 @@ func (p *BytesPayload) String() string {
 }
 
 /**
- * XML Payload
- * Just a copy of String Payload for now
- */
-
-// Represents a message payload containing XML String
-type XMLPayload struct {
-	StringCoAPMessagePayload
-}
-
-/**
  * Empty Payload
  * Just a stub
  */
@@ -618,10 +600,6 @@ func (p *EmptyPayload) Length() int {
 func (p *EmptyPayload) String() string {
 	return ""
 }
-
-/**
- * JSON Payload
- */
 
 func NewJSONPayload(obj interface{}) CoAPMessagePayload {
 	return &JSONPayload{

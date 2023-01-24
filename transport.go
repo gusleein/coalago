@@ -8,6 +8,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/coalalib/coalago/util"
 	log "github.com/ndmsystems/golog"
 	"github.com/patrickmn/go-cache"
 )
@@ -101,20 +102,20 @@ func (sr *transport) sendCON(message *CoAPMessage) (resp *CoAPMessage, err error
 
 	for {
 		if attempts > 0 {
-			MetricRetransmitMessages.Inc()
+			util.MetricRetransmitMessages.Inc()
 		}
 		attempts++
-		MetricSentMessages.Inc()
+		util.MetricSentMessages.Inc()
 		_, err = sr.conn.Write(data)
 		if err != nil {
-			MetricSentMessageErrors.Inc()
+			util.MetricSentMessageErrors.Inc()
 			return nil, err
 		}
 
 		resp, err = receiveMessage(sr, message)
 		if err == ErrMaxAttempts {
 			if attempts == maxSendAttempts {
-				MetricExpiredMessages.Inc()
+				util.MetricExpiredMessages.Inc()
 				return nil, err
 			}
 			continue
@@ -167,10 +168,10 @@ func (sr *transport) sendToSocket(message *CoAPMessage) error {
 	if err != nil {
 		return err
 	}
-	MetricSentMessages.Inc()
+	util.MetricSentMessages.Inc()
 	_, err = sr.conn.Write(buf)
 	if err != nil {
-		MetricSentMessageErrors.Inc()
+		util.MetricSentMessageErrors.Inc()
 	}
 	buf = nil
 	return err
@@ -182,10 +183,10 @@ func (sr *transport) sendToSocketByAddress(message *CoAPMessage, addr net.Addr) 
 	if err != nil {
 		return err
 	}
-	MetricSentMessages.Inc()
+	util.MetricSentMessages.Inc()
 	_, err = sr.conn.WriteTo(buf, addr.String())
 	if err != nil {
-		MetricSentMessageErrors.Inc()
+		util.MetricSentMessageErrors.Inc()
 	}
 	buf = nil
 	return err
@@ -207,12 +208,12 @@ func (sr *transport) sendPackets(packets []*packet, windowsize *int, shift int, 
 		if !packets[i].acked {
 			if time.Since(packets[i].lastSend) >= timeWait {
 				if packets[i].attempts > 0 && *windowsize >= MIN_WiNDOW_SIZE {
-					MetricRetransmitMessages.Inc()
+					util.MetricRetransmitMessages.Inc()
 					*localMetricsRetransmitMessages++
 				}
 
 				if packets[i].attempts == maxSendAttempts {
-					MetricExpiredMessages.Inc()
+					util.MetricExpiredMessages.Inc()
 					return ErrMaxAttempts
 				}
 				if packets[i].attempts == 3 {
@@ -252,10 +253,10 @@ func (sr *transport) sendPacketsByWindowOffset(packets []*packet, windowsize, sh
 		if !packets[i].acked {
 			if time.Since(packets[i].lastSend) >= timeWait {
 				if packets[i].attempts > 0 {
-					MetricRetransmitMessages.Inc()
+					util.MetricRetransmitMessages.Inc()
 				}
 				if packets[i].attempts == maxSendAttempts {
-					MetricExpiredMessages.Inc()
+					util.MetricExpiredMessages.Inc()
 					return ErrMaxAttempts
 				}
 				packets[i].attempts++
@@ -271,7 +272,7 @@ func (sr *transport) sendPacketsByWindowOffset(packets []*packet, windowsize, sh
 
 	if len(packets) == stop {
 		if time.Since(packets[len(packets)-1].lastSend) >= timeWait {
-			MetricExpiredMessages.Inc()
+			util.MetricExpiredMessages.Inc()
 			return ErrMaxAttempts
 		}
 	}
@@ -297,10 +298,10 @@ func (sr *transport) sendPacketsByWindowOffsetToAddr(packets []*packet, windowsi
 		if !packets[i].acked {
 			if time.Since(packets[i].lastSend) >= timeWait {
 				if packets[i].attempts > 0 {
-					MetricRetransmitMessages.Inc()
+					util.MetricRetransmitMessages.Inc()
 				}
 				if packets[i].attempts == maxSendAttempts {
-					MetricExpiredMessages.Inc()
+					util.MetricExpiredMessages.Inc()
 					return ErrMaxAttempts
 				}
 				packets[i].attempts++
@@ -316,7 +317,7 @@ func (sr *transport) sendPacketsByWindowOffsetToAddr(packets []*packet, windowsi
 
 	if len(packets) == stop {
 		if time.Since(packets[len(packets)-1].lastSend) >= timeWait {
-			MetricExpiredMessages.Inc()
+			util.MetricExpiredMessages.Inc()
 			return ErrMaxAttempts
 		}
 	}
@@ -344,7 +345,7 @@ func (sr *transport) sendPacketsToAddr(packets []*packet, windowsize *int, shift
 		if !packets[i].acked {
 			if time.Since(packets[i].lastSend) >= timeWait {
 				if packets[i].attempts == maxSendAttempts {
-					MetricExpiredMessages.Inc()
+					util.MetricExpiredMessages.Inc()
 					return ErrMaxAttempts
 				}
 
@@ -355,7 +356,7 @@ func (sr *transport) sendPacketsToAddr(packets []*packet, windowsize *int, shift
 				packets[i].attempts++
 
 				if packets[i].attempts > 1 && *windowsize > MIN_WiNDOW_SIZE {
-					MetricRetransmitMessages.Inc()
+					util.MetricRetransmitMessages.Inc()
 					*localMetricsRetransmitMessages++
 				}
 				packets[i].lastSend = time.Now()
@@ -445,8 +446,8 @@ func (sr *transport) sendARQBlock1CON(message *CoAPMessage) (*CoAPMessage, error
 					if resp.Code != CoapCodeContinue {
 						if len(packets) > DEFAULT_WINDOW_SIZE*2 {
 							log.Debug(fmt.Sprintf("COALA U: %s, %s, Packets: %d Lost: %d, FinalWSize: %d",
-								ByteCountBinary(int64(state.lenght)),
-								ByteCountBinaryBits(int64(state.lenght)*time.Second.Milliseconds()/time.Since(downloadStartTime).Milliseconds()),
+								util.ByteCountBinary(int64(state.lenght)),
+								util.ByteCountBinaryBits(int64(state.lenght)*time.Second.Milliseconds()/time.Since(downloadStartTime).Milliseconds()),
 								len(packets),
 								localMetricsRetransmitMessages,
 								state.windowsize))
@@ -553,8 +554,8 @@ func (sr *transport) sendARQBlock2ACK(input chan *CoAPMessage, message *CoAPMess
 						if resp.Code != CoapCodeContinue {
 							if len(packets) > DEFAULT_WINDOW_SIZE*2 {
 								log.Debug(fmt.Sprintf("COALA U: %s, %s, Packets: %d Lost: %d, FinalWSize: %d",
-									ByteCountBinary(int64(state.lenght)),
-									ByteCountBinaryBits(int64(state.lenght)*time.Second.Milliseconds()/time.Since(downloadStartTime).Milliseconds()),
+									util.ByteCountBinary(int64(state.lenght)),
+									util.ByteCountBinaryBits(int64(state.lenght)*time.Second.Milliseconds()/time.Since(downloadStartTime).Milliseconds()),
 									len(packets),
 									localMetricsRetransmitMessages,
 									state.windowsize))
@@ -650,7 +651,7 @@ func (sr *transport) receiveARQBlock1(input chan *CoAPMessage) (*CoAPMessage, er
 			}
 
 		case <-time.After(timeWait):
-			MetricExpiredMessages.Inc()
+			util.MetricExpiredMessages.Inc()
 			return nil, ErrMaxAttempts
 		}
 	}
@@ -698,7 +699,7 @@ func (sr *transport) receiveARQBlock2(origMessage *CoAPMessage, inputMessage *Co
 		inputMessage, err = receiveMessage(sr, origMessage)
 		if err == ErrMaxAttempts {
 			if attempts == maxSendAttempts {
-				MetricExpiredMessages.Inc()
+				util.MetricExpiredMessages.Inc()
 				return nil, err
 			}
 			attempts++
@@ -709,7 +710,7 @@ func (sr *transport) receiveARQBlock2(origMessage *CoAPMessage, inputMessage *Co
 		}
 
 		if attempts > 0 {
-			MetricRetransmitMessages.Inc()
+			util.MetricRetransmitMessages.Inc()
 		}
 		block := inputMessage.GetBlock2()
 		if block == nil || inputMessage.Type != CON {
@@ -734,8 +735,8 @@ func (sr *transport) receiveARQBlock2(origMessage *CoAPMessage, inputMessage *Co
 			}
 			if len(buf) > DEFAULT_WINDOW_SIZE*2 {
 				log.Debug(fmt.Sprintf("COALA D: %s, %s",
-					ByteCountBinary(int64(len(b))),
-					ByteCountBinaryBits(int64(len(b))*time.Second.Milliseconds()/time.Since(downloadStartTime).Milliseconds())))
+					util.ByteCountBinary(int64(len(b))),
+					util.ByteCountBinaryBits(int64(len(b))*time.Second.Milliseconds()/time.Since(downloadStartTime).Milliseconds())))
 			}
 			return inputMessage, nil
 		}
@@ -778,7 +779,7 @@ func preparationReceivingBufferForStorageLocalStates(data []byte, senderAddr net
 		return nil, ErrNilMessage
 	}
 
-	MetricReceivedMessages.Inc()
+	util.MetricReceivedMessages.Inc()
 
 	message.Sender = senderAddr
 
@@ -794,7 +795,7 @@ func preparationReceivingBuffer(tr *transport, data []byte, senderAddr net.Addr,
 		return nil, ErrNilMessage
 	}
 
-	MetricReceivedMessages.Inc()
+	util.MetricReceivedMessages.Inc()
 
 	message.Sender = senderAddr
 

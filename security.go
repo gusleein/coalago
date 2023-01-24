@@ -8,6 +8,7 @@ import (
 	"time"
 
 	"github.com/coalalib/coalago/session"
+	"github.com/coalalib/coalago/util"
 )
 
 func securityOutputLayer(tr *transport, message *CoAPMessage, addr net.Addr) error {
@@ -67,8 +68,8 @@ func getSessionForAddress(tr *transport, senderAddr, receiverAddr, proxyAddr str
 
 func setSessionForAddress(privatekey []byte, securedSession session.SecuredSession, senderAddr, receiverAddr, proxyAddr string) {
 	globalSessions.Set(senderAddr, receiverAddr, proxyAddr, securedSession)
-	MetricSessionsRate.Inc()
-	MetricSessionsCount.Set(int64(globalSessions.ItemCount()))
+	util.MetricSessionsRate.Inc()
+	util.MetricSessionsCount.Set(int64(globalSessions.ItemCount()))
 }
 
 func deleteSessionForAddress(senderAddr, receiverAddr, proxyAddr string) {
@@ -166,7 +167,7 @@ func receiveHandshake(tr *transport, privatekey []byte, message *CoAPMessage, pr
 			}
 		}
 
-		MetricSuccessfulHandhshakes.Inc()
+		util.MetricSuccessfulHandhshakes.Inc()
 
 		peerSession.UpdatedAt = int(time.Now().Unix())
 		setSessionForAddress(privatekey, peerSession, tr.conn.LocalAddr().String(), message.Sender.String(), proxyAddr)
@@ -209,7 +210,7 @@ func handshake(tr *transport, message *CoAPMessage, address net.Addr, proxyAddr 
 	}
 
 	globalSessions.Set(tr.conn.LocalAddr().String(), address.String(), proxyAddr, ses)
-	MetricSuccessfulHandhshakes.Inc()
+	util.MetricSuccessfulHandhshakes.Inc()
 
 	return ses, nil
 }

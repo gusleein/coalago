@@ -2,11 +2,13 @@ package coalago
 
 import (
 	"fmt"
-	log "github.com/ndmsystems/golog"
-	"github.com/patrickmn/go-cache"
 	"sync"
 	"sync/atomic"
 	"time"
+
+	"github.com/coalalib/coalago/util"
+	log "github.com/ndmsystems/golog"
+	"github.com/patrickmn/go-cache"
 )
 
 var StorageLocalStates = cache.New(sumTimeAttempts, time.Second)
@@ -28,7 +30,7 @@ func MakeLocalStateFn(r Resourcer, tr *transport, respHandler func(*CoAPMessage,
 			return
 		}
 
-		MetricReceivedMessages.Inc()
+		util.MetricReceivedMessages.Inc()
 
 		respHandler = func(message *CoAPMessage, err error) {
 			if atomic.LoadInt32(&runnedHandler) == 1 {
@@ -44,8 +46,8 @@ func MakeLocalStateFn(r Resourcer, tr *transport, respHandler func(*CoAPMessage,
 			closeCallback()
 			if len(bufBlock1) > 0 {
 				log.Debug(fmt.Sprintf("COALA U: %s, %s",
-					ByteCountBinary(int64(len(bufBlock1)*MAX_PAYLOAD_SIZE)),
-					ByteCountBinaryBits(int64(len(bufBlock1)*MAX_PAYLOAD_SIZE)*time.Second.Milliseconds()/time.Since(downloadStartTime).Milliseconds())))
+					util.ByteCountBinary(int64(len(bufBlock1)*MAX_PAYLOAD_SIZE)),
+					util.ByteCountBinaryBits(int64(len(bufBlock1)*MAX_PAYLOAD_SIZE)*time.Second.Milliseconds()/time.Since(downloadStartTime).Milliseconds())))
 			}
 		}
 
