@@ -2,6 +2,8 @@ package newcoala
 
 import (
 	"strings"
+
+	m "github.com/coalalib/coalago/message"
 )
 
 type CoAPResource struct {
@@ -11,15 +13,15 @@ type CoAPResource struct {
 	MediaTypes []MediaType
 }
 
-type CoAPResourceHandler func(message *CoAPMessage) *CoAPResourceHandlerResult
+type CoAPResourceHandler func(message *m.CoAPMessage) *CoAPResourceHandlerResult
 
 type CoAPResourceHandlerResult struct {
-	Payload   CoAPMessagePayload
+	Payload   m.CoAPMessagePayload
 	Code      CoapCode
 	MediaType MediaType
 }
 
-func NewResponse(payload CoAPMessagePayload, code CoapCode) *CoAPResourceHandlerResult {
+func NewResponse(payload m.CoAPMessagePayload, code CoapCode) *CoAPResourceHandlerResult {
 	return &CoAPResourceHandlerResult{Payload: payload, Code: code, MediaType: -1} // -1 means no value
 }
 

@@ -7,6 +7,8 @@ import (
 	"net"
 	"sync/atomic"
 	"time"
+
+	"github.com/coalalib/coalago/util"
 )
 
 // GenerateMessageId generate a uint16 Message ID
@@ -336,7 +338,7 @@ func newBlockingMessage(
 	queries := origMessage.GetOptions(OptionURIQuery)
 	msg.AddOptions(queries)
 
-	b := newBlock(isMore, blockNum, blockSize)
+	b := util.NewBlock(isMore, blockNum, blockSize)
 
 	msg.AddOption(optionBlock, b.ToInt())
 	msg.Recipient = recipient

@@ -6,6 +6,7 @@ import (
 	"sync"
 	"time"
 
+	m "github.com/coalalib/coalago/message"
 	"github.com/coalalib/coalago/util"
 )
 
@@ -17,10 +18,10 @@ type Server struct {
 	deleteResources map[string]CoAPResourceHandler
 
 	block2sendsMX sync.RWMutex
-	block2sends   map[string]chan *CoAPMessage
+	block2sends   map[string]chan *m.CoAPMessage
 
 	block1receiveMX sync.RWMutex
-	block1receive   map[string]chan *CoAPMessage
+	block1receive   map[string]chan *m.CoAPMessage
 
 	inProcessMX sync.RWMutex
 	inProcess   map[string]struct{}
@@ -34,8 +35,8 @@ func NewServer(pk []byte) *Server {
 	s.getResources = make(map[string]CoAPResourceHandler)
 	s.deleteResources = make(map[string]CoAPResourceHandler)
 
-	s.block2sends = make(map[string]chan *CoAPMessage)
-	s.block1receive = make(map[string]chan *CoAPMessage)
+	s.block2sends = make(map[string]chan *m.CoAPMessage)
+	s.block1receive = make(map[string]chan *m.CoAPMessage)
 
 	s.inProcess = make(map[string]struct{})
 	s.secSessions = newSecuritySessionStorage()
@@ -80,8 +81,8 @@ func (s *Server) AddDELETEResource(path string, handler CoAPResourceHandler) {
 	s.deleteResources[path] = handler
 }
 
-func buildMsg(addr net.Addr, buf []byte) (*CoAPMessage, error) {
-	message, err := Deserialize(buf)
+func buildMsg(addr net.Addr, buf []byte) (*m.CoAPMessage, error) {
+	message, err := m.Deserialize(buf)
 	if err != nil {
 		return nil, err
 	}
@@ -94,7 +95,7 @@ func buildMsg(addr net.Addr, buf []byte) (*CoAPMessage, error) {
 	return message, nil
 }
 
-func (s *Server) serve(pc net.PacketConn, msg *CoAPMessage) {
+func (s *Server) serve(pc net.PacketConn, msg *m.CoAPMessage) {
 	next, err := s.securityInputLayer(pc, s.privateKey, msg)
 	if !next || err != nil {
 		s.deleteInProcess(msg.GetTokenString())
@@ -102,13 +103,13 @@ func (s *Server) serve(pc net.PacketConn, msg *CoAPMessage) {
 	}
 
 	switch msg.Type {
-	case NON, CON:
+	case m.NON, m.CON:
 		if block := msg.GetBlock1(); block != nil {
 			s.block1receiveMX.Lock()
 			ch, ok := s.block1receive[msg.GetTokenString()]
 
 			if !ok {
-				ch = make(chan *CoAPMessage, 1)
+				ch = make(chan *m.CoAPMessage, 1)
 				s.block1receive[msg.GetTokenString()] = ch
 				go s.receiveARQBlock1(pc, msg, ch)
 			}
@@ -119,12 +120,12 @@ func (s *Server) serve(pc net.PacketConn, msg *CoAPMessage) {
 		}
 
 		s.serveCON(pc, msg)
-	case ACK:
+	case m.ACK:
 		s.serveACK(pc, msg)
 	}
 }
 
-func (s *Server) serveCON(pc net.PacketConn, msg *CoAPMessage) {
+func (s *Server) serveCON(pc net.PacketConn, msg *m.CoAPMessage) {
 	if res, ok := s.getResource(msg); ok {
 		s.inProcessMX.Lock()
 
@@ -144,7 +145,7 @@ func (s *Server) serveCON(pc net.PacketConn, msg *CoAPMessage) {
 	}
 }
 
-func (s *Server) serveACK(pc net.PacketConn, msg *CoAPMessage) {
+func (s *Server) serveACK(pc net.PacketConn, msg *m.CoAPMessage) {
 	if block := msg.GetBlock2(); block != nil {
 
 		s.block2sendsMX.RLock()
@@ -158,32 +159,32 @@ func (s *Server) serveACK(pc net.PacketConn, msg *CoAPMessage) {
 	}
 }
 
-func (s *Server) getResource(msg *CoAPMessage) (res CoAPResourceHandler, ok bool) {
+func (s *Server) getResource(msg *m.CoAPMessage) (res CoAPResourceHandler, ok bool) {
 	path := msg.GetURIPath()
 	switch msg.Code {
-	case POST:
+	case m.POST:
 		res, ok = s.postResources[path]
-	case GET:
+	case m.GET:
 		res, ok = s.getResources[path]
-	case DELETE:
+	case m.DELETE:
 		res, ok = s.deleteResources[path]
 	}
 
 	return
 }
 
-func (s *Server) resourceProcessor(pc net.PacketConn, msg *CoAPMessage, res CoAPResourceHandler) {
+func (s *Server) resourceProcessor(pc net.PacketConn, msg *m.CoAPMessage, res CoAPResourceHandler) {
 	result := res(msg)
-	if msg.Type == NON {
+	if msg.Type == m.NON {
 		return
 	}
 
 	// Create ACK response with the same ID and given reponse Code
-	responseMessage := NewCoAPMessageId(ACK, result.Code, msg.MessageID)
+	responseMessage := m.NewCoAPMessageId(m.ACK, result.Code, msg.MessageID)
 	if result.Payload != nil {
 		responseMessage.Payload = result.Payload
 	} else {
-		responseMessage.Payload = NewEmptyPayload()
+		responseMessage.Payload = m.NewEmptyPayload()
 	}
 
 	// Replicate Token of the original message if any
@@ -191,12 +192,12 @@ func (s *Server) resourceProcessor(pc net.PacketConn, msg *CoAPMessage, res CoAP
 
 	// Setup additional Content Format description if necessary
 	if result.MediaType >= 0 {
-		responseMessage.AddOption(OptionContentFormat, result.MediaType)
+		responseMessage.AddOption(m.OptionContentFormat, result.MediaType)
 	}
 
 	// validate Observe option (add Option in Response upon registration!)
-	if option := msg.GetOption(OptionObserve); option != nil && option.IntValue() == 0 {
-		responseMessage.AddOption(OptionObserve, 1)
+	if option := msg.GetOption(m.OptionObserve); option != nil && option.IntValue() == 0 {
+		responseMessage.AddOption(m.OptionObserve, 1)
 	}
 
 	// Validate message scheme
@@ -204,7 +205,7 @@ func (s *Server) resourceProcessor(pc net.PacketConn, msg *CoAPMessage, res CoAP
 		responseMessage.SetSchemeCOAPS()
 	}
 
-	responseMessage.CloneOptions(msg, OptionBlock1, OptionBlock2, OptionSelectiveRepeatWindowSize, OptionProxySecurityID)
+	responseMessage.CloneOptions(msg, m.OptionBlock1, m.OptionBlock2, m.OptionSelectiveRepeatWindowSize, m.OptionProxySecurityID)
 	if responseMessage.Payload.Length() > MAX_PAYLOAD_SIZE {
 		s.sendBlock2Response(pc, responseMessage, msg.Sender)
 	} else {
@@ -216,7 +217,7 @@ type packet struct {
 	acked    bool
 	attempts int
 	lastSend time.Time
-	message  *CoAPMessage
+	message  *m.CoAPMessage
 }
 
 func (s *Server) deleteInProcess(token string) {
@@ -225,8 +226,8 @@ func (s *Server) deleteInProcess(token string) {
 	s.inProcessMX.Unlock()
 }
 
-func (s *Server) sendBlock2Response(pc net.PacketConn, sendsMessage *CoAPMessage, addr net.Addr) {
-	ch := make(chan *CoAPMessage, 1024)
+func (s *Server) sendBlock2Response(pc net.PacketConn, sendsMessage *m.CoAPMessage, addr net.Addr) {
+	ch := make(chan *m.CoAPMessage, 1024)
 
 	s.block2sendsMX.Lock()
 	s.block2sends[sendsMessage.GetTokenString()] = ch
@@ -242,13 +243,13 @@ func (s *Server) sendBlock2Response(pc net.PacketConn, sendsMessage *CoAPMessage
 	packets := []*packet{}
 	state := makeState(sendsMessage)
 
-	emptyAckMessage := newACKEmptyMessage(sendsMessage, state.windowsize)
+	emptyAckMessage := m.NewACKEmptyMessage(sendsMessage, state.Windowsize)
 	if err := s.send(pc, emptyAckMessage, addr); err != nil {
 		return
 	}
 
 	for {
-		blockMessage, end := constructNextBlock(OptionBlock2, state)
+		blockMessage, end := m.ConstructNextBlock(m.OptionBlock2, state)
 		packets = append(packets, &packet{
 			acked:   false,
 			message: blockMessage,
@@ -261,7 +262,7 @@ func (s *Server) sendBlock2Response(pc net.PacketConn, sendsMessage *CoAPMessage
 
 	shift := 0
 
-	if err := s.sendPacketsToAddr(pc, packets, state.windowsize, shift, addr); err != nil {
+	if err := s.sendPacketsToAddr(pc, packets, state.Windowsize, shift, addr); err != nil {
 		return
 	}
 
@@ -275,7 +276,7 @@ func (s *Server) sendBlock2Response(pc net.PacketConn, sendsMessage *CoAPMessage
 				continue
 			}
 
-			if resp.Code != CoapCodeContinue {
+			if resp.Code != m.CoapCodeContinue {
 				return
 			}
 
@@ -298,24 +299,24 @@ func (s *Server) sendBlock2Response(pc net.PacketConn, sendsMessage *CoAPMessage
 				}
 			}
 
-			if err := s.sendPacketsToAddr(pc, packets, state.windowsize, shift, addr); err != nil {
+			if err := s.sendPacketsToAddr(pc, packets, state.Windowsize, shift, addr); err != nil {
 				return
 			}
 		}
 	}
 }
 
-func makeState(msg *CoAPMessage) *stateSend {
-	state := new(stateSend)
-	state.payload = msg.Payload.Bytes()
-	state.lenght = len(state.payload)
-	state.origMessage = msg
-	state.blockSize = MAX_PAYLOAD_SIZE
-	numblocks := math.Ceil(float64(state.lenght) / float64(MAX_PAYLOAD_SIZE))
+func makeState(msg *m.CoAPMessage) *m.StateSend {
+	state := new(m.StateSend)
+	state.Payload = msg.Payload.Bytes()
+	state.Lenght = len(state.Payload)
+	state.OrigMessage = msg
+	state.BlockSize = MAX_PAYLOAD_SIZE
+	numblocks := math.Ceil(float64(state.Lenght) / float64(MAX_PAYLOAD_SIZE))
 	if numblocks < DEFAULT_WINDOW_SIZE {
-		state.windowsize = int(numblocks)
+		state.Windowsize = int(numblocks)
 	} else {
-		state.windowsize = DEFAULT_WINDOW_SIZE
+		state.Windowsize = DEFAULT_WINDOW_SIZE
 	}
 
 	return state
@@ -360,9 +361,9 @@ func (s *Server) sendPacketsToAddr(pc net.PacketConn, packets []*packet, windows
 	return nil
 }
 
-func (s *Server) send(pc net.PacketConn, m *CoAPMessage, addr net.Addr) error {
+func (s *Server) send(pc net.PacketConn, m *m.CoAPMessage, addr net.Addr) error {
 	if err := s.securityOutputLayer(pc, m, addr); err == nil {
-		if b, err := Serialize(m); err == nil {
+		if b, err := m.Serialize(m); err == nil {
 			util.MetricSentMessages.Inc()
 			pc.WriteTo(b, addr)
 		}
@@ -373,16 +374,16 @@ func (s *Server) send(pc net.PacketConn, m *CoAPMessage, addr net.Addr) error {
 	return nil
 }
 
-func (s *Server) deleteBlock1Receive(token string, c chan *CoAPMessage) {
+func (s *Server) deleteBlock1Receive(token string, c chan *m.CoAPMessage) {
 	s.block1receiveMX.Lock()
 	delete(s.block1receive, token)
 	close(c)
 	s.block1receiveMX.Unlock()
 }
 
-func (s *Server) receiveARQBlock1(pc net.PacketConn, msg *CoAPMessage, input chan *CoAPMessage) {
+func (s *Server) receiveARQBlock1(pc net.PacketConn, msg *m.CoAPMessage, input chan *m.CoAPMessage) {
 	var (
-		fullmsg     *CoAPMessage
+		fullmsg     *m.CoAPMessage
 		buf         = make(map[int][]byte)
 		totalBlocks = -1
 	)
@@ -391,7 +392,7 @@ func (s *Server) receiveARQBlock1(pc net.PacketConn, msg *CoAPMessage, input cha
 		select {
 		case inputMessage := <-input:
 			block := inputMessage.GetBlock1()
-			if block == nil || inputMessage.Type != CON {
+			if block == nil || inputMessage.Type != m.CON {
 				continue
 			}
 			if !block.MoreBlocks {
@@ -404,18 +405,18 @@ func (s *Server) receiveARQBlock1(pc net.PacketConn, msg *CoAPMessage, input cha
 				for i := 0; i < totalBlocks; i++ {
 					b = append(b, buf[i]...)
 				}
-				inputMessage.Payload = NewBytesPayload(b)
+				inputMessage.Payload = m.NewBytesPayload(b)
 				fullmsg = inputMessage
 				s.deleteBlock1Receive(msg.GetTokenString(), input)
 				break
 			}
 
-			var ack *CoAPMessage
-			w := inputMessage.GetOption(OptionSelectiveRepeatWindowSize)
+			var ack *m.CoAPMessage
+			w := inputMessage.GetOption(m.OptionSelectiveRepeatWindowSize)
 			if w != nil {
-				ack = ackToWithWindowOffset(nil, inputMessage, CoapCodeContinue, w.IntValue(), block.BlockNumber, buf)
+				ack = m.AckToWithWindowOffset(nil, inputMessage, m.CoapCodeContinue, w.IntValue(), block.BlockNumber, buf)
 			} else {
-				ack = ackTo(nil, inputMessage, CoapCodeContinue)
+				ack = m.AckTo(nil, inputMessage, m.CoapCodeContinue)
 			}
 
 			if err := s.send(pc, ack, inputMessage.Sender); err != nil {

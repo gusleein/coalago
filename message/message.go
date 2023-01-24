@@ -1,4 +1,4 @@
-package newcoala
+package message
 
 import (
 	"bytes"
@@ -12,6 +12,8 @@ import (
 	"strconv"
 	"strings"
 	"time"
+
+	"github.com/coalalib/coalago/util"
 )
 
 // A Message object represents a CoAP payload
@@ -462,7 +464,7 @@ func (m *CoAPMessage) ToReadableString() string {
 	for _, option := range m.Options {
 		options += fmt.Sprintf("%v: '%v' ", optionCodeToString(option.Code), option.Value)
 		if option.Code == OptionBlock1 || option.Code == OptionBlock2 {
-			block := newBlockFromInt(option.IntValue())
+			block := util.NewBlockFromInt(option.IntValue())
 			options += fmt.Sprintf(" [%v | %v | %v]", block.BlockNumber, block.BlockSize, block.MoreBlocks)
 		}
 	}
@@ -496,18 +498,18 @@ func (m *CoAPMessage) IsProxied() bool {
 	return m.GetOption(OptionProxyURI) != nil
 }
 
-func (m *CoAPMessage) GetBlock1() *block {
+func (m *CoAPMessage) GetBlock1() *util.Block {
 	optionBlock1 := m.GetOption(OptionBlock1)
 	if optionBlock1 != nil {
-		return newBlockFromInt(optionBlock1.IntValue())
+		return util.NewBlockFromInt(optionBlock1.IntValue())
 	}
 	return nil
 }
 
-func (m *CoAPMessage) GetBlock2() *block {
+func (m *CoAPMessage) GetBlock2() *util.Block {
 	optionBlock2 := m.GetOption(OptionBlock2)
 	if optionBlock2 != nil {
-		return newBlockFromInt(optionBlock2.IntValue())
+		return util.NewBlockFromInt(optionBlock2.IntValue())
 	}
 	return nil
 }

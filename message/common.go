@@ -1,4 +1,4 @@
-package newcoala
+package message
 
 import (
 	"encoding/binary"
@@ -7,6 +7,8 @@ import (
 	"net"
 	"sync/atomic"
 	"time"
+
+	"github.com/coalalib/coalago/util"
 )
 
 // GenerateMessageId generate a uint16 Message ID
@@ -245,36 +247,36 @@ func optionCodeToString(option OptionCode) string {
 	}
 }
 
-func constructNextBlock(blockType OptionCode, s *stateSend) (*CoAPMessage, bool) {
-	s.stop = s.start + s.blockSize
-	if s.stop > s.lenght {
-		s.stop = s.lenght
+func ConstructNextBlock(blockType OptionCode, s *StateSend) (*CoAPMessage, bool) {
+	s.Stop = s.Start + s.BlockSize
+	if s.Stop > s.Lenght {
+		s.Stop = s.Lenght
 	}
 
-	blockbyte := s.payload[s.start:s.stop]
-	isMore := s.stop < s.lenght
+	blockbyte := s.Payload[s.Start:s.Stop]
+	isMore := s.Stop < s.Lenght
 
 	blockMessage := newBlockingMessage(
-		s.origMessage,
-		s.origMessage.Recipient,
+		s.OrigMessage,
+		s.OrigMessage.Recipient,
 		blockbyte,
 		blockType,
-		s.nextNumBlock,
-		s.blockSize,
-		s.windowsize,
+		s.NextNumBlock,
+		s.BlockSize,
+		s.Windowsize,
 		isMore,
 	)
 
-	s.nextNumBlock++
-	s.start = s.stop
+	s.NextNumBlock++
+	s.Start = s.Stop
 
-	blockMessage.CloneOptions(s.origMessage, OptionProxyURI, OptionProxySecurityID)
-	blockMessage.ProxyAddr = s.origMessage.ProxyAddr
+	blockMessage.CloneOptions(s.OrigMessage, OptionProxyURI, OptionProxySecurityID)
+	blockMessage.ProxyAddr = s.OrigMessage.ProxyAddr
 
 	return blockMessage, !isMore
 }
 
-func ackTo(initMessage *CoAPMessage, origMessage *CoAPMessage, code CoapCode) *CoAPMessage {
+func AckTo(initMessage *CoAPMessage, origMessage *CoAPMessage, code CoapCode) *CoAPMessage {
 	result := NewCoAPMessage(ACK, code)
 	result.MessageID = origMessage.MessageID
 	result.Token = origMessage.Token
@@ -289,7 +291,7 @@ func ackTo(initMessage *CoAPMessage, origMessage *CoAPMessage, code CoapCode) *C
 	return result
 }
 
-func ackToWithWindowOffset(initMessage *CoAPMessage, origMessage *CoAPMessage, code CoapCode, windowSize int, blockNumber int, buf map[int][]byte) *CoAPMessage {
+func AckToWithWindowOffset(initMessage *CoAPMessage, origMessage *CoAPMessage, code CoapCode, windowSize int, blockNumber int, buf map[int][]byte) *CoAPMessage {
 	// var offset = 0
 	// for i := blockNumber; i > blockNumber-windowSize; i-- {
 	// 	offset++
@@ -336,7 +338,7 @@ func newBlockingMessage(
 	queries := origMessage.GetOptions(OptionURIQuery)
 	msg.AddOptions(queries)
 
-	b := newBlock(isMore, blockNum, blockSize)
+	b := util.NewBlock(isMore, blockNum, blockSize)
 
 	msg.AddOption(optionBlock, b.ToInt())
 	msg.Recipient = recipient
@@ -345,19 +347,19 @@ func newBlockingMessage(
 	return msg
 }
 
-type stateSend struct {
-	lenght       int
-	offset       int
-	start        int
-	stop         int
-	nextNumBlock int
-	blockSize    int
-	windowsize   int
-	origMessage  *CoAPMessage
-	payload      []byte
+type StateSend struct {
+	Lenght       int
+	Offset       int
+	Start        int
+	Stop         int
+	NextNumBlock int
+	BlockSize    int
+	Windowsize   int
+	OrigMessage  *CoAPMessage
+	Payload      []byte
 }
 
-func newACKEmptyMessage(message *CoAPMessage, windowSize int) *CoAPMessage {
+func NewACKEmptyMessage(message *CoAPMessage, windowSize int) *CoAPMessage {
 	emptyAckMessage := NewCoAPMessage(ACK, CoapCodeEmpty)
 	emptyAckMessage.Token = message.Token
 	emptyAckMessage.MessageID = message.MessageID

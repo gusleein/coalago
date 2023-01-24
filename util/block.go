@@ -1,11 +1,17 @@
-package newcoala
+package util
 
 import (
 	"math"
 )
 
-func newBlock(moreBlocks bool, num, size int) *block {
-	block := &block{
+type Block struct {
+	BlockNumber int
+	MoreBlocks  bool
+	BlockSize   int
+}
+
+func NewBlock(moreBlocks bool, num, size int) *Block {
+	block := &Block{
 		BlockNumber: num,
 		BlockSize:   size,
 		MoreBlocks:  moreBlocks,
@@ -13,21 +19,15 @@ func newBlock(moreBlocks bool, num, size int) *block {
 	return block
 }
 
-func newBlockFromInt(blockValue int) *block {
-	block := &block{}
+func NewBlockFromInt(blockValue int) *Block {
+	block := &Block{}
 
 	block.FromInt(blockValue)
 
 	return block
 }
 
-type block struct {
-	BlockNumber int
-	MoreBlocks  bool
-	BlockSize   int
-}
-
-func (block *block) ToInt() int {
+func (block *Block) ToInt() int {
 	if block.BlockSize > 1024 || block.BlockSize <= 0 {
 		return 0
 	}
@@ -46,7 +46,7 @@ func (block *block) ToInt() int {
 	return value
 }
 
-func (block *block) FromInt(blockValue int) error {
+func (block *Block) FromInt(blockValue int) error {
 	num := blockValue >> 4
 	m := (blockValue & 8) >> 3
 	szx := blockValue & 7
