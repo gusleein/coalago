@@ -19,6 +19,4 @@ const (
 	MTU                      = 1500
 )
 
-const PayloadMarker = 0xff
-
 var NumberConnections = 1024
