@@ -20,3 +20,5 @@ const (
 )
 
 const PayloadMarker = 0xff
+
+var NumberConnections = 1024

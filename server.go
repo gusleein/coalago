@@ -23,14 +23,12 @@ type Server struct {
 }
 
 func NewServer() *Server {
-	s := new(Server)
-	return s
+	return new(Server)
 }
 
 func NewServerWithPrivateKey(privatekey []byte) *Server {
-	s := NewServer()
+	s := new(Server)
 	s.privatekey = privatekey
-
 	return s
 }
 

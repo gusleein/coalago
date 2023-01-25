@@ -9,8 +9,6 @@ import (
 	m "github.com/coalalib/coalago/message"
 )
 
-var NumberConnections = 1024
-
 var globalPoolConnections = newConnpool()
 
 type dialer interface {
@@ -29,6 +27,18 @@ type dialer interface {
 type connection struct {
 	end  chan struct{}
 	conn *net.UDPConn
+}
+
+type connpool struct {
+	balance chan struct{}
+}
+
+type packet struct {
+	acked    bool
+	attempts int
+	lastSend time.Time
+	message  *m.CoAPMessage
+	response *m.CoAPMessage
 }
 
 func (c *connection) SetUDPRecvBuf(size int) int {
@@ -92,6 +102,23 @@ func newDialer(end chan struct{}, addr string) (dialer, error) {
 	return c, nil
 }
 
+func newDialerV6(end chan struct{}, addr string) (dialer, error) {
+	a, err := net.ResolveUDPAddr("udp6", addr)
+	if err != nil {
+		return nil, err
+	}
+	end <- struct{}{}
+	conn, err := net.DialUDP("udp6", nil, a)
+	if err != nil {
+		return nil, err
+	}
+
+	c := new(connection)
+	c.conn = conn
+	c.end = end
+	return c, nil
+}
+
 func newListener(addr string) (dialer, error) {
 	a, err := net.ResolveUDPAddr("udp", addr)
 	if err != nil {
@@ -106,8 +133,18 @@ func newListener(addr string) (dialer, error) {
 	return c, nil
 }
 
-type connpool struct {
-	balance chan struct{}
+func newListenerV6(addr string) (dialer, error) {
+	a, err := net.ResolveUDPAddr("udp", addr)
+	if err != nil {
+		return nil, err
+	}
+	conn, err := net.ListenUDP("udp6", a)
+	if err != nil {
+		return nil, err
+	}
+	c := new(connection)
+	c.conn = conn
+	return c, nil
 }
 
 func newConnpool() *connpool {
@@ -126,14 +163,6 @@ func (c *connection) SetReadDeadline() {
 
 func (c *connection) SetReadDeadlineSec(timeout time.Duration) {
 	c.conn.SetReadDeadline(time.Now().Add(timeout))
-}
-
-type packet struct {
-	acked    bool
-	attempts int
-	lastSend time.Time
-	message  *m.CoAPMessage
-	response *m.CoAPMessage
 }
 
 func receiveMessage(tr *transport, origMessage *m.CoAPMessage) (*m.CoAPMessage, error) {
@@ -164,5 +193,4 @@ func receiveMessage(tr *transport, origMessage *m.CoAPMessage) (*m.CoAPMessage, 
 
 		return message, nil
 	}
-
 }
