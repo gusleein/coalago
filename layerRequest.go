@@ -2,9 +2,10 @@ package coalago
 
 import (
 	m "github.com/coalalib/coalago/message"
+	r "github.com/coalalib/coalago/resource"
 )
 
-func requestOnReceive(resource *CoAPResource, sr *transport, message *m.CoAPMessage) bool {
+func requestOnReceive(resource *r.CoAPResource, sr *transport, message *m.CoAPMessage) bool {
 	if message.Code < 0 || message.Code > 4 {
 		return true
 	}
@@ -61,7 +62,7 @@ func methodNotAllowed(sr *transport, message *m.CoAPMessage) bool {
 	return false
 }
 
-func returnResultFromResource(sr *transport, message *m.CoAPMessage, handlerResult *CoAPResourceHandlerResult) bool {
+func returnResultFromResource(sr *transport, message *m.CoAPMessage, handlerResult *r.CoAPResourceHandlerResult) bool {
 	// @TODO: Validate Response code! handlerResult.Code
 
 	// Create ACK response with the same ID and given reponse Code

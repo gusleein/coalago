@@ -7,6 +7,7 @@ import (
 	"sync"
 
 	m "github.com/coalalib/coalago/message"
+	r "github.com/coalalib/coalago/resource"
 	log "github.com/ndmsystems/golog"
 )
 
@@ -33,7 +34,7 @@ func NewServerWithPrivateKey(privatekey []byte) *Server {
 }
 
 type Resourcer interface {
-	getResourceForPathAndMethod(path string, method m.CoapMethod) *CoAPResource
+	getResourceForPathAndMethod(path string, method m.CoapMethod) *r.CoAPResource
 }
 
 func (s *Server) Listen(addr string) (err error) {
@@ -97,37 +98,37 @@ func (s *Server) ServeMessage(message *m.CoAPMessage) {
 	go fn.(LocalStateFn)(message)
 }
 
-func (s *Server) addResource(res *CoAPResource) {
+func (s *Server) addResource(res *r.CoAPResource) {
 	key := res.Path + fmt.Sprint(res.Method)
 	s.resources.Store(key, res)
 }
 
-func (s *Server) GET(path string, handler CoAPResourceHandler) {
-	s.addResource(NewCoAPResource(m.CoapMethodGet, path, handler))
+func (s *Server) GET(path string, handler r.CoAPResourceHandler) {
+	s.addResource(r.NewCoAPResource(m.CoapMethodGet, path, handler))
 }
 
-func (s *Server) POST(path string, handler CoAPResourceHandler) {
-	s.addResource(NewCoAPResource(m.CoapMethodPost, path, handler))
+func (s *Server) POST(path string, handler r.CoAPResourceHandler) {
+	s.addResource(r.NewCoAPResource(m.CoapMethodPost, path, handler))
 }
 
-func (s *Server) AddPUTResource(path string, handler CoAPResourceHandler) {
-	s.addResource(NewCoAPResource(m.CoapMethodPut, path, handler))
+func (s *Server) AddPUTResource(path string, handler r.CoAPResourceHandler) {
+	s.addResource(r.NewCoAPResource(m.CoapMethodPut, path, handler))
 }
 
-func (s *Server) DELETE(path string, handler CoAPResourceHandler) {
-	s.addResource(NewCoAPResource(m.CoapMethodDelete, path, handler))
+func (s *Server) DELETE(path string, handler r.CoAPResourceHandler) {
+	s.addResource(r.NewCoAPResource(m.CoapMethodDelete, path, handler))
 }
 
-func (s *Server) getResourceForPathAndMethod(path string, method m.CoapMethod) *CoAPResource {
+func (s *Server) getResourceForPathAndMethod(path string, method m.CoapMethod) *r.CoAPResource {
 	path = strings.Trim(path, "/ ")
 	key := path + fmt.Sprint(method)
 	res, ok := s.resources.Load("*" + fmt.Sprint(method))
 	if ok {
-		return res.(*CoAPResource)
+		return res.(*r.CoAPResource)
 	}
 	res, ok = s.resources.Load(key)
 	if ok {
-		return res.(*CoAPResource)
+		return res.(*r.CoAPResource)
 	}
 	return nil
 }

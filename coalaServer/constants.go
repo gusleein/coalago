@@ -1,4 +1,4 @@
-package newcoala
+package coalaServer
 
 import (
 	"time"

@@ -1,4 +1,4 @@
-package newcoala
+package coalaServer
 
 import (
 	"math"
@@ -8,15 +8,16 @@ import (
 
 	cerr "github.com/coalalib/coalago/errors"
 	m "github.com/coalalib/coalago/message"
+	r "github.com/coalalib/coalago/resource"
 	"github.com/coalalib/coalago/util"
 )
 
 type Server struct {
 	privateKey []byte
 
-	postResources   map[string]CoAPResourceHandler
-	getResources    map[string]CoAPResourceHandler
-	deleteResources map[string]CoAPResourceHandler
+	postResources   map[string]r.CoAPResourceHandler
+	getResources    map[string]r.CoAPResourceHandler
+	deleteResources map[string]r.CoAPResourceHandler
 
 	block2sendsMX sync.RWMutex
 	block2sends   map[string]chan *m.CoAPMessage
@@ -32,9 +33,9 @@ type Server struct {
 
 func NewServer(pk []byte) *Server {
 	s := new(Server)
-	s.postResources = make(map[string]CoAPResourceHandler)
-	s.getResources = make(map[string]CoAPResourceHandler)
-	s.deleteResources = make(map[string]CoAPResourceHandler)
+	s.postResources = make(map[string]r.CoAPResourceHandler)
+	s.getResources = make(map[string]r.CoAPResourceHandler)
+	s.deleteResources = make(map[string]r.CoAPResourceHandler)
 
 	s.block2sends = make(map[string]chan *m.CoAPMessage)
 	s.block1receive = make(map[string]chan *m.CoAPMessage)
@@ -69,16 +70,16 @@ func (s *Server) Listen(addr string) (err error) {
 	}
 }
 
-func (s *Server) AddGETResource(path string, handler CoAPResourceHandler) {
+func (s *Server) GET(path string, handler r.CoAPResourceHandler) {
 	s.getResources[path] = handler
 }
 
-func (s *Server) AddPOSTResource(path string, handler CoAPResourceHandler) {
+func (s *Server) POST(path string, handler r.CoAPResourceHandler) {
 	s.postResources[path] = handler
 
 }
 
-func (s *Server) AddDELETEResource(path string, handler CoAPResourceHandler) {
+func (s *Server) DELETE(path string, handler r.CoAPResourceHandler) {
 	s.deleteResources[path] = handler
 }
 
@@ -87,12 +88,7 @@ func buildMsg(addr net.Addr, buf []byte) (*m.CoAPMessage, error) {
 	if err != nil {
 		return nil, err
 	}
-	if message == nil {
-		return nil, cerr.NilMessage
-	}
-
 	message.Sender = addr
-
 	return message, nil
 }
 
@@ -148,19 +144,16 @@ func (s *Server) serveCON(pc net.PacketConn, msg *m.CoAPMessage) {
 
 func (s *Server) serveACK(pc net.PacketConn, msg *m.CoAPMessage) {
 	if block := msg.GetBlock2(); block != nil {
-
 		s.block2sendsMX.RLock()
 		ch, ok := s.block2sends[msg.GetTokenString()]
-
 		if ok {
 			ch <- msg
 		}
 		s.block2sendsMX.RUnlock()
-
 	}
 }
 
-func (s *Server) getResource(msg *m.CoAPMessage) (res CoAPResourceHandler, ok bool) {
+func (s *Server) getResource(msg *m.CoAPMessage) (res r.CoAPResourceHandler, ok bool) {
 	path := msg.GetURIPath()
 	switch msg.Code {
 	case m.POST:
@@ -170,11 +163,10 @@ func (s *Server) getResource(msg *m.CoAPMessage) (res CoAPResourceHandler, ok bo
 	case m.DELETE:
 		res, ok = s.deleteResources[path]
 	}
-
 	return
 }
 
-func (s *Server) resourceProcessor(pc net.PacketConn, msg *m.CoAPMessage, res CoAPResourceHandler) {
+func (s *Server) resourceProcessor(pc net.PacketConn, msg *m.CoAPMessage, res r.CoAPResourceHandler) {
 	result := res(msg)
 	if msg.Type == m.NON {
 		return
