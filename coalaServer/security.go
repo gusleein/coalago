@@ -2,61 +2,13 @@ package coalaServer
 
 import (
 	"net"
-	"time"
 
 	"github.com/coalalib/coalago/encription"
 	cerr "github.com/coalalib/coalago/errors"
 	m "github.com/coalalib/coalago/message"
 	"github.com/coalalib/coalago/session"
 	"github.com/coalalib/coalago/util"
-	"github.com/patrickmn/go-cache"
 )
-
-const (
-	sessionLifetime = time.Minute*4 + time.Second*9
-)
-
-type sessionState struct {
-	key string
-	est time.Time
-}
-
-type securitySessionStorage struct {
-	// rwmx sync.RWMutex
-	// m       map[string]session.SecuredSession
-	// indexes map[string]time.Time
-	// est     []sessionState
-	seccache *cache.Cache
-}
-
-func newSecuritySessionStorage() *securitySessionStorage {
-	s := &securitySessionStorage{
-		seccache: cache.New(sessionLifetime, time.Second),
-	}
-
-	return s
-}
-
-func (s *securitySessionStorage) Set(k string, v session.SecuredSession) {
-	s.seccache.SetDefault(k, v)
-}
-
-func (s *securitySessionStorage) Delete(k string) {
-	s.seccache.Delete(k)
-}
-
-func (s *securitySessionStorage) Update(k string, sess session.SecuredSession) {
-	s.seccache.SetDefault(k, sess)
-}
-
-func (s *securitySessionStorage) Get(k string) (sess session.SecuredSession, ok bool) {
-	v, ok := s.seccache.Get(k)
-	if !ok {
-		return sess, ok
-	}
-	sess = v.(session.SecuredSession)
-	return sess, ok
-}
 
 func (s *Server) securityOutputLayer(pc net.PacketConn, message *m.CoAPMessage, addr net.Addr) error {
 	if message.GetScheme() != m.COAPS_SCHEME {
@@ -164,19 +116,13 @@ func (s *Server) receiveHandshake(pc net.PacketConn, privatekey []byte, option *
 
 		s.secSessions.Set(message.Sender.String(), peerSession)
 		util.MetricSessionsRate.Inc()
-		// MetricSessionsCount.Set(int64(len(s.secSessions.m)))
 		util.MetricSessionsCount.Set(int64(s.secSessions.seccache.ItemCount()))
-
 		util.MetricSuccessfulHandhshakes.Inc()
 		return false, nil
 	}
 
 	return false, cerr.Handshake
 }
-
-const (
-	ERR_KEYS_NOT_MATCH = "Expected and current public keys do not match"
-)
 
 func newServerHelloMessage(origMessage *m.CoAPMessage, publicKey []byte) *m.CoAPMessage {
 	message := m.NewCoAPMessageId(m.ACK, m.CoapCodeContent, origMessage.MessageID)
