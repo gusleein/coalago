@@ -1,8 +1,8 @@
 package coalago
 
 import (
-	m "github.com/coalalib/coalago/message"
-	r "github.com/coalalib/coalago/resource"
+	m "github.com/gusleein/coalago/message"
+	r "github.com/gusleein/coalago/resource"
 )
 
 func requestOnReceive(resource *r.CoAPResource, sr *transport, message *m.CoAPMessage) bool {

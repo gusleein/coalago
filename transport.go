@@ -8,9 +8,9 @@ import (
 	"sync"
 	"time"
 
-	cerr "github.com/coalalib/coalago/errors"
-	m "github.com/coalalib/coalago/message"
-	"github.com/coalalib/coalago/util"
+	cerr "github.com/gusleein/coalago/errors"
+	m "github.com/gusleein/coalago/message"
+	"github.com/gusleein/coalago/util"
 	log "github.com/ndmsystems/golog"
 	"github.com/patrickmn/go-cache"
 )

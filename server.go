@@ -6,8 +6,8 @@ import (
 	"strings"
 	"sync"
 
-	m "github.com/coalalib/coalago/message"
-	r "github.com/coalalib/coalago/resource"
+	m "github.com/gusleein/coalago/message"
+	r "github.com/gusleein/coalago/resource"
 	log "github.com/ndmsystems/golog"
 )
 

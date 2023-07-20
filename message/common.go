@@ -8,8 +8,8 @@ import (
 	"sync/atomic"
 	"time"
 
-	cerr "github.com/coalalib/coalago/errors"
-	"github.com/coalalib/coalago/util"
+	cerr "github.com/gusleein/coalago/errors"
+	"github.com/gusleein/coalago/util"
 )
 
 // GenerateMessageId generate a uint16 Message ID

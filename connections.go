@@ -5,8 +5,8 @@ import (
 	"net"
 	"time"
 
-	cerr "github.com/coalalib/coalago/errors"
-	m "github.com/coalalib/coalago/message"
+	cerr "github.com/gusleein/coalago/errors"
+	m "github.com/gusleein/coalago/message"
 )
 
 var globalPoolConnections = newConnpool()

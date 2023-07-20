@@ -3,7 +3,7 @@ package resource
 import (
 	"strings"
 
-	m "github.com/coalalib/coalago/message"
+	m "github.com/gusleein/coalago/message"
 )
 
 type CoAPResource struct {

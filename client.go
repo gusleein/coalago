@@ -4,8 +4,8 @@ import (
 	"net"
 	"net/url"
 
-	cerr "github.com/coalalib/coalago/errors"
-	m "github.com/coalalib/coalago/message"
+	cerr "github.com/gusleein/coalago/errors"
+	m "github.com/gusleein/coalago/message"
 )
 
 type Response struct {

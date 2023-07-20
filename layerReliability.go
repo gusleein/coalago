@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"net"
 
-	m "github.com/coalalib/coalago/message"
+	m "github.com/gusleein/coalago/message"
 	cache "github.com/patrickmn/go-cache"
 )
 

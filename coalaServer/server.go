@@ -6,9 +6,9 @@ import (
 	"sync"
 	"time"
 
-	m "github.com/coalalib/coalago/message"
-	r "github.com/coalalib/coalago/resource"
-	"github.com/coalalib/coalago/util"
+	m "github.com/gusleein/coalago/message"
+	r "github.com/gusleein/coalago/resource"
+	"github.com/gusleein/coalago/util"
 )
 
 type Server struct {

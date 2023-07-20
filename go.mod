@@ -1,4 +1,4 @@
-module github.com/coalalib/coalago
+module github.com/gusleein/coalago
 
 go 1.14
 

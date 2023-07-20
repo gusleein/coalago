@@ -8,7 +8,7 @@ import (
 	"sync"
 	"sync/atomic"
 
-	"github.com/coalalib/coalago"
+	"github.com/gusleein/coalago"
 )
 
 var (

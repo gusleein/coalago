@@ -4,8 +4,8 @@ import (
 	"net"
 	"net/url"
 
-	m "github.com/coalalib/coalago/message"
-	"github.com/coalalib/coalago/session"
+	m "github.com/gusleein/coalago/message"
+	"github.com/gusleein/coalago/session"
 )
 
 func Encrypt(message *m.CoAPMessage, address net.Addr, aead session.AEAD) error {

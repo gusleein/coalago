@@ -7,11 +7,11 @@ import (
 	"net"
 	"time"
 
-	"github.com/coalalib/coalago/encription"
-	cerr "github.com/coalalib/coalago/errors"
-	m "github.com/coalalib/coalago/message"
-	"github.com/coalalib/coalago/session"
-	"github.com/coalalib/coalago/util"
+	"github.com/gusleein/coalago/encription"
+	cerr "github.com/gusleein/coalago/errors"
+	m "github.com/gusleein/coalago/message"
+	"github.com/gusleein/coalago/session"
+	"github.com/gusleein/coalago/util"
 )
 
 func securityOutputLayer(tr *transport, message *m.CoAPMessage, addr net.Addr) error {

@@ -3,7 +3,7 @@ package coalaServer
 import (
 	"time"
 
-	"github.com/coalalib/coalago/session"
+	"github.com/gusleein/coalago/session"
 	"github.com/patrickmn/go-cache"
 )
 

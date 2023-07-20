@@ -13,8 +13,8 @@ import (
 	"strings"
 	"time"
 
-	cerr "github.com/coalalib/coalago/errors"
-	"github.com/coalalib/coalago/util"
+	cerr "github.com/gusleein/coalago/errors"
+	"github.com/gusleein/coalago/util"
 )
 
 // A Message object represents a CoAP payload
